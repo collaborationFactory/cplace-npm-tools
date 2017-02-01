@@ -13,7 +13,6 @@
         "no-disable-auto-sanitization": true,
         "no-document-domain": true,
         "no-document-write": true,
-        "no-duplicate-key": true,
         "no-eval": true,
         "no-exec-script": true,
         "no-function-constructor-with-string-args": true,
@@ -25,7 +24,6 @@
         "no-string-based-set-interval": true,
         "no-string-based-set-timeout": true,
         "react-no-dangerous-html": true,
-        "use-strict": [true, "check-module"],
 
         /**
          * Common Bugs and Correctness. The following rules should be turned on because they find
@@ -35,7 +33,6 @@
         "forin": true,
         "jquery-deferred-must-complete": true,
         "label-position": true,
-        "label-undefined": true,
         "mocha-avoid-only": true,
         "no-any": true,
         "no-arg": true,
@@ -60,7 +57,6 @@
         "no-unnecessary-bind": true,
         "no-unnecessary-override": true,
         "no-unused-expression": true,
-        "no-unused-variable": true,
         "no-use-before-declare": true,
         "no-with-statement": true,
         "promise-must-complete": true,
@@ -95,7 +91,7 @@
         "missing-jsdoc": true,
         "new-parens": true,
         "no-construct": true,
-        "no-constructor-vars": true,
+        "no-parameter-properties": true,
         "no-default-export": true,
         "no-empty-interfaces": true,
         "no-for-in": true,
@@ -166,18 +162,6 @@
         "no-unexternalized-strings": false, // the VS Code team has a specific localization process that this rule enforces
         // pick one of the two following type-cast formats and use it consistently
         "prefer-type-cast": false,
-        "no-angle-bracket-type-assertion": true,
-
-        /**
-         * Deprecated rules.  The following rules are deprecated for various reasons.
-         */
-        "missing-optional-annotation": false,  // now supported by TypeScript compiler
-        "no-duplicate-parameter-names": false, // now supported by TypeScript compiler
-        "no-missing-visibility-modifiers": true, // use tslint member-access rule instead
-        "no-multiple-var-decl": false,         // use tslint one-variable-per-declaration rule instead
-        "no-switch-case-fall-through": false,  // now supported by TypeScript compiler
-        "no-unreachable": false,               // now supported by TypeScript compiler
-        "no-unused-imports": false             // use tslint no-unused-variable rule instead
-
+        "no-angle-bracket-type-assertion": true
     }
 }

@@ -1,5 +1,5 @@
-import {Arithmetic} from "../src/index";
 import * as Chai from "chai";
+import {Arithmetic} from "../src/index";
 /**
  * Test for Calculator
  */
