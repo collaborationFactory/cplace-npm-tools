@@ -3,19 +3,43 @@
  * CLI entry point
  */
 import * as meow from 'meow';
+import {CommandRunner} from './commands';
+
+const FLAG_VERBOSE = 'verbose';
 
 const cli = meow(`
     Usage:
         $ cplace-cli <command>
        
     Commands:
-        release-notes <from> <to>:
-            Generates release notes between the two given commits (excluding <from>, including <to>). 
+        release-notes --from <from> [--to <to>]
+            Generates release notes between the two given commits (excluding <from>, including <to>).
+             
+    Global options:
+        --${FLAG_VERBOSE}
+            Print verbose information to console
 `);
 
 if (!cli.input.length) {
     console.error('missing required parameter <command>');
     cli.showHelp();
 } else {
-    console.log(cli.input[0]);
+    CommandRunner
+        .run(cli.input[0], cli.flags)
+        .then(
+            () => {
+                // completed
+            },
+            (e) => {
+                console.error('Could not execute given command: ', e);
+            }
+        )
+        .catch(
+            (e) => {
+                console.error('Could not execute given command: ', e);
+                if (cli.flags[FLAG_VERBOSE]) {
+                    console.error(e.stack);
+                }
+            }
+        );
 }

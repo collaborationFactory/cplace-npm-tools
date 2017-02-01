@@ -1,5 +1,8 @@
 # Created by https://www.gitignore.io/api/node
 
+### IntelliJ ###
+.idea/workspace.xml
+
 ### Node ###
 # Logs
 logs
