@@ -1,14 +1,17 @@
 {
-  "name": "tsc-seed",
-  "version": "1.0.0",
+  "name": "@cplace/cli",
+  "version": "0.0.1",
   "description": "",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "bin": {
+    "cplace-cli": "dist/src/cli.js"
+  },
+  "author": "collaboration Factory AG",
+  "license": "commercial",
   "devDependencies": {
     "chai": "^3.5.0",
     "del": "^2.2.2",

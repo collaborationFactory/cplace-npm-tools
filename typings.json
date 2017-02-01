@@ -1,7 +1,8 @@
 {
   "name": "tsc-seed",
   "dependencies": {
-    "chai": "registry:npm/chai#3.5.0+20160723033700"
+    "chai": "registry:npm/chai#3.5.0+20160723033700",
+    "meow": "registry:dt/meow#3.6.0+20170103175350"
   },
   "globalDependencies": {
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",

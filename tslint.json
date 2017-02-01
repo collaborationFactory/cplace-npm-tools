@@ -75,7 +75,7 @@
         "class-name": true,
         "comment-format": [true, "check-space"],
         "export-name": true,
-        "function-name": [ true, { 
+        "function-name": [ true, {
             "method-regex": "^[a-z][\\w\\d]+$",
             "private-method-regex": "^[a-z][\\w\\d]+$",
             "static-method-regex": "^[a-z][\\w\\d]+$",
@@ -97,7 +97,6 @@
         "no-for-in": true,
         "no-function-expression": true,
         "no-inferrable-types": false, // turn no-inferrable-types off in order to make the code consistent in its use of type decorations
-        "no-multiline-string": true, // multiline-strings often introduce unnecessary whitespace into the string literals
         "no-null-keyword": false, // turn no-null-keyword off and use undefined to mean not initialized and null to mean without a value
         "no-relative-imports": false,
         "no-require-imports": true,
@@ -127,7 +126,7 @@
         "no-trailing-whitespace": true,
         "no-unnecessary-semicolons": true,
         "one-line": [true, "check-open-brace", "check-catch", "check-else", "check-whitespace"],
-        "quotemark": [true, "double"],
+        "quotemark": [true, "single"],
         "semicolon": [true, "always"],
         // forcing trailing commas for multi-line lists results in lists that are easier to reorder and version
         // control diffs that are more clear. Many teams like to have multiline be 'always'. There is no
