@@ -11,6 +11,10 @@
     "cplace-cli": "dist/src/cli.js"
   },
   "author": "collaboration Factory AG",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/collaborationFactory/cplace-npm-tools.git"
+  },
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "chai": "^3.5.0",
@@ -29,6 +33,7 @@
   },
   "dependencies": {
     "bluebird": "^3.4.7",
+    "meow": "^3.7.0",
     "simple-git": "^1.65.0"
   }
 }
