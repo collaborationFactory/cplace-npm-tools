@@ -13,9 +13,10 @@ export class ReleaseNotes implements ICommand {
     private static readonly PARAMETER_LANG: string = 'lang';
 
     private static readonly RELEVANCE_PATTERNS: string[] = [
-        'merge pull request #(\\d+)', // GitHub Pull Request
-        'close(s?) #(\\d+)', // GitHub Issues
-        'issue-(\\d+)' // Intranet / Project Issues
+        'merge pull request #\\d+', // GitHub Pull Request
+        '\\bcloses? #\\d+', // GitHub Issues
+        '\\bissue-\\d+', // Intranet / Project Issues
+        '\\bchangelog\\b' // Explicit changelog marker
     ];
 
     private static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
@@ -81,10 +82,9 @@ export class ReleaseNotes implements ICommand {
         if (!entry.message) {
             return false;
         }
-
         for (const p of ReleaseNotes.RELEVANCE_PATTERNS) {
             const regExp = new RegExp(p, 'i');
-            if (entry.message.match(regExp)) {
+            if (regExp.test(entry.message)) {
                 return true;
             }
         }
