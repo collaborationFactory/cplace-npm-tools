@@ -1,8 +1,9 @@
 /**
  * Command Runner implementation
  */
+import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from './models';
-import {ReleaseNotes} from './ReleaseNotes';
+import {ReleaseNotes} from './release-notes';
 
 const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
     'release-notes': new ReleaseNotes()

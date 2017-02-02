@@ -1,6 +1,7 @@
 /**
  * CLI Command relevant models
  */
+import * as Promise from 'bluebird';
 
 export interface ICommandParameters {
     [param: string]: number | boolean | string;
@@ -8,5 +9,5 @@ export interface ICommandParameters {
 
 export interface ICommand {
     prepareAndMayExecute(params: ICommandParameters): boolean;
-    execute(): Promise<null>;
+    execute(): Promise<void>;
 }

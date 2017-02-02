@@ -12,8 +12,10 @@ const cli = meow(`
         $ cplace-cli <command>
        
     Commands:
-        release-notes --from <from> [--to <to>]
+        release-notes --from <from> [--to <to>] [--lang <lang>]
             Generates release notes between the two given commits (excluding <from>, including <to>).
+            If <to> is not given "HEAD" is used.
+            If <lang> is not given "en" is used.
              
     Global options:
         --${FLAG_VERBOSE}
@@ -31,12 +33,14 @@ if (!cli.input.length) {
                 // completed
             },
             (e) => {
-                console.error('Could not execute given command: ', e);
+                console.error('Could not execute given command:');
+                console.error('\t', e);
             }
         )
         .catch(
             (e) => {
-                console.error('Could not execute given command: ', e);
+                console.error('Could not execute given command:');
+                console.error('\t', e);
                 if (cli.flags[FLAG_VERBOSE]) {
                     console.error(e.stack);
                 }

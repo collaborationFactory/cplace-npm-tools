@@ -28,6 +28,7 @@
     "typescript": "^2.1.5"
   },
   "dependencies": {
+    "bluebird": "^3.4.7",
     "simple-git": "^1.65.0"
   }
 }
