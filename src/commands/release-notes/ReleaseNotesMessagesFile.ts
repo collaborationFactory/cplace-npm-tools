@@ -23,7 +23,7 @@ export class ReleaseNotesMessagesFile {
         this.path = path;
     }
 
-    public getNumCommented(): number {
+    public getNumErrors(): number {
         return this.numErrors;
     }
 

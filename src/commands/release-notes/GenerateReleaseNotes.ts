@@ -97,14 +97,14 @@ export class GenerateReleaseNotes implements ICommand {
             .then(() => {
                 const missing = file.update(relevant);
                 if (missing !== 0) {
-                    console.log(`Update revealed ${missing} new entries - ${file.getNumCommented() - missing} were already commented`);
+                    console.log(`Update revealed ${missing} new entries - ${file.getNumErrors() - missing} were already commented out or in conflict`);
                     return file.write();
                 }
             })
             .catch(() => Promise.reject(`Could not write messages file to ${this.messagesFile}`))
             .then(() => {
-                if (file.getNumCommented()) {
-                    return Promise.reject('Cannot generate release notes - some required commits are still commented out');
+                if (file.getNumErrors()) {
+                    return Promise.reject('Cannot generate release notes - some required commits are still commented out or in conflict');
                 } else {
                     return Promise.resolve(file);
                 }
