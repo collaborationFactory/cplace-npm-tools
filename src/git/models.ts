@@ -15,3 +15,8 @@ export interface IGitLogEntry {
     author_name: string;
     author_email: string;
 }
+
+export interface IRepoProperties {
+    branch: string;
+    commit: string;
+}

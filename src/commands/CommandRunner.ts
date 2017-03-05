@@ -4,9 +4,11 @@
 import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
+import {UpdateRepos} from './update-repos';
 
 const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
-    'release-notes': new ReleaseNotes()
+    'release-notes': new ReleaseNotes(),
+    'update-repos': new UpdateRepos()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

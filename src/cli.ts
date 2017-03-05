@@ -5,7 +5,7 @@
 import * as meow from 'meow';
 import {CommandRunner} from './commands';
 
-const FLAG_VERBOSE = 'verbose';
+export const FLAG_VERBOSE = 'verbose';
 
 const cli = meow(`
     Usage:
@@ -24,6 +24,9 @@ const cli = meow(`
                     driver = cplace-cli release-notes --merge --current %A --other %B
             2. Make sure that the .gitattributes file in your repository contains the following line:
                 release-notes/messages_*.db merge=cplace-msgs
+                
+        update-repos
+            Updates all parent repos.
              
     Global options:
         --${FLAG_VERBOSE}

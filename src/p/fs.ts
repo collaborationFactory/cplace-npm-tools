@@ -29,6 +29,7 @@ declare module 'fs' {
      */
     export function mkdirAsync(path: string | Buffer): Promise<void>;
 
+    export function readFileSync(filename: string, encoding: string): string;
 }
 
 export {fs};
