@@ -26,7 +26,7 @@ export abstract class AbstractReposCommand implements ICommand {
         }
 
         this.force = params[FLAG_FORCE] as boolean;
-        if (this.debug) {
+        if (this.debug && this.force) {
             console.log('running in force mode');
         }
 

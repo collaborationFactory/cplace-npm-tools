@@ -42,16 +42,23 @@ export function repoGit(repoName: string): simpleGit.Git {
     return simpleGit('../' + repoName);
 }
 
-export function fetch(repoGit: simpleGit.Git, repoName: string): Promise<void> {
+export function fetch(repoGit: simpleGit.Git, repoName: string, noFetch: boolean, debug: boolean): Promise<void> {
     return new Promise<null>((resolve, reject) => {
-        repoGit.fetch((err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                console.log('repo ' + repoName + ' successfully fetched');
-                resolve();
+        if (noFetch) {
+            if (debug) {
+                console.log('not fetching because in no-fetch mode');
             }
-        });
+            resolve();
+        } else {
+            repoGit.fetch((err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log('repo ' + repoName + ' successfully fetched');
+                    resolve();
+                }
+            });
+        }
     });
 }
 

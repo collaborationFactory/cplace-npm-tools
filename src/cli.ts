@@ -26,7 +26,7 @@ const cli = meow(`
             2. Make sure that the .gitattributes file in your repository contains the following line:
                 release-notes/messages_*.db merge=cplace-msgs
                 
-        update-repos [--force]
+        update-repos [--force] [--nofetch]
             Updates all parent repos.
             If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
 
