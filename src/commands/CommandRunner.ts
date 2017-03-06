@@ -5,10 +5,12 @@ import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
 import {UpdateRepos} from './update-repos';
+import {WriteReposState} from './write-repos-state/WriteReposState';
 
 const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
     'release-notes': new ReleaseNotes(),
-    'update-repos': new UpdateRepos()
+    'update-repos': new UpdateRepos(),
+    'write-repos-state': new WriteReposState()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

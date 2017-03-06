@@ -27,7 +27,10 @@ const cli = meow(`
                 
         update-repos
             Updates all parent repos.
-             
+
+        write-repos-state
+            Write the state of the parent repos to parent-repos.json.
+
     Global options:
         --${FLAG_VERBOSE}
             Print verbose information to console
