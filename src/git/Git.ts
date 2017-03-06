@@ -55,15 +55,25 @@ export function fetch(repoGit: simpleGit.Git, repoName: string): Promise<void> {
     });
 }
 
-export function status(repoGit: simpleGit.Git, repoName: string, repoProperties: IRepoProperties, debug: boolean): Promise<void> {
+export function status(repoGit: simpleGit.Git, repoName: string, repoProperties: IRepoProperties, force: boolean, debug: boolean): Promise<void> {
+    // tslint:disable-next-line promise-must-complete
     return new Promise<null>((resolve, reject) => {
         repoGit.status((err, result) => {
             if (err) {
                 reject(err);
             } else {
-                if (result.not_added.length === 0 && result.deleted.length === 0 && result.modified.length === 0 && result.created.length === 0 && result.conflicted.length === 0) {
-                    if (debug) {
-                        console.log('result of gitStatus', result);
+                if (debug) {
+                    console.log('result of gitStatus', result);
+                }
+                const isRepoClean =
+                    result.not_added.length === 0 &&
+                    result.deleted.length === 0 &&
+                    result.modified.length === 0 &&
+                    result.created.length === 0 &&
+                    result.conflicted.length === 0;
+                if (isRepoClean || force) {
+                    if (!isRepoClean) {
+                        console.log('working copy of repo ' + repoName + ' is not clean; continue due to --force flag');
                     }
                     if (debug) {
                         console.log('setting commit to', result.current);
@@ -72,7 +82,7 @@ export function status(repoGit: simpleGit.Git, repoName: string, repoProperties:
                     if (debug) {
                         console.log('repoProperties', repoProperties);
                     }
-                    resolve();
+                    resolve(result);
                 } else {
                     reject('working copy of repo ' + repoName + ' is not clean');
                 }

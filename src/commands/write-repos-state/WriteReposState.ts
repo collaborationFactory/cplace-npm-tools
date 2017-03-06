@@ -25,7 +25,7 @@ export class WriteReposState extends AbstractReposCommand {
                     }
 
                     const repoGit = Git.repoGit(repoName);
-                    promises.push(Git.status(repoGit, repoName, repoProperties, this.debug));
+                    promises.push(Git.status(repoGit, repoName, repoProperties, this.force, this.debug));
                     promises.push(Git.revParseHead(repoGit, repoName, repoProperties, this.debug));
                 }
             });

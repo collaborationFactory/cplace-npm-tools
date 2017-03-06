@@ -74,7 +74,7 @@
          */
         "class-name": true,
         "comment-format": [true, "check-space"],
-        "export-name": false,
+        "export-name": true,
         "function-name": [ true, {
             "method-regex": "^[a-z][\\w\\d]+$",
             "private-method-regex": "^[a-z][\\w\\d]+$",

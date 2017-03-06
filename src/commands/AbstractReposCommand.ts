@@ -9,7 +9,11 @@ import {ICommand, ICommandParameters} from './models';
 
 export const propertiesFileName = 'parent-repos.json';
 
+const FLAG_FORCE = 'force';
+
 export abstract class AbstractReposCommand implements ICommand {
+
+    public force: boolean;
 
     public debug: boolean;
 
@@ -19,6 +23,11 @@ export abstract class AbstractReposCommand implements ICommand {
         this.debug = params[FLAG_VERBOSE] as boolean;
         if (this.debug) {
             console.log('running in verbose mode');
+        }
+
+        this.force = params[FLAG_FORCE] as boolean;
+        if (this.debug) {
+            console.log('running in force mode');
         }
 
         this.obj = JSON.parse(fs.readFileSync(propertiesFileName, 'utf8'));

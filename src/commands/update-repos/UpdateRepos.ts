@@ -29,7 +29,7 @@ export class UpdateRepos extends AbstractReposCommand {
                 const repoGit = Git.repoGit(repoName);
 
                 return Git.fetch(repoGit, repoName).then(
-                    Git.status(repoGit, repoName, repoProperties, this.debug)).then(
+                    Git.status(repoGit, repoName, repoProperties, this.force, this.debug)).then(
                     Git.checkoutBranch(repoGit, repoName, branch, this.debug)).then(
                     Git.checkoutCommit(repoGit, repoName, commit).then(
                         Git.resetHard(repoGit, repoName)

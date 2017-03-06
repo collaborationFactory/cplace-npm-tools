@@ -5,6 +5,7 @@
 import * as meow from 'meow';
 import {CommandRunner} from './commands';
 
+// tslint:disable-next-line export-name
 export const FLAG_VERBOSE = 'verbose';
 
 const cli = meow(`
@@ -25,8 +26,9 @@ const cli = meow(`
             2. Make sure that the .gitattributes file in your repository contains the following line:
                 release-notes/messages_*.db merge=cplace-msgs
                 
-        update-repos
+        update-repos [--force]
             Updates all parent repos.
+            If <force> is set
 
         write-repos-state
             Write the state of the parent repos to parent-repos.json.
