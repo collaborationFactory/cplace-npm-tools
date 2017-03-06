@@ -18,5 +18,5 @@ export interface IGitLogEntry {
 
 export interface IRepoProperties {
     branch: string;
-    commit: string;
+    commit?: string;
 }

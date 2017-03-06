@@ -126,16 +126,23 @@ export function checkoutBranch(repoGit: simpleGit.Git, repoName: string, branch:
     });
 }
 
-export function checkoutCommit(repoGit: simpleGit.Git, repoName: string, commit: string): Promise<void> {
+export function checkoutCommit(repoGit: simpleGit.Git, repoName: string, commit: string, debug: boolean): Promise<void> {
     return new Promise<null>((resolve, reject) => {
-        repoGit.checkout(commit, (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                console.log('repo ' + repoName + ' is now in commit', commit);
-                resolve();
+        if (commit) {
+            repoGit.checkout(commit, (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    console.log('repo ' + repoName + ' is now in commit', commit);
+                    resolve();
+                }
+            });
+        } else {
+            if (debug) {
+                console.log('no commit given');
             }
-        });
+            resolve();
+        }
     });
 }
 

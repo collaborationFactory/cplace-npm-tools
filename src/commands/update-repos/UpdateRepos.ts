@@ -14,9 +14,6 @@ export class UpdateRepos extends AbstractReposCommand {
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         super.prepareAndMayExecute(params);
-
-        console.log(params);
-
         this.noFetch = params[FLAG_NO_FETCH] as boolean;
         if (this.debug && this.noFetch) {
             console.log('running in nofetch mode');
@@ -48,7 +45,7 @@ export class UpdateRepos extends AbstractReposCommand {
                 return Git.fetch(repoGit, repoName, this.noFetch, this.debug).then(
                     Git.status(repoGit, repoName, repoProperties, this.force, this.debug)).then(
                     Git.checkoutBranch(repoGit, repoName, branch, this.debug)).then(
-                    Git.checkoutCommit(repoGit, repoName, commit).then(
+                    Git.checkoutCommit(repoGit, repoName, commit, this.debug).then(
                         Git.resetHard(repoGit, repoName)
                     ));
             });
