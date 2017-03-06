@@ -30,8 +30,8 @@ const cli = meow(`
             Updates all parent repos.
             If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
 
-        write-repos-state
-            Write the state of the parent repos to parent-repos.json.
+        write-repo-states
+            Write the states of the parent repos to parent-repos.json.
             If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
 
     Global options:

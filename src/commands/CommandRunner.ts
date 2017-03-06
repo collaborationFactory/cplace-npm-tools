@@ -10,7 +10,7 @@ import {WriteReposState} from './write-repos-state/WriteReposState';
 const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
     'release-notes': new ReleaseNotes(),
     'update-repos': new UpdateRepos(),
-    'write-repos-state': new WriteReposState()
+    'write-repo-states': new WriteReposState()
 };
 
 export type Result = 'missing' | 'failed' | 'success';
