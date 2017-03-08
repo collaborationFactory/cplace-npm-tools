@@ -23,7 +23,7 @@ export class UpdateRepos extends AbstractReposCommand {
 
     public execute(): Promise<void> {
         return new Promise<null>((resolve, reject) => {
-            Object.keys(this.obj).forEach((repoName) => {
+            Object.keys(this.obj).forEach(async (repoName) => {
                 if (this.debug) {
                     console.log('repo', repoName);
                 }
@@ -42,12 +42,15 @@ export class UpdateRepos extends AbstractReposCommand {
 
                 const repoGit = Git.repoGit(repoName);
 
-                return Git.fetch(repoGit, repoName, this.noFetch, this.debug).then(
-                    Git.status(repoGit, repoName, repoProperties, this.force, this.debug)).then(
-                    Git.checkoutBranch(repoGit, repoName, branch, this.debug)).then(
-                    Git.checkoutCommit(repoGit, repoName, commit, this.debug).then(
-                        Git.resetHard(repoGit, repoName)
-                    ));
+                try {
+                    await Git.fetch(repoGit, repoName, this.noFetch, this.debug);
+                    await Git.status(repoGit, repoName, repoProperties, this.force, this.debug);
+                    await Git.checkoutBranch(repoGit, repoName, branch, this.debug);
+                    await Git.checkoutCommit(repoGit, repoName, commit, this.debug);
+                    await Git.resetHard(repoGit, repoName);
+                } catch (e) {
+                    throw new Error('an error occured: ' + e);
+                }
             });
 
             resolve();

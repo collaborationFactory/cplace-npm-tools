@@ -10,7 +10,7 @@ import {AbstractReposCommand, propertiesFileName} from '../AbstractReposCommand'
 export class WriteReposState extends AbstractReposCommand {
 
     public execute(): Promise<void> {
-        return new Promise<null>((resolve, reject) => {
+        return new Promise<null>(async (resolve, reject) => {
             const promises = [];
 
             Object.keys(this.obj).forEach((repoName) => {
@@ -25,32 +25,27 @@ export class WriteReposState extends AbstractReposCommand {
                     }
 
                     const repoGit = Git.repoGit(repoName);
+
                     promises.push(Git.status(repoGit, repoName, repoProperties, this.force, this.debug));
                     promises.push(Git.revParseHead(repoGit, repoName, repoProperties, this.debug));
                 }
             });
 
-            Promise.all(promises).then(
-                (result) => {
-                    if (this.debug) {
-                        console.log('status and revparse successfully completed');
-                    }
-                    const newPropertiesAsString = JSON.stringify(this.obj, null, 2).replace(/[\n\r]/g, os.EOL);
-                    if (this.debug) {
-                        console.log('newPropertiesAsString', newPropertiesAsString);
-                    }
+            try {
+                await Promise.all(promises);
+                if (this.debug) {
+                    console.log('status and revparse successfully completed');
+                }
+                const newPropertiesAsString = JSON.stringify(this.obj, null, 2).replace(/[\n\r]/g, os.EOL);
+                if (this.debug) {
+                    console.log('newPropertiesAsString', newPropertiesAsString);
+                }
 
-                    fs.writeFileAsync(propertiesFileName, newPropertiesAsString, (err) => {
-                        if (err) {
-                            return console.log('an error occured while writing ' + propertiesFileName, err);
-                        } else {
-                            console.log(propertiesFileName + ' has been saved');
-                        }
-                    });
-                },
-                (err) => {
-                    console.log('an error occurred:', err);
-                });
+                await fs.writeFileAsync(propertiesFileName, newPropertiesAsString, {});
+                console.log(propertiesFileName + ' has been saved');
+            } catch (e) {
+                console.log('an error occurred:', e);
+            }
 
             resolve();
         });
