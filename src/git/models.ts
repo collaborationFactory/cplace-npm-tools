@@ -16,7 +16,22 @@ export interface IGitLogEntry {
     author_email: string;
 }
 
-export interface IRepoProperties {
-    branch: string;
-    commit?: string;
+export interface IGitStatus {
+    not_added: string[];
+    conflicted: string[];
+    created: string[];
+    deleted: string[];
+    modified: string[];
+    renamed: string[];
+    files: IGitFileStatus[];
+    ahead: number;
+    behind: number;
+    current: string;
+    tracking: string;
+}
+
+export interface IGitFileStatus {
+    path: string;
+    index: string;
+    working_dir: string;
 }

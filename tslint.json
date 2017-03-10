@@ -56,7 +56,7 @@
         "no-string-literal": true,
         "no-unnecessary-bind": true,
         "no-unnecessary-override": true,
-        "no-unused-expression": true,
+        "no-unused-expression": [true, "allow-fast-null-checks"],
         "no-use-before-declare": true,
         "no-with-statement": true,
         "promise-must-complete": true,
@@ -161,6 +161,7 @@
         "no-unexternalized-strings": false, // the VS Code team has a specific localization process that this rule enforces
         // pick one of the two following type-cast formats and use it consistently
         "prefer-type-cast": false,
-        "no-angle-bracket-type-assertion": true
+        "no-angle-bracket-type-assertion": true,
+        "ordered-imports": false
     }
 }
