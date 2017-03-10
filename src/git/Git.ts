@@ -34,6 +34,7 @@ export function log(fromHash?: string, toHash?: string): Promise<IGitLogSummary>
 
 export function commitExists(hash: string): Promise<void> {
     return new Promise<null>((resolve, reject) => {
+        Global.isVerbose() && console.log('Checking commit existence for', hash);
         git.revparse(['-q', '--verify', `${hash}^{commit}`], (err, data) => {
             err || !data ? reject(err) : resolve();
         });

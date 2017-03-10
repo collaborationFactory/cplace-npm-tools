@@ -79,7 +79,7 @@ export class ReleaseNotesMessagesFile {
         return this.missingEntries.size;
     }
 
-    public merge(other: ReleaseNotesMessagesFile): boolean {
+    public merge(other: ReleaseNotesMessagesFile, base: ReleaseNotesMessagesFile): boolean {
         let conflict = false;
         for (const otherEntry of other.hashMap.values()) {
             const hash = otherEntry.hash;
@@ -99,12 +99,10 @@ export class ReleaseNotesMessagesFile {
                             case 'commented':
                                 break;
                             case 'ok':
-                                if (currentEntry.message !== otherEntry.message) {
-                                    markConflict(currentEntry, otherEntry);
-                                }
-                                break;
                             case 'conflict':
-                                markConflict(currentEntry, otherEntry);
+                                if (!this.resolveConflict(currentEntry, otherEntry, base)) {
+                                    conflict = true;
+                                }
                                 break;
                             default:
                                 console.error('unknown status', otherEntry.status);
@@ -118,13 +116,6 @@ export class ReleaseNotesMessagesFile {
             }
         }
         return conflict;
-
-        function markConflict(currentEntry: IReleaseNotesMessageEntry, otherEntry: IReleaseNotesMessageEntry): void {
-            currentEntry.status = 'conflict';
-            currentEntry.message += ` <-CONFLICT-> ${otherEntry.message}`;
-            console.error('Detected conflict for commit:', currentEntry.hash, currentEntry.message);
-            conflict = true;
-        }
     }
 
     public write(): Promise<void> {
@@ -144,6 +135,27 @@ export class ReleaseNotesMessagesFile {
             .then(() => {
                 this.missingEntries.clear();
             });
+    }
+
+    private resolveConflict(currentEntry: IReleaseNotesMessageEntry, otherEntry: IReleaseNotesMessageEntry, base: ReleaseNotesMessagesFile): boolean {
+        if (currentEntry.message === otherEntry.message) {
+            return true;
+        }
+
+        if (base.hashMap.has(currentEntry.hash)) {
+            const baseEntry = base.hashMap.get(currentEntry.hash);
+            if (currentEntry.message === baseEntry.message) {
+                currentEntry.message = otherEntry.message;
+                return true;
+            } else if (otherEntry.message === baseEntry.message) {
+                return true;
+            }
+        }
+
+        currentEntry.status = 'conflict';
+        currentEntry.message += ` <-CONFLICT-> ${otherEntry.message}`;
+        console.error('Detected conflict for commit:', currentEntry.hash, currentEntry.message, '<- ->', otherEntry.message);
+        return false;
     }
 
     private addMissingLogEntry(logEntry: IGitLogEntry): void {

@@ -22,9 +22,10 @@ const cli = meow(`
             1. Add the following section to your .git/config file or global .gitconfig:
                 [merge "cplace-msgs"]
                     name = cplace Release Notes Messages DB merger
-                    driver = cplace-cli release-notes --merge --current %A --other %B
-            2. Make sure that the .gitattributes file in your repository contains the following line:
+                    driver = cplace-cli release-notes --merge --current %A --other %B --base %O
+            2. Make sure that the .gitattributes file in your repository contains the following lines:
                 release-notes/messages_*.db merge=cplace-msgs
+                release-notes/explicits_*.db merge=cplace-msgs
         
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
