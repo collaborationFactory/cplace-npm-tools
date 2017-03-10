@@ -116,10 +116,10 @@ export class GenerateReleaseNotes implements ICommand {
             .then(() => {
                 if (file.getNumErrors()) {
                     if (this.force) {
-                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict - continuing due to force option');
+                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
                         return Promise.resolve(file);
                     }
-                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict');
+                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict in messages');
                 } else {
                     return Promise.resolve(file);
                 }
@@ -139,10 +139,20 @@ export class GenerateReleaseNotes implements ICommand {
                 return null;
             })
             .then((explicits) => {
-                return {
+                const result = {
                     messages,
                     explicits
                 };
+
+                if (explicits && explicits.getNumErrors()) {
+                    if (this.force) {
+                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
+                        return result;
+                    }
+                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict in explicits');
+                }
+
+                return result;
             });
     }
 
