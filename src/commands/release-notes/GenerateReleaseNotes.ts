@@ -3,6 +3,7 @@
  */
 import * as Promise from 'bluebird';
 import {Git, IGitLogEntry, IGitLogSummary} from '../../git';
+import {Global} from '../../Global';
 import {fs} from '../../p/fs';
 import {ICommand, ICommandParameters} from '../models';
 import {ReleaseNotesMessagesFile} from './ReleaseNotesMessagesFile';
@@ -11,6 +12,8 @@ export class GenerateReleaseNotes implements ICommand {
     private static readonly PARAMETER_FROM: string = 'from';
     private static readonly PARAMETER_TO: string = 'to';
     private static readonly PARAMETER_LANG: string = 'lang';
+
+    private static readonly PARAMETER_FORCE: string = 'force';
 
     private static readonly RELEVANCE_PATTERNS: string[] = [
         'merge pull request #\\d+', // GitHub Pull Request
@@ -25,13 +28,15 @@ export class GenerateReleaseNotes implements ICommand {
     private fromHash: string;
     private toHash: string;
     private lang: string;
+    private force: boolean;
 
     private messagesFile: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         const fromHash = params[GenerateReleaseNotes.PARAMETER_FROM] as string;
         if (!fromHash) {
-            throw Error(`Missing required parameter "${GenerateReleaseNotes.PARAMETER_FROM}"`);
+            console.error(`Missing required parameter "${GenerateReleaseNotes.PARAMETER_FROM}"`);
+            return false;
         }
         this.fromHash = String(fromHash);
 
@@ -49,18 +54,21 @@ export class GenerateReleaseNotes implements ICommand {
             this.lang = 'en';
         }
 
+        this.force = !!params[GenerateReleaseNotes.PARAMETER_FORCE];
+        Global.isVerbose() && this.force && console.log('Force mode activated');
+
         this.messagesFile = `${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}/messages_${this.lang}.db`;
 
         return true;
     }
 
     public execute(): Promise<void> {
-        console.log('generating release notes from', this.fromHash, 'to', this.toHash ? this.toHash : 'most recent commit');
+        Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash ? this.toHash : 'most recent commit');
 
         return Git
             .commitExists(this.fromHash)
             .then(() => Git.commitExists(this.toHash), commitNotFound(this.fromHash))
-            .then(() => Git.log(this.fromHash, this.toHash), commitNotFound(this.fromHash))
+            .then(() => Git.log(this.fromHash, this.toHash), commitNotFound(this.toHash))
             .then((log: IGitLogSummary) => this.parseLog(log));
 
         function commitNotFound(hash: string): () => Promise<null> {
@@ -104,7 +112,11 @@ export class GenerateReleaseNotes implements ICommand {
             .catch(() => Promise.reject(`Could not write messages file to ${this.messagesFile}`))
             .then(() => {
                 if (file.getNumErrors()) {
-                    return Promise.reject('Cannot generate release notes - some required commits are still commented out or in conflict');
+                    if (this.force) {
+                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict - continuing due to force option');
+                        return Promise.resolve(file);
+                    }
+                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict');
                 } else {
                     return Promise.resolve(file);
                 }

@@ -29,11 +29,7 @@ export class ReleaseNotesMessagesFile {
 
     public getMessage(hash: string): string | null {
         const entry = this.hashMap.get(hash);
-        if (!entry || entry.status !== 'ok') {
-            return null;
-        } else {
-            return entry.message;
-        }
+        return entry ? entry.message : null;
     }
 
     public parse(): Promise<void> {

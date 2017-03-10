@@ -11,10 +11,12 @@ const cli = meow(`
         $ cplace-cli <command>
        
     Commands:
-        release-notes --from <from> [--to <to>] [--lang <lang>]
+        release-notes --from <from> [--to <to>] [--lang <lang>] [--force]
             Generates release notes between the two given commits (excluding <from>, including <to>).
             If <to> is not given "HEAD" is used.
             If <lang> is not given "en" is used.
+            
+            If <force> is set then release notes will also be generated if commits are commented out or in conflict.
             
             The release notes command can also be used to automatically merge two messages files in git:
             1. Add the following section to your .git/config file or global .gitconfig:
