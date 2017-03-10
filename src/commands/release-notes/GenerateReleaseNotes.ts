@@ -31,6 +31,7 @@ export class GenerateReleaseNotes implements ICommand {
     private force: boolean;
 
     private messagesFile: string;
+    private explicitsFile: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         const fromHash = params[GenerateReleaseNotes.PARAMETER_FROM] as string;
@@ -58,6 +59,7 @@ export class GenerateReleaseNotes implements ICommand {
         Global.isVerbose() && this.force && console.log('Force mode activated');
 
         this.messagesFile = `${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}/messages_${this.lang}.db`;
+        this.explicitsFile = `${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}/explicits_${this.lang}.db`;
 
         return true;
     }
@@ -83,7 +85,8 @@ export class GenerateReleaseNotes implements ICommand {
             .catch(() => fs.mkdirAsync(GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES))
             .catch(() => Promise.reject(`Failed to create directory ${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}`))
             .then(() => this.updateMessagesFile(relevant))
-            .then((file) => this.generateChangelog(file, relevant));
+            .then((file) => this.readExplicits(file))
+            .then((files) => this.generateChangelog(files.messages, files.explicits, log.all));
     }
 
     private filterRelevantCommits(entry: IGitLogEntry): boolean {
@@ -123,11 +126,31 @@ export class GenerateReleaseNotes implements ICommand {
             });
     }
 
-    private generateChangelog(file: ReleaseNotesMessagesFile, relevant: IGitLogEntry[]): Promise<void> {
+    private readExplicits(messages: ReleaseNotesMessagesFile): Promise<{messages: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile}> {
+        return fs
+            .statAsync(this.explicitsFile)
+            .then(() => {
+                const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
+                return explicits
+                    .parse()
+                    .then(() => explicits);
+            })
+            .catch(() => {
+                return null;
+            })
+            .then((explicits) => {
+                return {
+                    messages,
+                    explicits
+                };
+            });
+    }
+
+    private generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
         const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
 
-        for (const r of relevant) {
-            const message = file.getMessage(r.hash);
+        for (const c of log) {
+            const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
             if (message) {
                 changelog.push(`   * ${message}`);
             }
