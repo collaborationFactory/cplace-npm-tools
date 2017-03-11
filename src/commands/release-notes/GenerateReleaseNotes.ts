@@ -15,14 +15,6 @@ export class GenerateReleaseNotes implements ICommand {
 
     private static readonly PARAMETER_FORCE: string = 'force';
 
-    private static readonly RELEVANCE_PATTERNS: string[] = [
-        'merge pull request #\\d+', // GitHub Pull Request
-        '\\bcloses? #\\d+', // GitHub Issues
-        '\\bissue-\\d+', // Intranet / Project Issues
-        '\\bchangelog\\b' // Explicit changelog marker
-    ];
-
-    private static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
     private static readonly FILE_NAME_CHANGELOG: string = 'CHANGELOG.md';
 
     private fromHash: string;
@@ -58,8 +50,8 @@ export class GenerateReleaseNotes implements ICommand {
         this.force = !!params[GenerateReleaseNotes.PARAMETER_FORCE];
         Global.isVerbose() && this.force && console.log('Force mode activated');
 
-        this.messagesFile = `${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}/messages_${this.lang}.db`;
-        this.explicitsFile = `${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}/explicits_${this.lang}.db`;
+        this.messagesFile = ReleaseNotesMessagesFile.getPathToMessages(this.lang);
+        this.explicitsFile = ReleaseNotesMessagesFile.getPathToExplicits(this.lang);
 
         return true;
     }
@@ -79,26 +71,14 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     private parseLog(log: IGitLogSummary): Promise<void> {
-        const relevant = log.all.filter(this.filterRelevantCommits);
+        const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
         return fs
-            .statAsync(GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES)
-            .catch(() => fs.mkdirAsync(GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES))
-            .catch(() => Promise.reject(`Failed to create directory ${GenerateReleaseNotes.DIRECTORY_RELEASE_NOTES}`))
+            .statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)
+            .catch(() => fs.mkdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES))
+            .catch(() => Promise.reject(`Failed to create directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}`))
             .then(() => this.updateMessagesFile(relevant))
             .then((file) => this.readExplicits(file))
             .then((files) => this.generateChangelog(files.messages, files.explicits, log.all));
-    }
-
-    private filterRelevantCommits(entry: IGitLogEntry): boolean {
-        if (!entry.message) {
-            return false;
-        }
-        for (const p of GenerateReleaseNotes.RELEVANCE_PATTERNS) {
-            const regExp = new RegExp(p, 'i');
-            if (regExp.test(entry.message)) {
-                return true;
-            }
-        }
     }
 
     private updateMessagesFile(relevant: IGitLogEntry[]): Promise<ReleaseNotesMessagesFile> {

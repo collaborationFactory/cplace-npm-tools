@@ -32,6 +32,14 @@ export function log(fromHash?: string, toHash?: string): Promise<IGitLogSummary>
     });
 }
 
+export function logLast(size: number): Promise<IGitLogSummary> {
+    return new Promise<IGitLogSummary>((resolve, reject) => {
+        git.log(['-n', size], (err, data: IGitLogSummary) => {
+            err ? reject(err) : resolve(data);
+        });
+    });
+}
+
 export function commitExists(hash: string): Promise<void> {
     return new Promise<null>((resolve, reject) => {
         Global.isVerbose() && console.log('Checking commit existence for', hash);

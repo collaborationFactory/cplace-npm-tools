@@ -13,6 +13,16 @@ interface IReleaseNotesMessageEntry {
 }
 
 export class ReleaseNotesMessagesFile {
+    public static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
+
+    private static MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
+    private static readonly RELEVANCE_PATTERNS: string[] = [
+        'merge pull request #\\d+', // GitHub Pull Request
+        '\\bcloses? #\\d+', // GitHub Issues
+        '\\bissue-\\d+', // Intranet / Project Issues
+        '\\bchangelog\\b' // Explicit changelog marker
+    ];
+
     private readonly path: string;
 
     private missingEntries: Map<string, IReleaseNotesMessageEntry>;
@@ -21,6 +31,44 @@ export class ReleaseNotesMessagesFile {
 
     constructor(path: string) {
         this.path = path;
+    }
+
+    public static getPathToMessages(lang: string): string {
+        return `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/messages_${lang}.db`;
+    }
+
+    public static getPathToExplicits(lang: string): string {
+        return `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/explicits_${lang}.db`;
+    }
+
+    public static filterRelevantCommits(entry: IGitLogEntry): boolean {
+        if (!entry.message) {
+            return false;
+        }
+        for (const p of ReleaseNotesMessagesFile.RELEVANCE_PATTERNS) {
+            const regExp = new RegExp(p, 'i');
+            if (regExp.test(entry.message)) {
+                return true;
+            }
+        }
+    }
+
+    public static getAllMessagesFiles(): Promise<ReleaseNotesMessagesFile[]> {
+        return fs
+            .statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)
+            .catch(() => Promise.reject(`directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES} does not exist`))
+            .then(() => fs.readdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES))
+            .then((files) => {
+                return files
+                    .filter((f) => ReleaseNotesMessagesFile.MESSAGES_FILE_NAME_PATTERN.test(f))
+                    .map((f) => {
+                        return new ReleaseNotesMessagesFile(`${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/${f}`);
+                    });
+            });
+    }
+
+    public getPath(): string {
+        return this.path;
     }
 
     public getNumErrors(): number {
