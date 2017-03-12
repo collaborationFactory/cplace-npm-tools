@@ -57,15 +57,26 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     public execute(): Promise<void> {
-        Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash ? this.toHash : 'most recent commit');
+        Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash);
 
         return Git
             .commitExists(this.fromHash)
-            .then(() => Git.commitExists(this.toHash), commitNotFound(this.fromHash))
-            .then(() => Git.log(this.fromHash, this.toHash), commitNotFound(this.toHash))
+            .then((hash) => {
+                this.fromHash = hash;
+                Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
+            })
+            .catch(commitNotFound(this.fromHash))
+            .then(() => {
+                return Git.commitExists(this.toHash).catch(commitNotFound(this.toHash));
+            })
+            .then((hash) => {
+                this.toHash = hash;
+                Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
+            })
+            .then(() => Git.log(this.fromHash, this.toHash))
             .then((log: IGitLogSummary) => this.parseLog(log));
 
-        function commitNotFound(hash: string): () => Promise<null> {
+        function commitNotFound(hash: string): () => Promise<void> {
             return () => Promise.reject(`Commit does not exist: ${hash}`);
         }
     }
@@ -138,6 +149,10 @@ export class GenerateReleaseNotes implements ICommand {
 
     private generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
         const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
+
+        changelog.push();
+        changelog.push(`_Commit range: ${this.fromHash} - ${this.toHash}_`);
+        changelog.push();
 
         for (const c of log) {
             const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));

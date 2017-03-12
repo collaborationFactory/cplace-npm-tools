@@ -40,11 +40,11 @@ export function logLast(size: number): Promise<IGitLogSummary> {
     });
 }
 
-export function commitExists(hash: string): Promise<void> {
-    return new Promise<null>((resolve, reject) => {
+export function commitExists(hash: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
         Global.isVerbose() && console.log('Checking commit existence for', hash);
         git.revparse(['-q', '--verify', `${hash}^{commit}`], (err, data) => {
-            err || !data ? reject(err) : resolve();
+            err || !data ? reject(err) : resolve(data.trim());
         });
     });
 }
