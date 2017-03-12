@@ -150,9 +150,9 @@ export class GenerateReleaseNotes implements ICommand {
     private generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
         const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
 
-        changelog.push();
+        changelog.push('');
         changelog.push(`_Commit range: ${this.fromHash} - ${this.toHash}_`);
-        changelog.push();
+        changelog.push('');
 
         for (const c of log) {
             const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
