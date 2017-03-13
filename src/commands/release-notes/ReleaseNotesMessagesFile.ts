@@ -3,7 +3,9 @@
  */
 import * as Promise from 'bluebird';
 import {IGitLogEntry} from '../../git';
+import {Global} from '../../Global';
 import {fs} from '../../p/fs';
+import {enforceNewline, makeSingleLine} from '../../util';
 
 type MessageEntryStatus = 'ok' | 'commented' | 'conflict';
 interface IReleaseNotesMessageEntry {
@@ -16,6 +18,7 @@ export class ReleaseNotesMessagesFile {
     public static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
 
     private static MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
+    private static CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/#changelog:\s?((.|\n(?!\n))+)/);
     private static readonly RELEVANCE_PATTERNS: string[] = [
         'merge pull request #\\d+', // GitHub Pull Request
         '\\bcloses? #\\d+', // GitHub Issues
@@ -180,9 +183,14 @@ export class ReleaseNotesMessagesFile {
                 .join('\n') + '\n';
         return fs
             .writeFileAsync(this.path, content, 'utf8')
-            .then(() => {
-                this.missingEntries.clear();
-            });
+            .then(
+                () => {
+                    this.missingEntries.clear();
+                },
+                (err) => {
+                    Global.isVerbose() && console.error(err);
+                }
+            );
     }
 
     private resolveConflict(currentEntry: IReleaseNotesMessageEntry, otherEntry: IReleaseNotesMessageEntry, base: ReleaseNotesMessagesFile): boolean {
@@ -207,10 +215,19 @@ export class ReleaseNotesMessagesFile {
     }
 
     private addMissingLogEntry(logEntry: IGitLogEntry): void {
+        let status: MessageEntryStatus = 'commented';
+        let message = `${makeSingleLine(logEntry.message)} by ${logEntry.author_name}`;
+
+        const defaultMessage = this.extractMessageFromCommit(logEntry);
+        if (defaultMessage !== null) {
+            status = 'ok';
+            message = defaultMessage;
+        }
+
         const entry: IReleaseNotesMessageEntry = {
-            status: 'commented',
             hash: logEntry.hash,
-            message: `${logEntry.message} by ${logEntry.author_name}`
+            status,
+            message
         };
         this.addMissingEntry(entry);
     }
@@ -221,6 +238,18 @@ export class ReleaseNotesMessagesFile {
         if (entry.status !== 'ok') {
             this.numErrors += 1;
         }
+    }
+
+    private extractMessageFromCommit(logEntry: IGitLogEntry): string | null {
+        const message = enforceNewline(logEntry.message);
+        const match = ReleaseNotesMessagesFile.CHANGELOG_DEFAULT_MESSAGE_PATTERN.exec(message);
+        if (match === null || match.length < 2) {
+            return null;
+        }
+
+        const m = makeSingleLine(match[1]).trim();
+        Global.isVerbose() && console.log('found default commit message for', logEntry.hash, ':', m);
+        return m;
     }
 
     private getPrefixForStatus(status: MessageEntryStatus): string {

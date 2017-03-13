@@ -5,6 +5,7 @@ import * as Promise from 'bluebird';
 import {fs} from '../../p/fs';
 import {IGitStatus, Repository} from '../../git';
 import {Global} from '../../Global';
+import {enforceNewline} from '../../util';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
 
@@ -38,7 +39,7 @@ export class WriteRepos extends AbstractReposCommand {
                 });
 
                 Global.isVerbose() && console.log('status and revparse successfully completed');
-                const newParentReposContent = JSON.stringify(newParentRepos, null, 2).replace(/[\n\r]/g, '\n');
+                const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
                 Global.isVerbose() && console.log('new repo description', newParentReposContent);
 
                 return fs

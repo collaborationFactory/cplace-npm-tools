@@ -100,11 +100,12 @@ export class GenerateReleaseNotes implements ICommand {
             .then(() => {
                 const missing = file.update(relevant);
                 if (missing !== 0) {
-                    console.log(`Update revealed ${missing} new entries - ${file.getNumErrors() - missing} were already commented out or in conflict`);
-                    return file.write();
+                    console.log(`Update revealed ${missing} new entries - ${file.getNumErrors()} are now commented out or in conflict`);
+                    return file
+                        .write()
+                        .catch(() => Promise.reject(`Could not write messages file to ${this.messagesFile}`));
                 }
             })
-            .catch(() => Promise.reject(`Could not write messages file to ${this.messagesFile}`))
             .then(() => {
                 if (file.getNumErrors()) {
                     if (this.force) {

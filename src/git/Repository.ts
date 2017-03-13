@@ -35,9 +35,18 @@ export class Repository {
             this.git.log(
                 {
                     from: fromHash,
-                    to: toHash
+                    to: toHash,
+                    splitter: '__fieldSplitter_1234eirhgnsergfse324__',
+                    format: {
+                        hash: '%H',
+                        date: '%ai',
+                        message: '%B',
+                        author_name: '%aN',
+                        author_email: '%ae'
+                    }
                 },
                 (err, data: IGitLogSummary) => {
+                    console.log(data);
                     err ? reject(err) : resolve(data);
                 }
             );
