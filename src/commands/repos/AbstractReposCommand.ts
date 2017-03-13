@@ -6,7 +6,7 @@ import {Global} from '../../Global';
 import {fs} from '../../p/fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
-import {IGitStatus} from '../../git/models';
+import {IGitStatus, Repository} from '../../git';
 
 export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -45,7 +45,7 @@ export abstract class AbstractReposCommand implements ICommand {
         return true;
     }
 
-    protected checkRepoClean(repoName: string, status: IGitStatus): Promise<IGitStatus> {
+    protected checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&
@@ -55,11 +55,11 @@ export abstract class AbstractReposCommand implements ICommand {
 
         if (isRepoClean || this.force) {
             if (!isRepoClean) {
-                console.warn(`working copy of repo ${repoName} is not clean; continue due to force flag`);
+                console.warn(`working copy of repo ${repo.repoName} is not clean; continue due to force flag`);
             }
             return Promise.resolve(status);
         } else {
-            return Promise.reject(`working copy of repo ${repoName} is not clean`);
+            return Promise.reject(`working copy of repo ${repo.repoName} is not clean`);
         }
     }
 }

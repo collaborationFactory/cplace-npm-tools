@@ -2,7 +2,7 @@
  * Command for generating release notes
  */
 import * as Promise from 'bluebird';
-import {Git, IGitLogEntry, IGitLogSummary} from '../../git';
+import {IGitLogEntry, IGitLogSummary, Repository} from '../../git';
 import {Global} from '../../Global';
 import {fs} from '../../p/fs';
 import {ICommand, ICommandParameters} from '../models';
@@ -59,7 +59,8 @@ export class GenerateReleaseNotes implements ICommand {
     public execute(): Promise<void> {
         Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash);
 
-        return Git
+        const repo = new Repository();
+        return repo
             .commitExists(this.fromHash)
             .then((hash) => {
                 this.fromHash = hash;
@@ -67,13 +68,13 @@ export class GenerateReleaseNotes implements ICommand {
             })
             .catch(commitNotFound(this.fromHash))
             .then(() => {
-                return Git.commitExists(this.toHash).catch(commitNotFound(this.toHash));
+                return repo.commitExists(this.toHash).catch(commitNotFound(this.toHash));
             })
             .then((hash) => {
                 this.toHash = hash;
                 Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
             })
-            .then(() => Git.log(this.fromHash, this.toHash))
+            .then(() => repo.log(this.fromHash, this.toHash))
             .then((log: IGitLogSummary) => this.parseLog(log));
 
         function commitNotFound(hash: string): () => Promise<void> {

@@ -4,8 +4,8 @@
 import * as Promise from 'bluebird';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {ICommandParameters} from '../models';
+import {Repository} from '../../git';
 import {Global} from '../../Global';
-import {Git} from '../../git';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
@@ -27,14 +27,14 @@ export class UpdateRepos extends AbstractReposCommand {
                 const branch = repoProperties.branch;
                 Global.isVerbose() && console.log('branch', branch);
 
-                const repoGit = Git.forRepo(`../${repoName}`);
-                const p = this.noFetch ? Promise.resolve() : Git.fetch(repoGit, repoName);
+                const repo = new Repository(`../${repoName}`);
+                const p = this.noFetch ? Promise.resolve() : repo.fetch();
                 return p
-                    .then(() => Git.status(repoGit))
-                    .then((status) => this.checkRepoClean(repoName, status))
-                    .then(() => Git.checkoutBranch(repoGit, repoName, branch))
-                    .then(() => Git.checkoutCommit(repoGit, repoName, commit))
-                    .then(() => Git.resetHard(repoGit, repoName))
+                    .then(() => repo.status())
+                    .then((status) => this.checkRepoClean(repo, status))
+                    .then(() => repo.checkoutBranch(branch))
+                    .then(() => repo.checkoutCommit(commit))
+                    .then(() => repo.resetHard())
                     .then(() => {
                         Global.isVerbose() && console.log('successfully updated', repoName);
                     });

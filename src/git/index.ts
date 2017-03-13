@@ -1,6 +1,6 @@
 /**
  * Git integration package
  */
-import * as Git from './Git';
-import {IGitLogEntry, IGitLogSummary} from './models';
-export {Git, IGitLogEntry, IGitLogSummary}
+import {IGitLogEntry, IGitLogSummary, IGitStatus} from './models';
+import {Repository} from './Repository';
+export {Repository, IGitLogEntry, IGitLogSummary, IGitStatus}

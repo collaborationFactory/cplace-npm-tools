@@ -2,7 +2,7 @@
  * Command for checking whether all relevant messages are correctly set
  */
 import * as Promise from 'bluebird';
-import {Git, IGitLogEntry} from '../../git';
+import {IGitLogEntry, Repository} from '../../git';
 import {Global} from '../../Global';
 import {ICommand, ICommandParameters} from '../models';
 import {ReleaseNotesMessagesFile} from './ReleaseNotesMessagesFile';
@@ -26,13 +26,14 @@ export class CheckMessages implements ICommand {
     public execute(): Promise<void> {
         let messages;
 
+        const repo = new Repository();
         return ReleaseNotesMessagesFile
             .getAllMessagesFiles()
             .then((files) => {
                 messages = files;
                 return Promise.all(files.map((f) => f.parse()));
             })
-            .then(() => Git.logLast(this.logSize))
+            .then(() => repo.logLast(this.logSize))
             .then((log) => log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits))
             .then((relevant) => Promise.all(messages.map((f) => this.checkLog(f, relevant))))
             .then(() => Global.isVerbose() && console.log('successfully checked all files'));

@@ -2,13 +2,11 @@
  * General write-repos-state command
  */
 import * as Promise from 'bluebird';
-import * as simpleGit from 'simple-git';
 import {fs} from '../../p/fs';
-import {Git} from '../../git';
+import {IGitStatus, Repository} from '../../git';
 import {Global} from '../../Global';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
-import {IGitStatus} from '../../git/models';
 
 export class WriteRepos extends AbstractReposCommand {
 
@@ -20,11 +18,11 @@ export class WriteRepos extends AbstractReposCommand {
                 const repoProperties = this.parentRepos[repoName];
                 Global.isVerbose() && console.log('repoProperties', repoProperties);
 
-                const repoGit = Git.forRepo(`../${repoName}`);
-                return Git
-                    .status(repoGit)
-                    .then((status) => this.checkRepoClean(repoName, status))
-                    .then((status) => this.mapStatus(repoName, repoGit, status))
+                const repo = new Repository(`../${repoName}`);
+                return repo
+                    .status()
+                    .then((status) => this.checkRepoClean(repo, status))
+                    .then((status) => this.mapStatus(repo, status))
                     .then((status) => ({repoName, status}));
             });
 
@@ -51,11 +49,11 @@ export class WriteRepos extends AbstractReposCommand {
             });
     }
 
-    private mapStatus(repoName: string, repoGit: simpleGit.Git, status: IGitStatus): Promise<IRepoStatus> {
-        return Git
-            .currentCommit(repoGit)
+    private mapStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
+        return repo
+            .getCurrentCommitHash()
             .then((commit) => {
-                const current = this.parentRepos[repoName];
+                const current = this.parentRepos[repo.repoName];
                 const result: IRepoStatus = {
                     url: current.url,
                     branch: status.current
