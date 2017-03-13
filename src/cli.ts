@@ -40,6 +40,8 @@ const cli = meow(`
             2. --write|-w:
                 Write the states of the parent repos to parent-repos.json.
                 If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
+            3. --clone|-c:
+                Clones all parent repos if missing. <force> has no effect for this command.
 
     Global options:
         --verbose
