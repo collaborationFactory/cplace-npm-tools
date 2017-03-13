@@ -194,18 +194,25 @@ export class ReleaseNotesMessagesFile {
     }
 
     private resolveConflict(currentEntry: IReleaseNotesMessageEntry, otherEntry: IReleaseNotesMessageEntry, base: ReleaseNotesMessagesFile): boolean {
-        if (currentEntry.message === otherEntry.message) {
-            return true;
-        }
+        const baseEntry = base.hashMap.get(currentEntry.hash);
 
-        if (base.hashMap.has(currentEntry.hash)) {
-            const baseEntry = base.hashMap.get(currentEntry.hash);
-            if (currentEntry.message === baseEntry.message) {
-                currentEntry.message = otherEntry.message;
-                return true;
-            } else if (otherEntry.message === baseEntry.message) {
+        if (currentEntry.message === otherEntry.message) {
+            if (currentEntry.status !== otherEntry.status && baseEntry) {
+                if (currentEntry.status === baseEntry.status) {
+                    currentEntry.status = otherEntry.status;
+                } else if (otherEntry.status !== baseEntry.status) {
+                    currentEntry.status = 'conflict';
+                }
+                return currentEntry.status !== 'conflict';
+            } else {
                 return true;
             }
+        } else if (baseEntry) {
+            if (currentEntry.message === baseEntry.message) {
+                currentEntry.message = otherEntry.message;
+                currentEntry.status = otherEntry.status;
+            }
+            return currentEntry.status !== 'conflict';
         }
 
         currentEntry.status = 'conflict';
@@ -216,7 +223,7 @@ export class ReleaseNotesMessagesFile {
 
     private addMissingLogEntry(logEntry: IGitLogEntry): void {
         let status: MessageEntryStatus = 'commented';
-        let message = `${makeSingleLine(logEntry.message)} by ${logEntry.author_name}`;
+        let message = makeSingleLine(logEntry.message);
 
         const defaultMessage = this.extractMessageFromCommit(logEntry);
         if (defaultMessage !== null) {
