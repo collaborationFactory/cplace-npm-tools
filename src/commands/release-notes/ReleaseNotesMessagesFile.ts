@@ -18,7 +18,7 @@ export class ReleaseNotesMessagesFile {
     public static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
 
     private static MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
-    private static CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/#changelog:\s?((.|\n(?!\n))+)/);
+    private static CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n)changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/);
     private static readonly RELEVANCE_PATTERNS: string[] = [
         'merge pull request #\\d+', // GitHub Pull Request
         '\\bcloses? #\\d+', // GitHub Issues
@@ -250,11 +250,11 @@ export class ReleaseNotesMessagesFile {
     private extractMessageFromCommit(logEntry: IGitLogEntry): string | null {
         const message = enforceNewline(logEntry.message);
         const match = ReleaseNotesMessagesFile.CHANGELOG_DEFAULT_MESSAGE_PATTERN.exec(message);
-        if (match === null || match.length < 2) {
+        if (match === null || match.length < 3) {
             return null;
         }
 
-        const m = makeSingleLine(match[1]).trim();
+        const m = makeSingleLine(match[2]).trim();
         Global.isVerbose() && console.log('found default commit message for', logEntry.hash, ':', m);
         return m;
     }
