@@ -23,6 +23,7 @@ export class ReleaseNotesMessagesFile {
         'merge pull request #\\d+', // GitHub Pull Request
         '\\bcloses? #\\d+', // GitHub Issues
         '\\bissue-\\d+', // Intranet / Project Issues
+        '\\bus-\\d+', // Intranet / Project User Stories
         '\\bchangelog\\b' // Explicit changelog marker
     ];
 
