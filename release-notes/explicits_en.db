@@ -1,0 +1,3 @@
+f317d7ce1fdd347608eaf64bebab677ae428aadf:Feature: add repo-scripts functionality (update, clone, write)
+3f2f2b0c275a3333189bf717847a4704ce635064:Feature: support explicit marking of commits by using explicits_<lang>.db
+97f1103d44d19a3569591e83800517bde9b01418:Feature: three-way-merge for conflict resolution
