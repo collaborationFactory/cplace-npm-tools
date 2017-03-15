@@ -46,7 +46,6 @@ export class Repository {
                     }
                 },
                 (err, data: IGitLogSummary) => {
-                    console.log(data);
                     err ? reject(err) : resolve(data);
                 }
             );
