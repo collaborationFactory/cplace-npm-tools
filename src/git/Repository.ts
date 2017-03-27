@@ -5,9 +5,11 @@ import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
-import {IGitLogSummary, IGitStatus} from './models';
+import {IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
 
 export class Repository {
+    private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
+    private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
@@ -181,4 +183,46 @@ export class Repository {
         });
     }
 
+    public listBranches(): Promise<IGitBranchDetails[]> {
+        return new Promise<IGitBranchDetails[]>((resolve, reject) => {
+            this.git.branch(['-a', '-vv'], (err, summary: simpleGit.BranchSummary) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const branches = summary.all.map((b) => {
+                        const {current, name, commit, label} = summary.branches[b];
+                        const tracking = this.extractTrackingBranchFromLabel(label);
+                        const nameIfRemote = this.getBranchNameIfRemote(name);
+                        const isRemote = nameIfRemote != null;
+                        return {
+                            current,
+                            name: isRemote ? nameIfRemote : name,
+                            commit,
+                            isRemote,
+                            tracking
+                        };
+                    });
+                    resolve(branches);
+                }
+            });
+        });
+    }
+
+    private extractTrackingBranchFromLabel(label: string): string | null {
+        const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
+        if (!match || match.length < 2) {
+            return null;
+        }
+        const trackingBranch = match[1];
+        return trackingBranch ? trackingBranch : null;
+    }
+
+    private getBranchNameIfRemote(name: string): string | null {
+        const match = Repository.REMOTE_BRANCH_PATTERN.exec(name);
+        if (!match || match.length < 2) {
+            return null;
+        }
+        const branchName = match[1];
+        return branchName ? branchName : null;
+    }
 }
