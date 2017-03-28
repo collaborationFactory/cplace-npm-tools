@@ -145,7 +145,7 @@ export class Upmerge implements ICommand {
                 return this.repo
                     .checkoutBranch(branch.name)
                     .then(() => {
-                        console.log(`merging ${branch.name} with ${lastBranch.name}`);
+                        console.log(`merging ${lastBranch.name} into ${branch.name}`);
                     });
             }),
             Promise.resolve()

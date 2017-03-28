@@ -43,9 +43,9 @@ export class ReleaseNumber {
         if (this.master && other.master) {
             return 0;
         } else if (this.master) {
-            return -1;
-        } else if (other.master) {
             return 1;
+        } else if (other.master) {
+            return -1;
         } else if (this.major !== other.major) {
             return this.major - other.major;
         } else if (this.minor !== other.minor) {
