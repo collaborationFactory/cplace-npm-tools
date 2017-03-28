@@ -14,18 +14,20 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_REMOTE: string = 'remote';
 
     private repo: Repository;
+    private remote: string = 'origin';
+
     private releaseBranchPattern: RegExp = new RegExp(Upmerge.RELEASE_BRANCH_PATTERN);
     private remoteReleaseBranchPattern: RegExp;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.repo = new Repository();
 
-        let remote = params[Upmerge.PARAMETER_REMOTE];
-        if (typeof remote !== 'string') {
-            remote = 'origin';
+        const remote = params[Upmerge.PARAMETER_REMOTE];
+        if (typeof remote === 'string') {
+            this.remote = remote;
         }
 
-        this.remoteReleaseBranchPattern = new RegExp(`^${remote}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
+        this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
 
         return true;
     }
@@ -39,9 +41,8 @@ export class Upmerge implements ICommand {
                     .listBranches()
                     .then((branches) => this.filterReleaseBranchesAndCreateOrder(release, branches));
             })
-            .then((branches) => {
-                console.log(branches);
-            });
+            .then((branches) => this.checkMergability(branches))
+            .then((branches) => this.doMerges(branches));
     }
 
     private checkForRelease(): Promise<ReleaseNumber> {
@@ -73,39 +74,82 @@ export class Upmerge implements ICommand {
 
         branches.forEach((branch) => {
             if (branch.isRemote && !trackedRemoteBranches.has(branch.name)) {
-                const match = this.remoteReleaseBranchPattern.exec(branch.name);
-                if (!match || match.length < 2) {
-                    return;
+                let version: string;
+
+                if (branch.name === `${this.remote}/master`) {
+                    version = 'master';
+                } else {
+                    const match = this.remoteReleaseBranchPattern.exec(branch.name);
+                    if (!match || match.length < 2) {
+                        return;
+                    }
+                    version = match[1];
                 }
 
-                const version = match[1];
                 const releaseNumber = ReleaseNumber.parse(version);
                 if (!releaseNumber) {
                     return;
                 }
                 trackedRemoteBranches.set(branch.name, {branch, releaseNumber});
             } else if (branch.tracking) {
-                const match = this.releaseBranchPattern.exec(branch.name);
-                if (!match || match.length < 2) {
-                    return;
+                let version: string;
+
+                if (branch.name === 'master') {
+                    version = 'master';
+                } else {
+                    const match = this.releaseBranchPattern.exec(branch.name);
+                    if (!match || match.length < 2) {
+                        return;
+                    }
+                    version = match[1];
                 }
 
-                const version = match[1];
                 const releaseNumber = ReleaseNumber.parse(version);
                 if (!releaseNumber) {
                     return;
                 }
+
                 trackedRemoteBranches.set(branch.tracking, {branch, releaseNumber});
             }
         });
 
         return Array.from(trackedRemoteBranches)
             .map((b) => b[1])
-            .filter((b) => release.compareTo(b.releaseNumber) < 0)
+            .filter((b) => release.compareTo(b.releaseNumber) <= 0)
             .sort((r1, r2) => {
                 return r1.releaseNumber.compareTo(r2.releaseNumber);
             })
             .map((b) => b.branch);
+    }
+
+    private checkMergability(branches: IGitBranchDetails[]): Promise<IGitBranchDetails[]> {
+        for (const b of branches) {
+            if (b.gone) {
+                return Promise.reject(`branch ${b.name} is gone - cannot upmerge`);
+            }
+            if (b.ahead || b.behind) {
+                return Promise.reject(`branch ${b.name} differs from remote - ahead: ${b.ahead}, behind: ${b.behind}`);
+            }
+        }
+        return Promise.resolve(branches);
+    }
+
+    private doMerges(branches: IGitBranchDetails[]): Promise<void> {
+        return branches.reduce(
+            (p, branch, i) => p.then(() => {
+                if (i === 0) {
+                    return;
+                }
+
+                const lastBranch = branches[i - 1];
+                return this.repo
+                    .checkoutBranch(branch.name)
+                    .then(() => {
+                        console.log(`merging ${branch.name} with ${lastBranch.name}`);
+                    });
+            }),
+            Promise.resolve()
+        );
     }
 
 }

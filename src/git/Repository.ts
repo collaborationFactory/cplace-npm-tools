@@ -9,6 +9,7 @@ import {IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
 
 export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
+    private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
 
     public readonly repoName: string;
@@ -191,7 +192,7 @@ export class Repository {
                 } else {
                     const branches = summary.all.map((b) => {
                         const {current, name, commit, label} = summary.branches[b];
-                        const tracking = this.extractTrackingBranchFromLabel(label);
+                        const tracking = this.extractTrackingInfoFromLabel(label);
                         const nameIfRemote = this.getBranchNameIfRemote(name);
                         const isRemote = nameIfRemote != null;
                         return {
@@ -199,7 +200,7 @@ export class Repository {
                             name: isRemote ? nameIfRemote : name,
                             commit,
                             isRemote,
-                            tracking
+                            ...tracking
                         };
                     });
                     resolve(branches);
@@ -208,13 +209,34 @@ export class Repository {
         });
     }
 
-    private extractTrackingBranchFromLabel(label: string): string | null {
+    private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
-        if (!match || match.length < 2) {
-            return null;
+        if (!match || match.length < 2 || !match[1]) {
+            return {
+                tracking: null
+            };
         }
-        const trackingBranch = match[1];
-        return trackingBranch ? trackingBranch : null;
+
+        const tracking = match[1];
+        const info = Repository.ADDITIONAL_INFO_PATTERN.exec(tracking);
+        if (!info) {
+            return {
+                tracking,
+                gone: false,
+                ahead: 0,
+                behind: 0
+            };
+        }
+
+        const gone = !!info[2];
+        const ahead = Number(info[4]) || 0;
+        const behind = Number(info[7]) || 0;
+        return {
+            tracking: info[1],
+            gone,
+            ahead,
+            behind
+        };
     }
 
     private getBranchNameIfRemote(name: string): string | null {

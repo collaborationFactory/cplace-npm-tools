@@ -35,6 +35,9 @@ export interface IGitBranchDetails {
     name: string;
     commit: string;
     isRemote: boolean;
+    gone?: boolean;
+    ahead?: number;
+    behind?: number;
     tracking?: string;
 }
 
