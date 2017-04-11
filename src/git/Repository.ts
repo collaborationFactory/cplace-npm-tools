@@ -20,7 +20,7 @@ export class Repository {
     public static clone(toPath: string, remoteUrl: string, branch: string): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             Global.isVerbose() && console.log('cloning branch', branch, 'from', remoteUrl, 'to', toPath);
-            simpleGit().clone(remoteUrl, toPath, ['--single-branch', '--branch', branch], (err) => {
+            simpleGit().clone(remoteUrl, toPath, ['--branch', branch], (err) => {
                 if (err) {
                     reject(err);
                 } else {
