@@ -9,6 +9,10 @@ declare module 'simple-git' {
     interface Git {
         revparse(args: string[], handlerFn: HandlerFunction): Git;
 
+        branch(args: string[], handlerFn: HandlerFunction): Git;
+
+        raw(args: string[], handlerFn: HandlerFunction): Git;
+
         log(options: string[] | {
             from?: string,
             to?: string

@@ -5,9 +5,11 @@ import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
+import {BranchesDelegate} from './branches';
 
 const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
     'release-notes': new ReleaseNotes(),
+    'branches': new BranchesDelegate(),
     'repos': new Repos()
 };
 

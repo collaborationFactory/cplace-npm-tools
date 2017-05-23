@@ -42,6 +42,9 @@ const cli = meow(`
                 If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
+        
+        branches
+            Creates a visualization of the branches in the repository.
 
     Global options:
         --verbose

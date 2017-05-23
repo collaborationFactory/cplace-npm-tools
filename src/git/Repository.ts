@@ -5,7 +5,7 @@ import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
-import {IGitLogSummary, IGitStatus} from './models';
+import {IGitLogSummary, IGitRemoteBranchesAndCommits, IGitStatus} from './models';
 
 export class Repository {
 
@@ -154,4 +154,85 @@ export class Repository {
         });
     }
 
+    public getRemoteBranches(): Promise<string[]> {
+        return new Promise<string[]>((resolve, reject) => {
+            this.git.raw(['branch', '-r'], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log('result of git branch -r', result);
+                    const lines: string[] = result.match(/[^\r\n]+/g);
+                    const trimmedLines: string[] = [];
+                    lines.forEach((l) => {
+                        const trimmed = l.trim();
+                        if (trimmed.indexOf('origin/HEAD') < 0) {
+                            trimmedLines.push(trimmed.substring('origin/'.length));
+                        }
+                    });
+
+                    Global.isVerbose() && console.log('remote branches', trimmedLines);
+                    resolve(trimmedLines);
+                }
+            });
+        });
+    }
+
+    public getRemoteBranchesAndCommits(): Promise<IGitRemoteBranchesAndCommits[]> {
+        return new Promise<IGitRemoteBranchesAndCommits[]>((resolve, reject) => {
+            this.git.raw(['for-each-ref'], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log('result of git for-each-ref', result);
+                    const lines: string[] = result.match(/[^\r\n]+/g);
+                    const branchesAndCommits: IGitRemoteBranchesAndCommits[] = [];
+
+                    lines.forEach((l) => {
+                        const trimmed = l.trim();
+                        Global.isVerbose() && console.log('trimmed: ' + trimmed);
+                        const matched = /([a-z0-9]+)\s*commit\s*refs\/remotes\/origin\/(\S*)/.exec(trimmed);
+                        Global.isVerbose() && console.log('matched', matched);
+                        if (matched && matched.length === 3) {
+                            const branch = matched[2];
+                            const commit = matched[1];
+
+                            branchesAndCommits.push({branch, commit});
+                        }
+                    });
+
+                    Global.isVerbose() && console.log('branches and commits', branchesAndCommits);
+                    resolve(branchesAndCommits);
+                }
+            });
+        });
+    }
+
+    public getRemoteBranchesContainingCommit(commit: string): Promise<string[]> {
+        return new Promise<string[]>((resolve, reject) => {
+            this.git.raw(['branch', '-a', '--contains', commit], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log('result of git branch -a --contains ' + commit, result);
+                    const lines: string[] = result.match(/[^\r\n]+/g);
+                    const branches: string[] = [];
+
+                    lines.forEach((l) => {
+                        const trimmed = l.trim();
+                        Global.isVerbose() && console.log('trimmed: ' + trimmed);
+                        const matched = /remotes\/origin\/(\S*)/.exec(trimmed);
+                        Global.isVerbose() && console.log('matched', matched);
+                        if (matched && matched.length === 2) {
+                            if ('HEAD' !== matched[1]) {
+                                branches.push(matched[1]);
+                            }
+                        }
+                    });
+
+                    Global.isVerbose() && console.log('branches', branches);
+                    resolve(branches);
+                }
+            });
+        });
+    }
 }
