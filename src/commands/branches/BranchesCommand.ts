@@ -8,7 +8,11 @@ import * as simpleGit from 'simple-git';
 import {Repository} from '../../git/Repository';
 import {IGitRemoteBranchesAndCommits, IGitStatus} from '../../git/models';
 import * as os from 'os';
+import {fs} from '../../p/fs';
+
 export class BranchesCommand implements ICommand {
+
+    private static readonly FILE_NAME_BRANCHES_DOT: string = 'branches.dot';
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         return true;
@@ -23,7 +27,7 @@ export class BranchesCommand implements ICommand {
         let dotString = 'digraph G {' + eol;
 
         return repo.getRemoteBranchesAndCommits().then((result: IGitRemoteBranchesAndCommits[]) => {
-            const promises = result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
+            return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
                 return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit).then((branches: string[]) => {
                     const index = branches.indexOf(branchAndCommit.branch);
                     if (index > -1) {
@@ -33,14 +37,19 @@ export class BranchesCommand implements ICommand {
                         Global.isVerbose() && console.log('branch ' + branchAndCommit.branch + ' is contained in these branches: ' + branches);
                         Global.isVerbose() && console.log('');
                         branches.forEach((b: string) => {
-                            dotString += '    ' + branchAndCommit.branch + ' -> ' + b + ';' + eol;
+                            dotString += '    "' + branchAndCommit.branch + '" -> "' + b + '";' + eol;
                         });
                     }
                 });
-            });
-            return Promise.all(promises).then(() => {
+            })).then(() => {
                 dotString += '}';
                 console.log('dotString: ' + dotString);
+            }).then(() => {
+                return fs
+                    .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, dotString, 'utf8')
+                    .then(() => {
+                        console.log(`>> dot file has successfully been graphgenerated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
+                    });
             });
         });
     }
