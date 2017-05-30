@@ -43,8 +43,9 @@ const cli = meow(`
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
         
-        branches
+        branches (--regex <regex>)
             Creates a visualization of the remote branches and their dependencies of the repository.
+            If <regex> is not given "HEAD|attic\/.*" is used. Use quotes if you want to use the | symbol.
 
     Global options:
         --verbose

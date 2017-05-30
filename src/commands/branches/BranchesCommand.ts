@@ -15,13 +15,24 @@ export class BranchesCommand implements ICommand {
 
     private static readonly FILE_NAME_BRANCHES_PNG: string = 'branches.png';
 
+    private static readonly PARAMETER_BRANCHES_REGEX: string = 'regex';
+
     private branches2containingBranches: Map<string, string[]> = new Map();
 
     private reducedBranches2containingBranches: Map<string, string[]> = new Map();
 
     private styledBranches: string[] = [];
 
+    private regex: string;
+
     public prepareAndMayExecute(params: ICommandParameters): boolean {
+        const regex = params[BranchesCommand.PARAMETER_BRANCHES_REGEX] as string;
+        if (regex) {
+            this.regex = String(regex);
+        } else {
+            this.regex = String('HEAD|attic\/.*');
+        }
+        Global.isVerbose() && console.log('using regex ' + this.regex + ' for branch filtering');
         return true;
     }
 
@@ -31,10 +42,10 @@ export class BranchesCommand implements ICommand {
         const repo = new Repository();
 
         console.log('Collecting branches...');
-        return repo.getRemoteBranchesAndCommits().then((result: IGitRemoteBranchesAndCommits[]) => {
+        return repo.getRemoteBranchesAndCommits(this.regex).then((result: IGitRemoteBranchesAndCommits[]) => {
             console.log('Collecting branch dependencies...');
             return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
-                return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit).then((branches: string[]) => {
+                return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit, this.regex).then((branches: string[]) => {
                     const index = branches.indexOf(branchAndCommit.branch);
                     if (index > -1) {
                         branches.splice(index, 1);

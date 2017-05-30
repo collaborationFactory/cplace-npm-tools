@@ -30,6 +30,12 @@ export class Repository {
         });
     }
 
+    private static includeBranch(branch: string, regex: string): boolean {
+        const re = new RegExp(regex);
+        const match = branch.match(re);
+        return !(match !== null && branch === match[0]);
+    }
+
     public log(fromHash?: string, toHash?: string): Promise<IGitLogSummary> {
         return new Promise<IGitLogSummary>((resolve, reject) => {
             this.git.log(
@@ -177,7 +183,7 @@ export class Repository {
         });
     }
 
-    public getRemoteBranchesAndCommits(): Promise<IGitRemoteBranchesAndCommits[]> {
+    public getRemoteBranchesAndCommits(branchRegex: string): Promise<IGitRemoteBranchesAndCommits[]> {
         return new Promise<IGitRemoteBranchesAndCommits[]>((resolve, reject) => {
             this.git.raw(['for-each-ref'], (err, result: string) => {
                 if (err) {
@@ -196,7 +202,7 @@ export class Repository {
                             const branch = matched[2];
                             const commit = matched[1];
 
-                            if (branch !== 'HEAD') {
+                            if (Repository.includeBranch(branch, branchRegex)) {
                                 branchesAndCommits.push({branch, commit});
                             }
                         }
@@ -209,7 +215,7 @@ export class Repository {
         });
     }
 
-    public getRemoteBranchesContainingCommit(commit: string): Promise<string[]> {
+    public getRemoteBranchesContainingCommit(commit: string, branchRegex: string): Promise<string[]> {
         return new Promise<string[]>((resolve, reject) => {
             this.git.raw(['branch', '-a', '--contains', commit], (err, result: string) => {
                 if (err) {
@@ -225,7 +231,7 @@ export class Repository {
                         const matched = /remotes\/origin\/(\S*)/.exec(trimmed);
                         Global.isVerbose() && console.log('matched', matched);
                         if (matched && matched.length === 2) {
-                            if ('HEAD' !== matched[1]) {
+                            if (Repository.includeBranch(matched[1], branchRegex)) {
                                 branches.push(matched[1]);
                             }
                         }
