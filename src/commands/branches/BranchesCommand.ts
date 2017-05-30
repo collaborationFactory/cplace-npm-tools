@@ -55,7 +55,7 @@ export class BranchesCommand implements ICommand {
                 return fs
                     .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
-                        console.log(`>> dot file has successfully been graphgenerated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
+                        console.log(`>> dot file has successfully been generated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
                         console.log('>> you can now generate a png file with graphviz:');
                         console.log(`>> dot -Tpng ${BranchesCommand.FILE_NAME_BRANCHES_DOT} > ${BranchesCommand.FILE_NAME_BRANCHES_PNG}`);
                     });
