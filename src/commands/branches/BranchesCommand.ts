@@ -67,6 +67,9 @@ export class BranchesCommand implements ICommand {
             if (branch.indexOf('release/') === 0) {
                 dotString += '    "' + branch + '" [style=bold,color="red"];' + eol;
             }
+            if (branch.indexOf('customer/') === 0) {
+                dotString += '    "' + branch + '" [style=bold,color="blue"];' + eol;
+            }
         });
         dotString += '}';
         Global.isVerbose() && console.log('dotString: ' + dotString);
