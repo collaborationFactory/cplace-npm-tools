@@ -6,13 +6,19 @@ import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
 import * as simpleGit from 'simple-git';
 import {Repository} from '../../git/Repository';
-import {IGitRemoteBranchesAndCommits, IGitStatus} from '../../git/models';
+import {IGitRemoteBranchesAndCommits, IGitStatus, IBranch2ContainingBranches} from '../../git/models';
 import * as os from 'os';
 import {fs} from '../../p/fs';
 
 export class BranchesCommand implements ICommand {
 
     private static readonly FILE_NAME_BRANCHES_DOT: string = 'branches.dot';
+
+    private static readonly FILE_NAME_BRANCHES_PNG: string = 'branches.png';
+
+    private branches2containingBranches: Map<string, string[]> = new Map();
+
+    private reducedBranches2containingBranches: Map<string, string[]> = new Map();
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         return true;
@@ -22,9 +28,6 @@ export class BranchesCommand implements ICommand {
         Global.isVerbose() && console.log('running branches command in verbose mode');
 
         const repo = new Repository();
-        const eol = os.EOL;
-
-        let dotString = 'digraph G {' + eol;
 
         return repo.getRemoteBranchesAndCommits().then((result: IGitRemoteBranchesAndCommits[]) => {
             return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
@@ -37,20 +40,84 @@ export class BranchesCommand implements ICommand {
                         Global.isVerbose() && console.log('branch ' + branchAndCommit.branch + ' is contained in these branches: ' + branches);
                         Global.isVerbose() && console.log('');
                         branches.forEach((b: string) => {
-                            dotString += '    "' + branchAndCommit.branch + '" -> "' + b + '";' + eol;
+                            this.put(branchAndCommit.branch, b);
                         });
                     }
                 });
             })).then(() => {
-                dotString += '}';
-                console.log('dotString: ' + dotString);
+                this.reduce();
             }).then(() => {
                 return fs
-                    .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, dotString, 'utf8')
+                    .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
                         console.log(`>> dot file has successfully been graphgenerated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
+                        console.log(`>> dot -Tpng ${BranchesCommand.FILE_NAME_BRANCHES_DOT} > ${BranchesCommand.FILE_NAME_BRANCHES_PNG}`);
                     });
             });
         });
+    }
+
+    private generateDot(branches2containingBranches: Map<string, string[]>): string {
+        const eol = os.EOL;
+        let dotString = 'digraph G {' + eol;
+        branches2containingBranches.forEach((containingBranches, branch, map) => {
+            containingBranches.forEach((containingBranch) => {
+                dotString += '    "' + branch + '" -> "' + containingBranch + '";' + eol;
+            });
+        });
+        dotString += '}';
+        Global.isVerbose() && console.log('dotString: ' + dotString);
+        return dotString;
+    }
+
+    private put(branch: string, containingBranch: string): void {
+        let containingBranches;
+        if (this.branches2containingBranches.has(branch)) {
+            containingBranches = this.branches2containingBranches.get(branch);
+        } else {
+            containingBranches = [];
+            this.branches2containingBranches.set(branch, containingBranches);
+        }
+        if (containingBranches.indexOf(containingBranch) >= 0) {
+            return;
+        } else {
+            containingBranches.push(containingBranch);
+        }
+    }
+
+    private reduce(): void {
+        Global.isVerbose() && console.log('reducing');
+
+        // cloning into reducedBranches2containingBranches
+        this.branches2containingBranches.forEach((containingBranches, branch, map) => {
+            this.reducedBranches2containingBranches.set(branch, containingBranches.slice(0));
+        });
+
+        // reducing
+        this.branches2containingBranches.forEach((containingBranches, branch, map) => {
+            containingBranches.forEach((containingBranch) => {
+                this.reduceEdge(branch, containingBranch);
+            });
+        });
+    }
+
+    private reduceEdge(branch: string, containingBranch: string): void {
+        Global.isVerbose() && console.log('reducing ' + branch + ' -> ' + containingBranch);
+        while (this.edgeHasBeenRemoved(branch, containingBranch)) {
+            Global.isVerbose() && console.log('edge has been removed');
+        }
+    }
+
+    private edgeHasBeenRemoved(branch: string, containingBranch: string): boolean {
+        this.reducedBranches2containingBranches.forEach((cbs, b, map) => {
+            const indexOfContainingBranch = cbs.indexOf(containingBranch);
+            const cbsContainsBoth = cbs.indexOf(branch) >= 0 && indexOfContainingBranch >= 0;
+            if (cbsContainsBoth) {
+                cbs.splice(indexOfContainingBranch, 1);
+                // Global.isVerbose() && console.log(this.generateDot(this.reducedBranches2containingBranches));
+                return true;
+            }
+        });
+        return false;
     }
 }

@@ -196,7 +196,9 @@ export class Repository {
                             const branch = matched[2];
                             const commit = matched[1];
 
-                            branchesAndCommits.push({branch, commit});
+                            if (branch !== 'HEAD') {
+                                branchesAndCommits.push({branch, commit});
+                            }
                         }
                     });
 
