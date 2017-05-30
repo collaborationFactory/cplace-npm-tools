@@ -28,7 +28,9 @@ export class BranchesCommand implements ICommand {
 
         const repo = new Repository();
 
+        console.log('Collecting branches...');
         return repo.getRemoteBranchesAndCommits().then((result: IGitRemoteBranchesAndCommits[]) => {
+            console.log('Collecting branch dependencies...');
             return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
                 return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit).then((branches: string[]) => {
                     const index = branches.indexOf(branchAndCommit.branch);
@@ -44,8 +46,10 @@ export class BranchesCommand implements ICommand {
                     }
                 });
             })).then(() => {
+                console.log('Reducing dependencies...');
                 this.reduce();
             }).then(() => {
+                console.log('Generating dot file...');
                 return fs
                     .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
@@ -69,6 +73,9 @@ export class BranchesCommand implements ICommand {
             }
             if (branch.indexOf('customer/') === 0) {
                 dotString += '    "' + branch + '" [style=bold,color="blue"];' + eol;
+            }
+            if (branch.indexOf('master') === 0) {
+                dotString += '    "' + branch + '" [style=bold,color="green"];' + eol;
             }
         });
         dotString += '}';
