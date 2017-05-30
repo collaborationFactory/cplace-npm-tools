@@ -40,8 +40,3 @@ export interface IGitRemoteBranchesAndCommits {
     branch: string;
     commit: string;
 }
-
-export interface IBranch2ContainingBranches {
-    branch: string;
-    containingBranches: string[];
-}

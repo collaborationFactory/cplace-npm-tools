@@ -4,9 +4,8 @@
 import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
-import * as simpleGit from 'simple-git';
 import {Repository} from '../../git/Repository';
-import {IGitRemoteBranchesAndCommits, IGitStatus, IBranch2ContainingBranches} from '../../git/models';
+import {IGitRemoteBranchesAndCommits} from '../../git/models';
 import * as os from 'os';
 import {fs} from '../../p/fs';
 
@@ -51,6 +50,7 @@ export class BranchesCommand implements ICommand {
                     .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
                         console.log(`>> dot file has successfully been graphgenerated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
+                        console.log('>> now you can generate a png file with graphviz:');
                         console.log(`>> dot -Tpng ${BranchesCommand.FILE_NAME_BRANCHES_DOT} > ${BranchesCommand.FILE_NAME_BRANCHES_PNG}`);
                     });
             });

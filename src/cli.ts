@@ -44,7 +44,7 @@ const cli = meow(`
                 Clones all parent repos if missing. <force> has no effect for this command.
         
         branches
-            Creates a visualization of the branches in the repository.
+            Creates a visualization of the remote branches and their dependencies of the repository.
 
     Global options:
         --verbose
