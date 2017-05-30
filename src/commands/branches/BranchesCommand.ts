@@ -19,6 +19,8 @@ export class BranchesCommand implements ICommand {
 
     private reducedBranches2containingBranches: Map<string, string[]> = new Map();
 
+    private styledBranches: string[] = [];
+
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         return true;
     }
@@ -62,25 +64,37 @@ export class BranchesCommand implements ICommand {
     }
 
     private generateDot(branches2containingBranches: Map<string, string[]>): string {
-        const eol = os.EOL;
-        let dotString = 'digraph G {' + eol;
+        let dotString = 'digraph G {' + os.EOL;
         branches2containingBranches.forEach((containingBranches, branch, map) => {
             containingBranches.forEach((containingBranch) => {
-                dotString += '    "' + branch + '" -> "' + containingBranch + '";' + eol;
+                dotString += '    "' + branch + '" -> "' + containingBranch + '";' + os.EOL;
+                dotString = this.addStyle(dotString, containingBranch);
             });
-            if (branch.indexOf('release/') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="red"];' + eol;
-            }
-            if (branch.indexOf('customer/') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="blue"];' + eol;
-            }
-            if (branch.indexOf('master') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="green"];' + eol;
-            }
+            dotString = this.addStyle(dotString, branch);
         });
         dotString += '}';
         Global.isVerbose() && console.log('dotString: ' + dotString);
         return dotString;
+    }
+
+    private addStyle(dotString: string, branch: string): string {
+        if (this.styledBranches.indexOf(branch) >= 0) {
+            return dotString;
+        } else {
+            if (branch.indexOf('release/') === 0) {
+                dotString += '    "' + branch + '" [style=bold,color="red"];' + os.EOL;
+                this.styledBranches.push(branch);
+            }
+            if (branch.indexOf('customer/') === 0) {
+                dotString += '    "' + branch + '" [style=bold,color="blue"];' + os.EOL;
+                this.styledBranches.push(branch);
+            }
+            if (branch.indexOf('master') === 0) {
+                dotString += '    "' + branch + '" [style=bold,color="green"];' + os.EOL;
+                this.styledBranches.push(branch);
+            }
+            return dotString;
+        }
     }
 
     private put(branch: string, containingBranch: string): void {
