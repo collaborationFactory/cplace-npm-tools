@@ -14,3 +14,12 @@ After installation you can just execute:
 $ cplace-cli
 ```
 to get the available commands and help.
+
+
+## Development
+
+```
+$ npm install typings --global
+$ npm install
+$ typings install
+```
