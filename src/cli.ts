@@ -45,6 +45,17 @@ const cli = meow({ help: `
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
 
+        flow --upmerge [--no-push] [--release <version>]
+            Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your local
+            branches. All merges will be done on new, temporary local branches and will then be pushed to 
+
+            --no-push
+                Will not push changes, dry run only to check for conflicts
+
+            --release <version>
+                Merge from this release version upwards (e.g. "4.38"). If not specified and the current branch is tracking
+                a release branch, this release version will be used.
+
     Global options:
         --verbose
             Print verbose information to console
