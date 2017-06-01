@@ -74,6 +74,7 @@ if (!cli.input.length) {
         .then(
             () => {
                 // completed
+                process.exit(0);
             },
             (e) => {
                 console.error('Could not execute given command:');
