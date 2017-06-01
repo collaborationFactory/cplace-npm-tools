@@ -17,6 +17,12 @@ export class Repository {
 
     constructor(repoPath: string = './') {
         this.git = simpleGit(repoPath);
+        if(Global.isVerbose()) {
+            this.git.outputHandler(function (command, stdout, stderr) {
+                stdout.pipe(process.stdout);
+                stderr.pipe(process.stderr);
+            });
+        }
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
@@ -98,7 +104,7 @@ export class Repository {
         });
     }
 
-    public checkoutBranch(branch: string): Promise<void> {
+    public checkoutBranch(branch: string|string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch ${branch}`);
             this.git.checkout(branch, (err) => {
@@ -111,6 +117,57 @@ export class Repository {
                 }
             });
         });
+    }
+
+    public deleteBranch(branch: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`deleting branch`, branch);
+            this.git.branch(['-D', branch], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`deleted branch`, branch);
+                    resolve();
+                }
+            })
+        });
+    }
+
+    public merge(otherBranch: string, noFF?: boolean): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
+            let options = [otherBranch];
+            noFF && options.push('--no-ff');
+            this.git.merge(options, (err, data) => {
+                if (err) {
+                    reject(err);
+                }
+                else if(data.startsWith('CONFLICT')) {
+                    // abort if merge failed
+                    this.git.mergeFromTo('--abort', undefined, (err2) => {
+                        reject(data);
+                    });
+                } else {
+                    Global.isVerbose() && console.log(`merged ${otherBranch} into ${this.repoName}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public push(remote: string, remoteBranchName: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`pushing to ${remote}/${remoteBranchName}`);
+            this.git.push(remote, 'HEAD:' + remoteBranchName, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`pushed to ${remote}/${remoteBranchName}`);
+                    resolve();
+                }
+            });
+        });
+
     }
 
     public checkoutCommit(commit: string): Promise<void> {

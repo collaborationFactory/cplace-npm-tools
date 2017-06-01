@@ -6,7 +6,7 @@ import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
 
-const cli = meow(`
+const cli = meow({ help: `
     Usage:
         $ cplace-cli <command>
        
@@ -48,7 +48,7 @@ const cli = meow(`
     Global options:
         --verbose
             Print verbose information to console
-`);
+`}, { 'string': 'release' });
 
 if (!cli.input.length) {
     console.error('missing required parameter <command>');

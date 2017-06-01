@@ -36,6 +36,8 @@ declare module 'simple-git' {
         }, handlerFn: HandlerFunction): Git;
 
         branch(options: string[], handlerFn: (error: any, branchSummary: BranchSummary) => void): Git;
+
+        merge(options: string[], handlerFn: HandlerFunction): Git;
     }
 
     /* tslint:enable */
