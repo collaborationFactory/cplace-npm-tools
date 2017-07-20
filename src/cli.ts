@@ -36,10 +36,12 @@ const cli = meow(`
             Handles repo specific actions where <subcommand> is one of the following:
             1. --update|-u [--nofetch]:
                 Updates all parent repos.
-                If <force> is set, the update will take place even if the working copies of the parent repos are not clean.                
-            2. --write|-w:
+                If <force> is set the update will take place even if the working copies of the parent repos are not clean.                
+            2. --write|-w [--freeze]:
                 Write the states of the parent repos to parent-repos.json.
-                If <force> is set, the update will take place even if the working copies of the parent repos are not clean.
+                If <freeze> is set the exact commit hashes of the currently checked out parent repos will be written regardless
+                whether there already was a commit hash in the descriptor or not.
+                If <force> is set the update will take place even if the working copies of the parent repos are not clean.
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
 
