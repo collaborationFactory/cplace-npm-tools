@@ -33,7 +33,13 @@ export class UpdateRepos extends AbstractReposCommand {
                     .then(() => repo.status())
                     .then((status) => this.checkRepoClean(repo, status))
                     .then(() => repo.checkoutBranch(branch))
-                    .then(() => repo.checkoutCommit(commit))
+                    .then(() => {
+                        if (commit) {
+                            return repo.checkoutCommit(commit);
+                        } else {
+                            return repo.pullOnlyFastForward();
+                        }
+                    })
                     .then(() => repo.resetHard())
                     .then(() => {
                         Global.isVerbose() && console.log('successfully updated', repoName);

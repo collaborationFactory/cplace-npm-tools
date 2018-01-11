@@ -2,12 +2,13 @@
 CHANGELOG.md
 
 ### IntelliJ ###
-.idea/workspace.xml
+.idea/
 
 ### Node ###
 # Logs
 logs
 *.log
+.npmrc
 npm-debug.log*
 
 # Runtime data

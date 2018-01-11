@@ -133,13 +133,37 @@ export class Repository {
         }
     }
 
+    public pullOnlyFastForward(): Promise<void> {
+        return this.status()
+            .then(({tracking}) => {
+                const i = tracking.indexOf('/');
+                if (i < 0) {
+                    return Promise.reject(`cannot determine remote and branch for ${tracking}`);
+                }
+
+                const remote = tracking.substring(0, i);
+                const branch = tracking.substr(i + 1);
+
+                Global.isVerbose() && console.log(`pulling branch ${branch} from remote ${remote}`);
+                return new Promise((resolve, reject) => {
+                    this.git.pull(remote, branch, {'--ff-only': true}, (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            });
+    }
+
     public resetHard(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.git.reset('hard', (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} has been resetted`);
+                    Global.isVerbose() && console.log(`repo ${this.repoName} has been reset`);
                     resolve();
                 }
             });
