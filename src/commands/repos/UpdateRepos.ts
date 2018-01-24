@@ -13,47 +13,23 @@ export class UpdateRepos extends AbstractReposCommand {
     protected noFetch: boolean;
 
     public execute(): Promise<void> {
-        const promises = Object
-            .keys(this.parentRepos)
-            .map((repoName) => {
-                Global.isVerbose() && console.log('repo', repoName);
-
-                const repoProperties = this.parentRepos[repoName];
-                Global.isVerbose() && console.log('repoProperties', repoProperties);
-
-                const commit = repoProperties.commit;
-                Global.isVerbose() && console.log('commit', commit);
-
-                const branch = repoProperties.branch;
-                Global.isVerbose() && console.log('branch', branch);
-
-                const repo = new Repository(`../${repoName}`);
-                const p = this.noFetch ? Promise.resolve() : repo.fetch();
-                return p
-                    .then(() => repo.status())
-                    .then((status) => this.checkRepoClean(repo, status))
-                    .then(() => repo.checkoutBranch(branch))
-                    .then(() => repo.resetHard())
-                    .then(() => {
-                        if (commit) {
-                            return repo.checkoutCommit(commit);
-                        } else {
-                            return repo.pullOnlyFastForward();
-                        }
-                    })
-                    .then(() => {
-                        Global.isVerbose() && console.log('successfully updated', repoName);
-                    });
-            });
-
-        return Promise
-            .all(promises)
-            .then(
-                () => {
-                    // pass
-                },
-                (err) => Promise.reject('failed to update repos: ' + err)
-            );
+        const repoNames = Object.keys(this.parentRepos);
+        return new Promise<void>((resolve, reject) => {
+            const handleNext = (i: number) => {
+                if (i === repoNames.length) {
+                    resolve();
+                }
+                const repoName = repoNames[i];
+                this.handleRepo(repoName).then(
+                    () => handleNext(i + 1),
+                    (err) => {
+                        Global.isVerbose() && console.error('failed to update repos:', err);
+                        reject(err);
+                    }
+                );
+            };
+            handleNext(0);
+        });
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
@@ -62,5 +38,36 @@ export class UpdateRepos extends AbstractReposCommand {
             Global.isVerbose() && console.log('running in nofetch mode');
         }
         return true;
+    }
+
+    private handleRepo(repoName: string): Promise<void> {
+        Global.isVerbose() && console.log('repo', repoName);
+
+        const repoProperties = this.parentRepos[repoName];
+        Global.isVerbose() && console.log('repoProperties', repoProperties);
+
+        const commit = repoProperties.commit;
+        Global.isVerbose() && console.log('commit', commit);
+
+        const branch = repoProperties.branch;
+        Global.isVerbose() && console.log('branch', branch);
+
+        const repo = new Repository(`../${repoName}`);
+        const p = this.noFetch ? Promise.resolve() : repo.fetch();
+        return p
+            .then(() => repo.status())
+            .then((status) => this.checkRepoClean(repo, status))
+            .then(() => repo.checkoutBranch(branch))
+            .then(() => repo.resetHard())
+            .then(() => {
+                if (commit) {
+                    return repo.checkoutCommit(commit);
+                } else {
+                    return repo.pullOnlyFastForward();
+                }
+            })
+            .then(() => {
+                Global.isVerbose() && console.log('successfully updated', repoName);
+            });
     }
 }
