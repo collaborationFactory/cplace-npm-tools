@@ -88,7 +88,7 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of gitStatus', status);
+                    Global.isVerbose() && console.log(`result of gitStatus in ${this.repoName}`, status);
                     resolve(status);
                 }
             });
