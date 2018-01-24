@@ -16,23 +16,9 @@ export class WriteRepos extends AbstractReposCommand {
     private freeze: boolean = false;
 
     public execute(): Promise<void> {
-        const promises = Object
-            .keys(this.parentRepos)
-            .map((repoName) => {
-                Global.isVerbose() && console.log('repo', repoName);
-                const repoProperties = this.parentRepos[repoName];
-                Global.isVerbose() && console.log('repoProperties', repoProperties);
-
-                const repo = new Repository(`../${repoName}`);
-                return repo
-                    .status()
-                    .then((status) => this.checkRepoClean(repo, status))
-                    .then((status) => this.mapStatus(repo, status))
-                    .then((status) => ({repoName, status}));
-            });
-
         return Promise
-            .all(promises)
+            .resolve(Object.keys(this.parentRepos))
+            .map((repoName: string) => this.handleRepo(repoName), {concurrency: 1})
             .then((states) => {
                 const newParentRepos: IReposDescriptor = {};
                 states.forEach((s) => newParentRepos[s.repoName] = s.status);
@@ -53,6 +39,18 @@ export class WriteRepos extends AbstractReposCommand {
         this.freeze = params[WriteRepos.PARAMETER_FREEZE] as boolean;
         Global.isVerbose() && this.freeze && console.log('Freezing repo states');
         return true;
+    }
+
+    private handleRepo(repoName: string): Promise<{ repoName: string; status: IRepoStatus }> {
+        Global.isVerbose() && console.log('repo', repoName);
+        const repoProperties = this.parentRepos[repoName];
+        Global.isVerbose() && console.log('repoProperties', repoProperties);
+
+        const repo = new Repository(`../${repoName}`);
+        return repo.status()
+            .then((status) => this.checkRepoClean(repo, status))
+            .then((status) => this.mapStatus(repo, status))
+            .then((status) => ({repoName, status}));
     }
 
     private mapStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {

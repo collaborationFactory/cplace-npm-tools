@@ -13,23 +13,11 @@ export class UpdateRepos extends AbstractReposCommand {
     protected noFetch: boolean;
 
     public execute(): Promise<void> {
-        const repoNames = Object.keys(this.parentRepos);
-        return new Promise<void>((resolve, reject) => {
-            const handleNext = (i: number) => {
-                if (i === repoNames.length) {
-                    resolve();
-                    return;
-                }
-                const repoName = repoNames[i];
-                this.handleRepo(repoName).then(
-                    () => handleNext(i + 1),
-                    (err) => {
-                        Global.isVerbose() && console.error('failed to update repos:', err);
-                        reject(err);
-                    }
-                );
-            };
-            handleNext(0);
+        return Promise.each(
+            Object.keys(this.parentRepos),
+            (repoName) => this.handleRepo(repoName)
+        ).then(() => {
+            Global.isVerbose() && console.log('all repositories successfully updated');
         });
     }
 
