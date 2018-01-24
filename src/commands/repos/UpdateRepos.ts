@@ -18,6 +18,7 @@ export class UpdateRepos extends AbstractReposCommand {
             const handleNext = (i: number) => {
                 if (i === repoNames.length) {
                     resolve();
+                    return;
                 }
                 const repoName = repoNames[i];
                 this.handleRepo(repoName).then(
