@@ -9,7 +9,7 @@ import {IGitRemoteBranchesAndCommits} from '../../git/models';
 import * as os from 'os';
 import {fs} from '../../p/fs';
 
-export class BranchesCommand implements ICommand {
+export class VisualizeCommand implements ICommand {
 
     private static readonly FILE_NAME_BRANCHES_DOT: string = 'branches.dot';
 
@@ -26,7 +26,7 @@ export class BranchesCommand implements ICommand {
     private regex: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
-        const regex = params[BranchesCommand.PARAMETER_BRANCHES_REGEX] as string;
+        const regex = params[VisualizeCommand.PARAMETER_BRANCHES_REGEX] as string;
         if (regex) {
             this.regex = String(regex);
         } else {
@@ -64,11 +64,11 @@ export class BranchesCommand implements ICommand {
             }).then(() => {
                 console.log('Generating dot file...');
                 return fs
-                    .writeFileAsync(BranchesCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
+                    .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
-                        console.log(`>> dot file has successfully been generated in ${BranchesCommand.FILE_NAME_BRANCHES_DOT}`);
+                        console.log(`>> dot file has successfully been generated in ${VisualizeCommand.FILE_NAME_BRANCHES_DOT}`);
                         console.log('>> you can now generate a png file with graphviz:');
-                        console.log(`>> dot -Tpng ${BranchesCommand.FILE_NAME_BRANCHES_DOT} > ${BranchesCommand.FILE_NAME_BRANCHES_PNG}`);
+                        console.log(`>> dot -Tpng ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PNG}`);
                     });
             });
         });

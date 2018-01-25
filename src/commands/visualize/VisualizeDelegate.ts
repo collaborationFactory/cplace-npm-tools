@@ -3,14 +3,14 @@
  */
 import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
-import {BranchesCommand} from './BranchesCommand';
+import {VisualizeCommand} from './VisualizeCommand';
 
-export class BranchesDelegate implements ICommand {
+export class VisualizeDelegate implements ICommand {
 
     private cmd: ICommand;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
-        this.cmd = new BranchesCommand();
+        this.cmd = new VisualizeCommand();
         return this.cmd.prepareAndMayExecute(params);
     }
 
