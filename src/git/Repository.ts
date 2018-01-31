@@ -232,8 +232,32 @@ export class Repository {
                         }
                     });
 
-                    Global.isVerbose() && console.log('branches and commits', branchesAndCommits);
-                    resolve(branchesAndCommits);
+                    Global.isVerbose() && console.log('all branches and commits before filtering', branchesAndCommits);
+
+                    // filter out branches that are on the same commit
+                    const filteredBranchesAndCommits = branchesAndCommits.filter((branchAndCommit: IGitRemoteBranchesAndCommits) => {
+                        const branches: string[] = [];
+                        for (const bac of branchesAndCommits) {
+                            if (bac.commit === branchAndCommit.commit) {
+                                branches.push(bac.branch);
+                            }
+                        }
+                        if (branches.length === 1) {
+                            return true;
+                        } else {
+                            if (branches[0] === branchAndCommit.branch) {
+                                console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit +
+                                    ', ignoring branch ' + branchAndCommit.branch);
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+                    });
+
+                    Global.isVerbose() && console.log('all branches and commits after filtering', filteredBranchesAndCommits);
+
+                    resolve(filteredBranchesAndCommits);
                 }
             });
         });
