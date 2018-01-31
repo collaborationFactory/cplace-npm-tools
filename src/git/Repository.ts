@@ -246,7 +246,7 @@ export class Repository {
                             return true;
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
-                                console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit +
+                                console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
                                     ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
