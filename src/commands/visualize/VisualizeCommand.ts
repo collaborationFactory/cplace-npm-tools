@@ -141,21 +141,14 @@ export class VisualizeCommand implements ICommand {
 
     private reduceEdge(branch: string, containingBranch: string): void {
         Global.isVerbose() && console.log('reducing ' + branch + ' -> ' + containingBranch);
-        while (this.edgeHasBeenRemoved(branch, containingBranch)) {
-            Global.isVerbose() && console.log('edge has been removed');
-        }
-    }
-
-    private edgeHasBeenRemoved(branch: string, containingBranch: string): boolean {
         this.reducedBranches2containingBranches.forEach((cbs, b, map) => {
             const indexOfContainingBranch = cbs.indexOf(containingBranch);
             const cbsContainsBoth = cbs.indexOf(branch) >= 0 && indexOfContainingBranch >= 0;
             if (cbsContainsBoth) {
                 cbs.splice(indexOfContainingBranch, 1);
-                // Global.isVerbose() && console.log(this.generateDot(this.reducedBranches2containingBranches));
-                return true;
+                Global.isVerbose() && console.log('removing edge between ' + branch + ' and ' + containingBranch);
             }
         });
-        return false;
     }
+
 }
