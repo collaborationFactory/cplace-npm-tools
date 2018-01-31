@@ -15,7 +15,9 @@ export class VisualizeCommand implements ICommand {
 
     private static readonly FILE_NAME_BRANCHES_PNG: string = 'branches.png';
 
-    private static readonly PARAMETER_BRANCHES_REGEX: string = 'regex';
+    private static readonly PARAMETER_BRANCHES_REGEX_FOR_EXCLUSION: string = 'regexForExclusion';
+
+    private static readonly PARAMETER_BRANCHES_REGEX_FOR_INCLUSION: string = 'regexForInclusion';
 
     private branches2containingBranches: Map<string, string[]> = new Map();
 
@@ -23,16 +25,29 @@ export class VisualizeCommand implements ICommand {
 
     private styledBranches: string[] = [];
 
-    private regex: string;
+    private regexForExclusion: string;
+
+    private regexForInclusion: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
-        const regex = params[VisualizeCommand.PARAMETER_BRANCHES_REGEX] as string;
-        if (regex) {
-            this.regex = String(regex);
-        } else {
-            this.regex = String('HEAD|attic\/.*');
+        for (const param of Object.keys(params)) {
+            Global.isVerbose() && console.log('param', param);
         }
-        Global.isVerbose() && console.log('using regex ' + this.regex + ' for branch filtering');
+        const regexForExclusion = params[VisualizeCommand.PARAMETER_BRANCHES_REGEX_FOR_EXCLUSION] as string;
+        if (regexForExclusion) {
+            this.regexForExclusion = String(regexForExclusion);
+        } else {
+            this.regexForExclusion = String('HEAD|attic\/.*');
+        }
+        Global.isVerbose() && console.log('using regexForExclusion ' + this.regexForExclusion + ' for branch filtering');
+
+        const regexForInclusion = params[VisualizeCommand.PARAMETER_BRANCHES_REGEX_FOR_INCLUSION] as string;
+        if (regexForInclusion) {
+            this.regexForInclusion = String(regexForInclusion);
+        } else {
+            this.regexForInclusion = String('');
+        }
+        Global.isVerbose() && console.log('using regexForInclusion ' + this.regexForInclusion + ' for branch filtering');
         return true;
     }
 
@@ -42,10 +57,10 @@ export class VisualizeCommand implements ICommand {
         const repo = new Repository();
 
         console.log('Collecting branches...');
-        return repo.getRemoteBranchesAndCommits(this.regex).then((result: IGitRemoteBranchesAndCommits[]) => {
+        return repo.getRemoteBranchesAndCommits(this.regexForExclusion, this.regexForInclusion).then((result: IGitRemoteBranchesAndCommits[]) => {
             console.log('Collecting branch dependencies...');
             return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
-                return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit, this.regex).then((branches: string[]) => {
+                return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit, this.regexForExclusion, this.regexForInclusion).then((branches: string[]) => {
                     const index = branches.indexOf(branchAndCommit.branch);
                     if (index > -1) {
                         branches.splice(index, 1);

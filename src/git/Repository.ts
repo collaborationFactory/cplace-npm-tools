@@ -30,10 +30,16 @@ export class Repository {
         });
     }
 
-    private static includeBranch(branch: string, regex: string): boolean {
-        const re = new RegExp(regex);
-        const match = branch.match(re);
-        return !(match !== null && branch === match[0]);
+    private static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
+        if (regexForInclusion.length > 0) {
+            const re = new RegExp(regexForInclusion);
+            const match = branch.match(re);
+            return match !== null && branch === match[0];
+        } else {
+            const re = new RegExp(regexForExclusion);
+            const match = branch.match(re);
+            return !(match !== null && branch === match[0]);
+        }
     }
 
     public log(fromHash?: string, toHash?: string): Promise<IGitLogSummary> {
@@ -207,7 +213,7 @@ export class Repository {
         });
     }
 
-    public getRemoteBranchesAndCommits(branchRegex: string): Promise<IGitRemoteBranchesAndCommits[]> {
+    public getRemoteBranchesAndCommits(branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<IGitRemoteBranchesAndCommits[]> {
         return new Promise<IGitRemoteBranchesAndCommits[]>((resolve, reject) => {
             this.git.raw(['for-each-ref'], (err, result: string) => {
                 if (err) {
@@ -226,7 +232,7 @@ export class Repository {
                             const branch = matched[2];
                             const commit = matched[1];
 
-                            if (Repository.includeBranch(branch, branchRegex)) {
+                            if (Repository.includeBranch(branch, branchRegexForExclusion, branchRegexForInclusion)) {
                                 branchesAndCommits.push({branch, commit});
                             }
                         }
@@ -263,7 +269,7 @@ export class Repository {
         });
     }
 
-    public getRemoteBranchesContainingCommit(commit: string, branchRegex: string): Promise<string[]> {
+    public getRemoteBranchesContainingCommit(commit: string, branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<string[]> {
         return new Promise<string[]>((resolve, reject) => {
             this.git.raw(['branch', '-a', '--contains', commit], (err, result: string) => {
                 if (err) {
@@ -279,7 +285,7 @@ export class Repository {
                         const matched = /remotes\/origin\/(\S*)/.exec(trimmed);
                         Global.isVerbose() && console.log('matched', matched);
                         if (matched && matched.length === 2) {
-                            if (Repository.includeBranch(matched[1], branchRegex)) {
+                            if (Repository.includeBranch(matched[1], branchRegexForExclusion, branchRegexForInclusion)) {
                                 branches.push(matched[1]);
                             }
                         }
