@@ -141,7 +141,7 @@ export class Repository {
             this.git.merge(options, (err, data) => {
                 if (err) {
                     reject(err);
-                } else if (data.startsWith('CONFLICT')) {
+                } else if (data.conflicts.length > 0) {
                     // abort if merge failed
                     this.git.mergeFromTo('--abort', undefined, (err2) => {
                         reject(data);
