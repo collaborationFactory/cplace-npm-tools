@@ -15,13 +15,14 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_REMOTE: string = 'remote';
     private static readonly PARAMETER_PUSH: string = 'push';
     private static readonly PARAMETER_RELEASE: string = 'release';
+    private static readonly PARAMETER_SHOW_FILES: string = 'show-files';
 
     private repo: Repository;
     private remote: string = 'origin';
     private push: boolean;
     private release: string;
+    private showFiles: boolean;
 
-    private releaseBranchPattern: RegExp = new RegExp(Upmerge.RELEASE_BRANCH_PATTERN);
     private remoteReleaseBranchPattern: RegExp;
 
     private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
@@ -40,6 +41,7 @@ export class Upmerge implements ICommand {
         if (typeof release === 'string') {
             this.release = release;
         }
+        this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] !== false;
 
         this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
 
@@ -185,7 +187,7 @@ export class Upmerge implements ICommand {
                     const tempBranchName = this.tempBranchName(branch.name);
                     return this.repo.checkoutBranch(['-b', tempBranchName, branch.name])
                         .then(() => cleanup.push(tempBranchName))
-                        .then(() => this.repo.merge(tempSrcBranch, true).catch((err) =>
+                        .then(() => this.repo.merge(tempSrcBranch, true, this.showFiles).catch((err) =>
                             Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)
                         ))
                         .then(() => {

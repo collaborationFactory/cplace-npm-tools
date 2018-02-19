@@ -133,7 +133,7 @@ export class Repository {
         });
     }
 
-    public merge(otherBranch: string, noFF?: boolean): Promise<void> {
+    public merge(otherBranch: string, noFF?: boolean, listFiles?: boolean): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
             const options = [otherBranch];
@@ -148,6 +148,14 @@ export class Repository {
                     });
                 } else {
                     Global.isVerbose() && console.log(`merged ${otherBranch} into ${this.repoName}`);
+                    if (listFiles) {
+                        if (data.files.length > 0) {
+                            console.log('The following files have been merged: ');
+                            data.files.forEach((file) => console.log(file));
+                        } else {
+                            console.log('Nothing to merge.');
+                        }
+                    }
                     resolve();
                 }
             });
