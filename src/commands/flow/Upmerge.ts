@@ -10,18 +10,20 @@ import * as randomatic from 'randomatic';
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
-    private static readonly RELEASE_BRANCH_PATTERN: string = 'release/((\\d+)(\.\\d+){0,2})';
+    private static readonly RELEASE_BRANCH_PATTERN: string = '((\\d+)(\.\\d+){0,2})';
 
     private static readonly PARAMETER_REMOTE: string = 'remote';
     private static readonly PARAMETER_PUSH: string = 'push';
     private static readonly PARAMETER_RELEASE: string = 'release';
     private static readonly PARAMETER_SHOW_FILES: string = 'show-files';
+    private static readonly PARAMETER_CUSTOMER: string = 'customer';
 
     private repo: Repository;
     private remote: string = 'origin';
     private push: boolean;
     private release: string;
     private showFiles: boolean;
+    private customer: string;
 
     private remoteReleaseBranchPattern: RegExp;
 
@@ -43,7 +45,12 @@ export class Upmerge implements ICommand {
         }
         this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] !== false;
 
-        this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
+        const customer = params[Upmerge.PARAMETER_CUSTOMER];
+        if (typeof customer === 'string') {
+            this.customer = customer;
+        }
+
+        this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/release/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
 
         return true;
     }
@@ -109,6 +116,8 @@ export class Upmerge implements ICommand {
     private filterReleaseBranchesAndCreateOrder(release: ReleaseNumber, branches: IGitBranchDetails[]): IGitBranchDetails[] {
         const trackedRemoteBranches = new Map<String, { branch: IGitBranchDetails, releaseNumber: ReleaseNumber }>();
 
+        const customerBranchPattern = new RegExp(`^${this.remote}/customer/${this.customer}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
+
         branches.forEach((branch) => {
             if (branch.isRemote && !trackedRemoteBranches.has(branch.name)) {
                 let version: string;
@@ -116,7 +125,11 @@ export class Upmerge implements ICommand {
                 if (branch.name === `${this.remote}/master`) {
                     version = 'master';
                 } else {
-                    const match = this.remoteReleaseBranchPattern.exec(branch.name);
+                    let match = this.remoteReleaseBranchPattern.exec(branch.name);
+                    if (!match && this.customer) {
+                        match = customerBranchPattern.exec(branch.name);
+                        branch.customer = this.customer;
+                    }
                     if (!match || match.length < 2) {
                         return;
                     }
@@ -135,7 +148,14 @@ export class Upmerge implements ICommand {
             .map((b) => b[1])
             .filter((b) => release.compareTo(b.releaseNumber) <= 0)
             .sort((r1, r2) => {
-                return r1.releaseNumber.compareTo(r2.releaseNumber);
+                const compareResult = r1.releaseNumber.compareTo(r2.releaseNumber);
+                if (compareResult === 0) {
+                    if (r1.branch.customer) {
+                        return r2.branch.customer ? 0 : 1;
+                    }
+                    return r2.branch.customer ? -1 : 0;
+                }
+                return compareResult;
             })
             .map((b) => b.branch);
     }
@@ -167,39 +187,37 @@ export class Upmerge implements ICommand {
 
         return this.repo.status()
             .then((status) => prevBranch = status.current)
-            .then(() => branches.reduce(
-                (p, branch, i) => p.then(() => {
+            .then(() => branches
+                .filter((branch) => !branch.customer)
+                .reduce((p, branch, i) => p.then(() => {
+                        if (i === 0) {
+                            const tempBranchName = this.tempBranchName(branches[0].name);
+                            return this.repo.checkoutBranch(['-b', tempBranchName, branches[0].name])
+                                .then(() => cleanup.push(tempBranchName));
+                        }
 
-                    if (i === 0) {
-                        const tempBranchName = this.tempBranchName(branches[0].name);
-                        return this.repo.checkoutBranch(['-b', tempBranchName, branches[0].name])
-                            .then(() => cleanup.push(tempBranchName));
-                    }
+                        const srcBranch = branches[i - 1];
+                        const tempSrcBranch = this.tempBranchName(srcBranch.name);
 
-                    const srcBranch = branches[i - 1];
-                    const tempSrcBranch = this.tempBranchName(srcBranch.name);
+                        console.log(`merging ${tempSrcBranch} into ${branch.name}`);
 
-                    console.log(`merging ${tempSrcBranch} into ${branch.name}`);
-
-                    if (!branch.name.startsWith(this.remote + '/')) {
-                        return Promise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
-                    }
-                    const tempBranchName = this.tempBranchName(branch.name);
-                    return this.repo.checkoutBranch(['-b', tempBranchName, branch.name])
-                        .then(() => cleanup.push(tempBranchName))
-                        .then(() => this.repo.merge(tempSrcBranch, true, this.showFiles).catch((err) =>
-                            Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)
-                        ))
-                        .then(() => {
-                            const targetBranchName = branch.name.substr(this.remote.length + 1);
-                            return this.push
-                                ? this.repo.push(this.remote, targetBranchName)
-                                : Promise.resolve();
-                        });
-
-                }),
-                Promise.resolve()
-            ))
+                        if (!branch.name.startsWith(this.remote + '/')) {
+                            return Promise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
+                        }
+                        const tempBranchName = this.tempBranchName(branch.name);
+                        return this.repo.checkoutBranch(['-b', tempBranchName, branch.name])
+                            .then(() => cleanup.push(tempBranchName))
+                            .then(() => this.repo.merge(tempSrcBranch, true, this.showFiles).catch((err) =>
+                                Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)
+                            ))
+                            .then(() => {
+                                const targetBranchName = branch.name.substr(this.remote.length + 1);
+                                return this.push
+                                    ? this.repo.push(this.remote, targetBranchName)
+                                    : Promise.resolve();
+                            });
+                    }), Promise.resolve()
+                ))
             .finally(() =>
                 this.repo.checkoutBranch(prevBranch).then(() =>
                     Promise.all(cleanup.map((b) =>

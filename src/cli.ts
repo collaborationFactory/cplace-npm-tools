@@ -47,7 +47,7 @@ const cli = meow(
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
 
-        flow --upmerge [--no-push] [--release <version>] [--show-files]
+        flow --upmerge [--no-push] [--release <version>] [--customer <customer>] [--show-files]
             Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your local
             branches. All merges will be done on new, temporary local branches and will then be pushed to 
 
@@ -57,6 +57,10 @@ const cli = meow(
             --release <version>
                 Merge from this release version upwards (e.g. "4.38"). If not specified and the current branch is tracking
                 a release branch, this release version will be used.
+                
+            --customer <customer>
+                Also merge into the branches of the given customer. The customer name must match the second part of the branch
+                names.
             
             --show-files
                 List files to be merged
