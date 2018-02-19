@@ -17,8 +17,8 @@ export class Repository {
 
     constructor(repoPath: string = './') {
         this.git = simpleGit(repoPath);
-        if(Global.isVerbose()) {
-            this.git.outputHandler(function (command, stdout, stderr) {
+        if (Global.isVerbose()) {
+            this.git.outputHandler((command, stdout, stderr) => {
                 stdout.pipe(process.stdout);
                 stderr.pipe(process.stderr);
             });
@@ -104,7 +104,7 @@ export class Repository {
         });
     }
 
-    public checkoutBranch(branch: string|string[]): Promise<void> {
+    public checkoutBranch(branch: string | string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch ${branch}`);
             this.git.checkout(branch, (err) => {
@@ -129,20 +129,19 @@ export class Repository {
                     Global.isVerbose() && console.log(`deleted branch`, branch);
                     resolve();
                 }
-            })
+            });
         });
     }
 
     public merge(otherBranch: string, noFF?: boolean): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
-            let options = [otherBranch];
+            const options = [otherBranch];
             noFF && options.push('--no-ff');
             this.git.merge(options, (err, data) => {
                 if (err) {
                     reject(err);
-                }
-                else if(data.startsWith('CONFLICT')) {
+                } else if (data.startsWith('CONFLICT')) {
                     // abort if merge failed
                     this.git.mergeFromTo('--abort', undefined, (err2) => {
                         reject(data);

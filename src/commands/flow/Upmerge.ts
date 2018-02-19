@@ -24,7 +24,7 @@ export class Upmerge implements ICommand {
     private releaseBranchPattern: RegExp = new RegExp(Upmerge.RELEASE_BRANCH_PATTERN);
     private remoteReleaseBranchPattern: RegExp;
 
-    private prefix = 'upmerge-' + randomatic('Aa0', 6) + '/';
+    private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.repo = new Repository();
@@ -68,7 +68,7 @@ export class Upmerge implements ICommand {
                     return Promise.reject(`current branch is ${status.behind} commits behind ${status.tracking}`);
                 }
 
-                if (['not_added', 'conflicted', 'created', 'deleted', 'modified', 'renamed'].find(k => status[k].length)) {
+                if (['not_added', 'conflicted', 'created', 'deleted', 'modified', 'renamed'].find((k) => status[k].length)) {
                     return Promise.reject('You have uncommitted changes');
                 }
 
@@ -77,7 +77,7 @@ export class Upmerge implements ICommand {
     }
 
     private checkForRelease(): Promise<ReleaseNumber> {
-        if(this.release) {
+        if (this.release) {
             const rn = ReleaseNumber.parse(this.release);
             if (rn == null) {
                 return Promise.reject(`Could not parse release number '${this.release}'`);
@@ -151,7 +151,7 @@ export class Upmerge implements ICommand {
     }
 
     private tempBranchName(remoteBranchName: string): string {
-        if(!remoteBranchName.startsWith(this.remote + '/')) {
+        if (!remoteBranchName.startsWith(this.remote + '/')) {
             throw new Error(`Branch '${remoteBranchName}' does not start with '${this.remote}/'`);
         }
         return this.prefix + remoteBranchName.substr(this.remote.length + 1);
@@ -164,7 +164,7 @@ export class Upmerge implements ICommand {
         let prevBranch;
 
         return this.repo.status()
-            .then(status => prevBranch = status.current)
+            .then((status) => prevBranch = status.current)
             .then(() => branches.reduce(
                 (p, branch, i) => p.then(() => {
 
@@ -179,20 +179,20 @@ export class Upmerge implements ICommand {
 
                     console.log(`merging ${tempSrcBranch} into ${branch.name}`);
 
-                    if(!branch.name.startsWith(this.remote + '/')) {
+                    if (!branch.name.startsWith(this.remote + '/')) {
                         return Promise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
                     }
                     const tempBranchName = this.tempBranchName(branch.name);
                     return this.repo.checkoutBranch(['-b', tempBranchName, branch.name])
                         .then(() => cleanup.push(tempBranchName))
-                        .then(() => this.repo.merge(tempSrcBranch, true).catch(err =>
+                        .then(() => this.repo.merge(tempSrcBranch, true).catch((err) =>
                             Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)
                         ))
                         .then(() => {
                             const targetBranchName = branch.name.substr(this.remote.length + 1);
                             return this.push
                                 ? this.repo.push(this.remote, targetBranchName)
-                                : Promise.resolve()
+                                : Promise.resolve();
                         });
 
                 }),
