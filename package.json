@@ -29,10 +29,10 @@
     "merge2": "^1.0.2",
     "tslint": "^4.4.2",
     "tslint-microsoft-contrib": "^4.0.0",
-    "typescript": "^2.2.1"
+    "typescript": "^2.2.1",
+    "@types/node": "^9.4.6"
   },
   "dependencies": {
-    "@types/node": "^9.4.6",
     "bluebird": "^3.4.7",
     "meow": "^3.7.0",
     "simple-git": "^1.65.0"
