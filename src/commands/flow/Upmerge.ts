@@ -18,6 +18,7 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_PUSH: string = 'push';
     private static readonly PARAMETER_RELEASE: string = 'release';
     private static readonly PARAMETER_SHOW_FILES: string = 'showFiles';
+    private static readonly PARAMETER_ALL_CUSTOMERS: string = 'allCustomers';
     private static readonly PARAMETER_CUSTOMER: string = 'customer';
 
     private repo: Repository;
@@ -25,6 +26,7 @@ export class Upmerge implements ICommand {
     private push: boolean;
     private release: string;
     private showFiles: boolean;
+    private allCustomers: boolean;
     private customer: string;
 
     private remoteReleaseBranchPattern: RegExp;
@@ -47,9 +49,12 @@ export class Upmerge implements ICommand {
         }
         this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] === true;
 
-        const customer = params[Upmerge.PARAMETER_CUSTOMER];
-        if (typeof customer === 'string') {
-            this.customer = customer;
+        this.allCustomers = params[Upmerge.PARAMETER_ALL_CUSTOMERS] === true;
+        if (!this.allCustomers) {
+            const customer = params[Upmerge.PARAMETER_CUSTOMER];
+            if (typeof customer === 'string') {
+                this.customer = customer;
+            }
         }
 
         this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/release/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
@@ -118,10 +123,12 @@ export class Upmerge implements ICommand {
     private filterReleaseBranchesAndCreateOrder(release: ReleaseNumber, branches: IGitBranchDetails[]): IBranchDetails[] {
         const trackedRemoteBranches = new Map<String, IBranchDetails>();
 
-        const customerBranchPattern = new RegExp(`^${this.remote}/customer/${this.customer}/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
+        const customerPattern = this.allCustomers ? '[\\w-]*' : this.customer;
+        const customerBranchPattern = new RegExp(`^${this.remote}/customer/(${customerPattern})/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
 
-        branches.forEach((branch) => {
-            if (branch.isRemote && !trackedRemoteBranches.has(branch.name)) {
+        branches
+            .filter((branch) => branch.isRemote && !trackedRemoteBranches.has(branch.name))
+            .forEach((branch) => {
                 let version: string;
                 let customerName: string;
 
@@ -129,14 +136,20 @@ export class Upmerge implements ICommand {
                     version = 'master';
                 } else {
                     let match = this.remoteReleaseBranchPattern.exec(branch.name);
-                    if (!match && this.customer) {
-                        match = customerBranchPattern.exec(branch.name);
-                        customerName = this.customer;
-                    }
                     if (!match || match.length < 2) {
-                        return;
+                        if (this.allCustomers || this.customer) {
+                            match = customerBranchPattern.exec(branch.name);
+                            if (!match || match.length < 3) {
+                                return;
+                            }
+                            customerName = match[1];
+                            version = match[2];
+                        } else {
+                            return;
+                        }
+                    } else {
+                        version = match[1];
                     }
-                    version = match[1];
                 }
 
                 const releaseNumber = ReleaseNumber.parse(version);
@@ -148,8 +161,7 @@ export class Upmerge implements ICommand {
                     customer: customerName,
                     version: releaseNumber
                 });
-            }
-        });
+            });
 
         return Array.from(trackedRemoteBranches)
             .map((b) => b[1])
@@ -206,7 +218,7 @@ export class Upmerge implements ICommand {
                     Promise.all([...cleanup]
                         .map((b) =>
                             this.repo.deleteBranch(b)
-                    ))
+                        ))
                 )
             );
     }
@@ -234,17 +246,18 @@ export class Upmerge implements ICommand {
                     Global.isVerbose() && console.log('No previous branch, nothing to merge.');
                     return Promise.resolve();
                 }
-                console.log(`Previous branch found: ${previousCustomerBranch.name}`);
+                Global.isVerbose() && console.log(`Previous branch found: ${previousCustomerBranch.name}`);
                 return this.mergeBranch(branch, previousCustomerBranch, false, cleanup);
             })
             .then(() => {
                 const matchingReleaseBranch = branches
                     .filter((b) => !b.customer)
-                    .find((b) => b.version.compareTo(branch.version) === 0);
+                    .sort((b1, b2) => b2.version.compareTo(b1.version))
+                    .find((b) => b.version.compareTo(branch.version) <= 0);
                 if (!matchingReleaseBranch) {
                     return Promise.reject(`No release branch for version ${branch.version} found.`);
                 }
-                Global.isVerbose() && console.log(`Matching release branch is ${matchingReleaseBranch.name}`);
+                Global.isVerbose() && console.log(`Matching release branch for ${branch.name} is ${matchingReleaseBranch.name}`);
 
                 return this.mergeBranch(branch, matchingReleaseBranch, true, cleanup);
             });
