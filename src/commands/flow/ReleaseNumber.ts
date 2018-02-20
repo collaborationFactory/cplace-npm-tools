@@ -54,4 +54,8 @@ export class ReleaseNumber {
             return this.patch - other.patch;
         }
     }
+
+    public toString(): string {
+        return this.master ? ' master' : `${this.major}.${this.minor}.${this.patch}`;
+    }
 }
