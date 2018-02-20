@@ -31,7 +31,6 @@ export interface IGitStatus {
 }
 
 export interface IGitBranchDetails {
-    customer: string;
     current: boolean;
     name: string;
     commit: string;
