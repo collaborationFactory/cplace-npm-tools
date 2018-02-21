@@ -8,6 +8,8 @@ import {Repository} from '../../git';
 import {Repos} from './Repos';
 import {fs} from '../../p/fs';
 import * as Promise from 'bluebird';
+import {IReposDescriptor} from './models';
+import {enforceNewline} from '../../util';
 
 export class BranchRepos extends AbstractReposCommand {
     private static readonly PARAMETER_PARENT: string = 'parent';
@@ -70,6 +72,26 @@ export class BranchRepos extends AbstractReposCommand {
     }
 
     private adjustParentReposJsonAndCommit(repo: Repository): Promise<Repository> {
-        return repo;
+        if (repo.baseDir === `../${this.parentRepoPath}`) {
+            return Promise.resolve(repo);
+        }
+        try {
+            const filename = `${repo.baseDir}/${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`;
+            const descriptorFile = fs.readFileSync(filename, 'utf8');
+            const reposDescriptor: IReposDescriptor = JSON.parse(descriptorFile);
+
+            Object.keys(reposDescriptor).forEach((key) => {
+                reposDescriptor[key].branch = this.branchName;
+                reposDescriptor[key].commit = undefined;
+            });
+
+            const newReposDescriptorContent = enforceNewline(JSON.stringify(reposDescriptor, null, 2));
+            return fs.writeFileAsync(filename, newReposDescriptorContent, 'utf8')
+                .then(() => repo.add(AbstractReposCommand.PARENT_REPOS_FILE_NAME))
+                .then(() => repo.commit(`Adjust parent-repos.json to new branch ${this.branchName}`, AbstractReposCommand.PARENT_REPOS_FILE_NAME));
+        } catch (e) {
+            console.error('Failed to parse repo description', AbstractReposCommand.PARENT_REPOS_FILE_NAME, e);
+            return Promise.reject(`Failed to parse repo descriptor ${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`);
+        }
     }
 }
