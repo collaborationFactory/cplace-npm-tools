@@ -44,7 +44,7 @@ export class BranchRepos extends AbstractReposCommand {
             .map((repo) => this.validateRepoClean(repo))
             .map((repo) => this.checkoutBranch(repo), {concurrency: 1})
             .map((repo) => this.adjustParentReposJsonAndCommit(repo), {concurrency: 1})
-            .map((repo) => this.push ? repo.push() : Promise.resolve(), {concurrency: 1});
+            .map((repo) => this.push ? repo.push('origin', this.branchName) : Promise.resolve(), {concurrency: 1});
     }
 
     private findRepos(): Promise<Repository[]> {
@@ -88,10 +88,11 @@ export class BranchRepos extends AbstractReposCommand {
             const newReposDescriptorContent = enforceNewline(JSON.stringify(reposDescriptor, null, 2));
             return fs.writeFileAsync(filename, newReposDescriptorContent, 'utf8')
                 .then(() => repo.add(AbstractReposCommand.PARENT_REPOS_FILE_NAME))
-                .then(() => repo.commit(`Adjust parent-repos.json to new branch ${this.branchName}`, AbstractReposCommand.PARENT_REPOS_FILE_NAME));
+                .then(() => repo.commit(`Adjust parent-repos.json to new branch ${this.branchName}`, AbstractReposCommand.PARENT_REPOS_FILE_NAME))
+                .then(() => repo);
         } catch (e) {
-            console.error('Failed to parse repo description', AbstractReposCommand.PARENT_REPOS_FILE_NAME, e);
-            return Promise.reject(`Failed to parse repo descriptor ${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`);
+            console.error('Failed to update repo description', e);
+            return Promise.reject(`Failed to update repo descriptor ${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`);
         }
     }
 }

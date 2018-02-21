@@ -185,7 +185,7 @@ export class Repository {
         });
     }
 
-    public push(remote?: string, remoteBranchName?: string): Promise<void> {
+    public push(remote: string, remoteBranchName?: string): Promise<void> {
         const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`pushing to ${remote}/${remoteBranchName}`);
