@@ -181,4 +181,19 @@ export class Repository {
         });
     }
 
+    public push(remote?: string, remoteBranchName?: string): Promise<void> {
+        const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`pushing to ${remote}/${remoteBranchName}`);
+            this.git.push(remote, remoteBranch, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`pushed to ${remote}/${remoteBranchName}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
 }

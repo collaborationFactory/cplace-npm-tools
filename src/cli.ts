@@ -44,9 +44,10 @@ const cli = meow(`
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
             --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
-            --branch|-b <name>
+            --branch|-b <name> [--parent <parent-repo-name>] [--push]
                 Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will checkout the new branch and their
-                parent-repos.json will be updated to match the branch name.
+                parent-repos.json will be updated to match the branch name. The topmost repo must be named 'main'. This can be overridden by providing
+                the --parent parameter. If --push is provided, the new branches are pushed after creation.
 
     Global options:
         --verbose
