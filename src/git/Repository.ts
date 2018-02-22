@@ -66,7 +66,7 @@ export class Repository {
 
     public logLast(size: number): Promise<IGitLogSummary> {
         return new Promise<IGitLogSummary>((resolve, reject) => {
-            this.git.log(['-n', size], (err, data: IGitLogSummary) => {
+            this.git.log(['-n', size + ''], (err, data: IGitLogSummary) => {
                 err ? reject(err) : resolve(data);
             });
         });
@@ -100,7 +100,7 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of gitStatus', status);
+                    Global.isVerbose() && console.log(`result of gitStatus in ${this.repoName}`, status);
                     resolve(status);
                 }
             });
@@ -109,12 +109,13 @@ export class Repository {
 
     public checkoutBranch(branch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch `, branch);
+            Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch ${branch}`);
             this.git.checkout(branch, (err) => {
                 if (err) {
+                    Global.isVerbose() && console.error(`failed to checkout ${this.repoName}/${branch}`, err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} is now in branch`, branch);
+                    Global.isVerbose() && console.log(`repo ${this.repoName} is now in branch ${branch}`);
                     resolve();
                 }
             });
@@ -126,6 +127,7 @@ export class Repository {
             return new Promise<void>((resolve, reject) => {
                 this.git.checkout(commit, (err) => {
                     if (err) {
+                        Global.isVerbose() && console.error(`failed to checkout commit ${commit} in ${this.repoName}`, err);
                         reject(err);
                     } else {
                         Global.isVerbose() && console.log(`repo ${this.repoName} is now in commit`, commit);
@@ -142,6 +144,7 @@ export class Repository {
     public pullOnlyFastForward(): Promise<void> {
         return this.status()
             .then(({tracking}) => {
+                Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} which is tracking ${tracking}`);
                 const i = tracking.indexOf('/');
                 if (i < 0) {
                     return Promise.reject(`cannot determine remote and branch for ${tracking}`);

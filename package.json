@@ -1,6 +1,6 @@
 {
   "name": "@cplace/cli",
-  "version": "0.3.4",
+  "version": "0.3.10",
   "description": "",
   "main": "dist/src/index.js",
   "typings": "dist/src/index.d.ts",
@@ -29,7 +29,8 @@
     "merge2": "^1.0.2",
     "tslint": "^4.4.2",
     "tslint-microsoft-contrib": "^4.0.0",
-    "typescript": "^2.2.1"
+    "typescript": "^2.2.1",
+    "@types/node": "^9.4.6"
   },
   "dependencies": {
     "bluebird": "^3.4.7",
