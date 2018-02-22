@@ -5,7 +5,6 @@ import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
 import {Repository} from '../../git';
-import {IGitRemoteBranchesAndCommits} from '../../git/models';
 import * as os from 'os';
 import {fs} from '../../p/fs';
 import {exec} from 'child_process';
@@ -36,7 +35,7 @@ export class VisualizeCommand implements ICommand {
         } else {
             this.regexForExclusion = String('HEAD|attic\/.*');
         }
-        Global.isVerbose() && console.log('using regexForExclusion ' + this.regexForExclusion + ' for branch filtering');
+        Global.isVerbose() && console.log(`using regexForExclusion ${this.regexForExclusion} for branch filtering`);
 
         const regexForInclusion = params[VisualizeCommand.PARAMETER_BRANCHES_REGEX_FOR_INCLUSION] as string;
         if (regexForInclusion) {
@@ -46,7 +45,7 @@ export class VisualizeCommand implements ICommand {
         }
         this.pdf = params[VisualizeCommand.PARAMETER_PDF] === true;
 
-        Global.isVerbose() && console.log('using regexForInclusion ' + this.regexForInclusion + ' for branch filtering');
+        Global.isVerbose() && console.log(`using regexForInclusion ${this.regexForInclusion} for branch filtering`);
         return true;
     }
 
@@ -56,52 +55,54 @@ export class VisualizeCommand implements ICommand {
         const repo = new Repository();
 
         console.log('Collecting branches...');
-        return repo.getRemoteBranchesAndCommits(this.regexForExclusion, this.regexForInclusion).then((result: IGitRemoteBranchesAndCommits[]) => {
-            console.log('Collecting branch dependencies...');
-            return Promise.all(result.map((branchAndCommit: IGitRemoteBranchesAndCommits) => {
-                return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit, this.regexForExclusion, this.regexForInclusion).then((branches: string[]) => {
-                    const index = branches.indexOf(branchAndCommit.branch);
-                    if (index > -1) {
-                        branches.splice(index, 1);
-                    }
-                    if (branches.length > 0) {
-                        Global.isVerbose() && console.log('branch ' + branchAndCommit.branch + ' is contained in these branches: ' + branches);
-                        Global.isVerbose() && console.log('');
-                        branches.forEach((b: string) => {
-                            this.put(branchAndCommit.branch, b);
+        return repo.getRemoteBranchesAndCommits(this.regexForExclusion, this.regexForInclusion)
+            .then((result) => {
+                console.log('Collecting branch dependencies...');
+                const branchPromises = result.map((branchAndCommit) => {
+                    return repo.getRemoteBranchesContainingCommit(branchAndCommit.commit, this.regexForExclusion, this.regexForInclusion)
+                        .then((branches: string[]) => {
+                            const index = branches.indexOf(branchAndCommit.branch);
+                            if (index > -1) {
+                                branches.splice(index, 1);
+                            }
+                            if (branches.length > 0) {
+                                Global.isVerbose() && console.log(`branch ${branchAndCommit.branch} is contained in these branches: ${branches}`);
+                                Global.isVerbose() && console.log('');
+                                branches.forEach((b: string) => {
+                                    this.put(branchAndCommit.branch, b);
+                                });
+                            }
                         });
-                    }
                 });
-            })).then(() => {
-                console.log('Reducing dependencies...');
-                this.reduce();
-            }).then(() => {
-                console.log('Generating dot file...');
-                return fs
-                    .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
-                    .then(() => {
-                        if (this.pdf) {
-                            return this.generatePdf();
-                        } else {
-                            console.log(`>> dot file has successfully been generated in ${VisualizeCommand.FILE_NAME_BRANCHES_DOT}`);
-                            console.log('>> you can now generate a png file with graphviz:');
-                            console.log(`>> dot -Tpng ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PNG}`);
-                        }
-                    });
+                return Promise.all(branchPromises).then(() => {
+                    console.log('Reducing dependencies...');
+                    this.reduce();
+                }).then(() => {
+                    console.log('Generating dot file...');
+                    return fs
+                        .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
+                        .then(() => {
+                            if (this.pdf) {
+                                return this.generatePdf();
+                            } else {
+                                console.log(`>> dot file has successfully been generated in ${VisualizeCommand.FILE_NAME_BRANCHES_DOT}`);
+                                console.log('>> you can now generate a png file with graphviz:');
+                                console.log(`>> dot -Tpng ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PNG}`);
+                            }
+                        });
+                });
             });
-        });
     }
 
     private generateDot(branches2containingBranches: Map<string, string[]>): string {
-        let dotString = 'digraph G {' + os.EOL;
+        const branchStrings: string[] = [];
         branches2containingBranches.forEach((containingBranches, branch) => {
             containingBranches.forEach((containingBranch) => {
-                dotString += '    "' + branch + '" -> "' + containingBranch + '";' + os.EOL;
-                dotString = this.addStyle(dotString, containingBranch);
+                branchStrings.push(`    "${branch}" -> "${containingBranch}";${os.EOL}${this.createStyle(containingBranch)}`);
             });
-            dotString = this.addStyle(dotString, branch);
+            branchStrings.push(this.createStyle(branch));
         });
-        dotString += '}';
+        const dotString = `digraph G {${os.EOL}${branchStrings.join('')}}`;
         Global.isVerbose() && console.log('dotString: ' + dotString);
         return dotString;
     }
@@ -122,23 +123,24 @@ export class VisualizeCommand implements ICommand {
         });
     }
 
-    private addStyle(dotString: string, branch: string): string {
+    private createStyle(branch: string): string {
         if (this.styledBranches.indexOf(branch) >= 0) {
-            return dotString;
+            return '';
         } else {
+            const result: string[] = [];
             if (branch.indexOf('release/') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="red"];' + os.EOL;
+                result.push(`    "${branch}" [style=bold,color="red"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }
             if (branch.indexOf('customer/') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="blue"];' + os.EOL;
+                result.push(`    "${branch}" [style=bold,color="blue"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }
             if (branch.indexOf('master') === 0) {
-                dotString += '    "' + branch + '" [style=bold,color="green"];' + os.EOL;
+                result.push(`    "${branch}" [style=bold,color="green"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }
-            return dotString;
+            return result.join('');
         }
     }
 
@@ -174,13 +176,13 @@ export class VisualizeCommand implements ICommand {
     }
 
     private reduceEdge(branch: string, containingBranch: string): void {
-        Global.isVerbose() && console.log('reducing ' + branch + ' -> ' + containingBranch);
+        Global.isVerbose() && console.log(`reducing ${branch} -> ${containingBranch}`);
         this.reducedBranches2containingBranches.forEach((cbs) => {
             const indexOfContainingBranch = cbs.indexOf(containingBranch);
             const cbsContainsBoth = cbs.indexOf(branch) >= 0 && indexOfContainingBranch >= 0;
             if (cbsContainsBoth) {
                 cbs.splice(indexOfContainingBranch, 1);
-                Global.isVerbose() && console.log('removing edge between ' + branch + ' and ' + containingBranch);
+                Global.isVerbose() && console.log(`removing edge between ${branch} and ${containingBranch}`);
             }
         });
     }

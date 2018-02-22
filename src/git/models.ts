@@ -36,7 +36,7 @@ export interface IGitFileStatus {
     working_dir: string;
 }
 
-export interface IGitRemoteBranchesAndCommits {
+export interface IGitBranchAndCommit {
     branch: string;
     commit: string;
 }

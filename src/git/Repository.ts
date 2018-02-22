@@ -5,7 +5,7 @@ import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
-import {IGitLogSummary, IGitRemoteBranchesAndCommits, IGitStatus} from './models';
+import {IGitBranchAndCommit, IGitLogSummary, IGitStatus} from './models';
 
 export class Repository {
 
@@ -216,15 +216,15 @@ export class Repository {
         });
     }
 
-    public getRemoteBranchesAndCommits(branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<IGitRemoteBranchesAndCommits[]> {
-        return new Promise<IGitRemoteBranchesAndCommits[]>((resolve, reject) => {
+    public getRemoteBranchesAndCommits(branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<IGitBranchAndCommit[]> {
+        return new Promise<IGitBranchAndCommit[]>((resolve, reject) => {
             this.git.raw(['for-each-ref'], (err, result: string) => {
                 if (err) {
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log('result of git for-each-ref', result);
                     const lines: string[] = result.match(/[^\r\n]+/g);
-                    const branchesAndCommits: IGitRemoteBranchesAndCommits[] = [];
+                    const branchesAndCommits: IGitBranchAndCommit[] = [];
 
                     lines.forEach((l) => {
                         const trimmed = l.trim();
@@ -244,7 +244,7 @@ export class Repository {
                     Global.isVerbose() && console.log('all branches and commits before filtering', branchesAndCommits);
 
                     // filter out branches that are on the same commit
-                    const filteredBranchesAndCommits = branchesAndCommits.filter((branchAndCommit: IGitRemoteBranchesAndCommits) => {
+                    const filteredBranchesAndCommits = branchesAndCommits.filter((branchAndCommit: IGitBranchAndCommit) => {
                         const branches: string[] = [];
                         for (const bac of branchesAndCommits) {
                             if (bac.commit === branchAndCommit.commit) {
