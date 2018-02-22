@@ -4,30 +4,27 @@
 import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
-import {Repository} from '../../git/Repository';
+import {Repository} from '../../git';
 import {IGitRemoteBranchesAndCommits} from '../../git/models';
 import * as os from 'os';
 import {fs} from '../../p/fs';
+import {exec} from 'child_process';
 
 export class VisualizeCommand implements ICommand {
 
     private static readonly FILE_NAME_BRANCHES_DOT: string = 'branches.dot';
-
     private static readonly FILE_NAME_BRANCHES_PNG: string = 'branches.png';
-
+    private static readonly FILE_NAME_BRANCHES_PDF: string = 'branches.pdf';
     private static readonly PARAMETER_BRANCHES_REGEX_FOR_EXCLUSION: string = 'regexForExclusion';
-
     private static readonly PARAMETER_BRANCHES_REGEX_FOR_INCLUSION: string = 'regexForInclusion';
+    private static readonly PARAMETER_PDF: string = 'pdf';
 
     private branches2containingBranches: Map<string, string[]> = new Map();
-
     private reducedBranches2containingBranches: Map<string, string[]> = new Map();
-
     private styledBranches: string[] = [];
-
     private regexForExclusion: string;
-
     private regexForInclusion: string;
+    private pdf: boolean;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         for (const param of Object.keys(params)) {
@@ -47,6 +44,8 @@ export class VisualizeCommand implements ICommand {
         } else {
             this.regexForInclusion = String('');
         }
+        this.pdf = params[VisualizeCommand.PARAMETER_PDF] === true;
+
         Global.isVerbose() && console.log('using regexForInclusion ' + this.regexForInclusion + ' for branch filtering');
         return true;
     }
@@ -81,9 +80,13 @@ export class VisualizeCommand implements ICommand {
                 return fs
                     .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
                     .then(() => {
-                        console.log(`>> dot file has successfully been generated in ${VisualizeCommand.FILE_NAME_BRANCHES_DOT}`);
-                        console.log('>> you can now generate a png file with graphviz:');
-                        console.log(`>> dot -Tpng ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PNG}`);
+                        if (this.pdf) {
+                            return this.generatePdf();
+                        } else {
+                            console.log(`>> dot file has successfully been generated in ${VisualizeCommand.FILE_NAME_BRANCHES_DOT}`);
+                            console.log('>> you can now generate a png file with graphviz:');
+                            console.log(`>> dot -Tpng ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PNG}`);
+                        }
                     });
             });
         });
@@ -91,7 +94,7 @@ export class VisualizeCommand implements ICommand {
 
     private generateDot(branches2containingBranches: Map<string, string[]>): string {
         let dotString = 'digraph G {' + os.EOL;
-        branches2containingBranches.forEach((containingBranches, branch, map) => {
+        branches2containingBranches.forEach((containingBranches, branch) => {
             containingBranches.forEach((containingBranch) => {
                 dotString += '    "' + branch + '" -> "' + containingBranch + '";' + os.EOL;
                 dotString = this.addStyle(dotString, containingBranch);
@@ -101,6 +104,22 @@ export class VisualizeCommand implements ICommand {
         dotString += '}';
         Global.isVerbose() && console.log('dotString: ' + dotString);
         return dotString;
+    }
+
+    private generatePdf(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            exec(
+                `dot -Tpdf ${VisualizeCommand.FILE_NAME_BRANCHES_DOT} > ${VisualizeCommand.FILE_NAME_BRANCHES_PDF}`,
+                (err) => {
+                    if (err) {
+                        return reject(err);
+                    } else {
+                        console.log(`Generated ${VisualizeCommand.FILE_NAME_BRANCHES_PDF}`);
+                        return resolve();
+                    }
+                }
+            );
+        });
     }
 
     private addStyle(dotString: string, branch: string): string {
@@ -142,12 +161,12 @@ export class VisualizeCommand implements ICommand {
         Global.isVerbose() && console.log('reducing');
 
         // cloning into reducedBranches2containingBranches
-        this.branches2containingBranches.forEach((containingBranches, branch, map) => {
+        this.branches2containingBranches.forEach((containingBranches, branch) => {
             this.reducedBranches2containingBranches.set(branch, containingBranches.slice(0));
         });
 
         // reducing
-        this.branches2containingBranches.forEach((containingBranches, branch, map) => {
+        this.branches2containingBranches.forEach((containingBranches, branch) => {
             containingBranches.forEach((containingBranch) => {
                 this.reduceEdge(branch, containingBranch);
             });
@@ -156,7 +175,7 @@ export class VisualizeCommand implements ICommand {
 
     private reduceEdge(branch: string, containingBranch: string): void {
         Global.isVerbose() && console.log('reducing ' + branch + ' -> ' + containingBranch);
-        this.reducedBranches2containingBranches.forEach((cbs, b, map) => {
+        this.reducedBranches2containingBranches.forEach((cbs) => {
             const indexOfContainingBranch = cbs.indexOf(containingBranch);
             const cbsContainsBoth = cbs.indexOf(branch) >= 0 && indexOfContainingBranch >= 0;
             if (cbsContainsBoth) {

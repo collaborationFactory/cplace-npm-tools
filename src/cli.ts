@@ -45,9 +45,10 @@ const cli = meow(`
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
         
-        visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>]
-            Creates a visualization of the remote branches and their dependencies of the repository.
+        visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
+            Creates a visualization of the remote branches and their dependencies of the repository. The output is a .dot file.
             If <regexForExclusion> is not given "HEAD|attic\/.*" is used. Use quotes if you want to use the | symbol.
+            Use --pdf to create a PDF from the .dot file. Requires Graphviz to be installed and the dot binary to be on the path.
 
     Global options:
         --verbose
