@@ -46,10 +46,12 @@ const cli = meow(
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
             --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
-            --branch|-b <name> [--parent <parent-repo-name>] [--push]
+            --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
                 Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will checkout the new branch and their
                 parent-repos.json will be updated to match the branch name. The topmost repo must be named 'main'. This can be overridden by providing
                 the --parent parameter. If --push is provided, the new branches are pushed after creation.
+                You can provide a remote-branch name using the --from <branch-name> parameter. This determines the remote branch based on which
+                the new branches are created. If this parameter is missing, the local branches currently checked out are used.
 
         flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files]
             Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your local

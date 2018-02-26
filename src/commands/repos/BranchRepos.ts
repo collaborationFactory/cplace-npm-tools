@@ -14,10 +14,12 @@ import {enforceNewline} from '../../util';
 export class BranchRepos extends AbstractReposCommand {
     private static readonly PARAMETER_PARENT: string = 'parent';
     private static readonly PARAMETER_PUSH: string = 'push';
+    private static readonly PARAMETER_FROM: string = 'from';
 
     private parentRepoPath: string = 'main';
     private branchName: string;
     private push: boolean;
+    private branchFrom: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         let branchName = params[Repos.PARAMETER_BRANCH];
@@ -27,6 +29,11 @@ export class BranchRepos extends AbstractReposCommand {
         if (typeof branchName !== 'string') {
             console.log('No branch name given.');
             return false;
+        }
+        const branchFrom = params[BranchRepos.PARAMETER_FROM];
+        if (typeof branchFrom === 'string') {
+            console.log(`Branching off ${branchFrom}`);
+            this.branchFrom = branchFrom;
         }
         this.branchName = branchName;
         this.push = params[BranchRepos.PARAMETER_PUSH] === true;
@@ -67,7 +74,11 @@ export class BranchRepos extends AbstractReposCommand {
     }
 
     private checkoutBranch(repo: Repository): Promise<Repository> {
-        return repo.checkoutBranch(`-b${this.branchName}`)
+        const params = [`-b${this.branchName}`];
+        if (this.branchFrom) {
+            params.push(`origin/${this.branchFrom}`);
+        }
+        return repo.checkoutBranch(params)
             .then(() => repo);
     }
 
