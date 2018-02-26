@@ -30,6 +30,17 @@ export interface IGitStatus {
     tracking: string;
 }
 
+export interface IGitBranchDetails {
+    current: boolean;
+    name: string;
+    commit: string;
+    isRemote: boolean;
+    gone?: boolean;
+    ahead?: number;
+    behind?: number;
+    tracking?: string;
+}
+
 export interface IGitFileStatus {
     path: string;
     index: string;
