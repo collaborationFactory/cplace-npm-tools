@@ -2,13 +2,15 @@
  * Command Runner implementation
  */
 import * as Promise from 'bluebird';
+import {Flow} from './flow';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
 
-const REGISTERED_COMMANDS: {[cmd: string]: ICommand} = {
+const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
-    'repos': new Repos()
+    'repos': new Repos(),
+    'flow': new Flow()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

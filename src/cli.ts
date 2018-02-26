@@ -6,7 +6,9 @@ import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
 
-const cli = meow(`
+const cli = meow(
+    {
+        help: `
     Usage:
         $ cplace-cli <command>
        
@@ -45,10 +47,36 @@ const cli = meow(`
             3. --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
 
+        flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files]
+            Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your local
+            branches. All merges will be done on new, temporary local branches and will then be pushed to 
+
+            --no-push
+                Will not push changes, dry run only to check for conflicts
+
+            --release <version>
+                Merge from this release version upwards (e.g. "4.38"). If not specified and the current branch is tracking
+                a release branch, this release version will be used.
+            
+            --all-customers
+                Also merges into all customer-branches. This applies to customer branches named 'customer/$customerName/$version', where
+                $version must merge the pattern mentioned for --release.
+            
+            --customer <customer>
+                Also merge into the branches of the given customer. The customer name must match the same pattern as mentioned in --all-customers.
+            
+            --show-files
+                List files to be merged
+
     Global options:
         --verbose
             Print verbose information to console
-`);
+`
+    },
+    /* tslint:disable */
+    {'string': 'release'}
+    /* tslint:enable */
+);
 
 if (!cli.input.length) {
     console.error('missing required parameter <command>');
@@ -63,6 +91,7 @@ if (!cli.input.length) {
         .then(
             () => {
                 // completed
+                process.exit(0);
             },
             (e) => {
                 console.error('Could not execute given command:');
