@@ -71,6 +71,9 @@ export class VisualizeCommand implements ICommand {
                                 branches.forEach((b: string) => {
                                     this.put(branchAndCommit.branch, b);
                                 });
+                            } else {
+                                Global.isVerbose() && console.log(`branch ${branchAndCommit.branch} is contained in no other branch.`);
+                                this.put(branchAndCommit.branch, null);
                             }
                         });
                 });
@@ -80,7 +83,7 @@ export class VisualizeCommand implements ICommand {
                 }).then(() => {
                     console.log('Generating dot file...');
                     return fs
-                        .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(this.reducedBranches2containingBranches), 'utf8')
+                        .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(), 'utf8')
                         .then(() => {
                             if (this.pdf) {
                                 return this.generatePdf();
@@ -94,9 +97,9 @@ export class VisualizeCommand implements ICommand {
             });
     }
 
-    private generateDot(branches2containingBranches: Map<string, string[]>): string {
+    private generateDot(): string {
         const branchStrings: string[] = [];
-        branches2containingBranches.forEach((containingBranches, branch) => {
+        this.reducedBranches2containingBranches.forEach((containingBranches, branch) => {
             containingBranches.forEach((containingBranch) => {
                 branchStrings.push(`    "${branch}" -> "${containingBranch}";${os.EOL}${this.createStyle(containingBranch)}`);
             });
@@ -144,7 +147,7 @@ export class VisualizeCommand implements ICommand {
         }
     }
 
-    private put(branch: string, containingBranch: string): void {
+    private put(branch: string, containingBranch?: string): void {
         let containingBranches;
         if (this.branches2containingBranches.has(branch)) {
             containingBranches = this.branches2containingBranches.get(branch);
@@ -152,7 +155,7 @@ export class VisualizeCommand implements ICommand {
             containingBranches = [];
             this.branches2containingBranches.set(branch, containingBranches);
         }
-        if (containingBranches.indexOf(containingBranch) >= 0) {
+        if (!containingBranch || containingBranches.indexOf(containingBranch) >= 0) {
             return;
         } else {
             containingBranches.push(containingBranch);
