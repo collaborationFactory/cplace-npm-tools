@@ -17,8 +17,8 @@ interface IReleaseNotesMessageEntry {
 export class ReleaseNotesMessagesFile {
     public static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
 
-    private static MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
-    private static CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n)changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/);
+    private static readonly MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
+    private static readonly CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n)changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/);
     private static readonly RELEVANCE_PATTERNS: string[] = [
         'merge pull request #\\d+', // GitHub Pull Request
         '\\bcloses? #\\d+', // GitHub Issues
