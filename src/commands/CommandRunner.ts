@@ -6,11 +6,13 @@ import {Flow} from './flow';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
+import {VisualizeDelegate} from './visualize';
 
 const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
     'repos': new Repos(),
-    'flow': new Flow()
+    'flow': new Flow(),
+    'visualize': new VisualizeDelegate()
 };
 
 export type Result = 'missing' | 'failed' | 'success';
