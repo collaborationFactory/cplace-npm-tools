@@ -46,3 +46,8 @@ export interface IGitFileStatus {
     index: string;
     working_dir: string;
 }
+
+export interface IGitBranchAndCommit {
+    branch: string;
+    commit: string;
+}
