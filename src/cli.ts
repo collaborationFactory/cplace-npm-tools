@@ -52,6 +52,10 @@ const cli = meow(
                 the --parent parameter. If --push is provided, the new branches are pushed after creation.
                 You can provide a remote-branch name using the --from <branch-name> parameter. This determines the remote branch based on which
                 the new branches are created. If this parameter is missing, the local branches currently checked out are used.
+            --add-dependency|-d <plugin>
+                Adds a new dependency to another plugin. The other plugin must be checked out already. This will add
+                the module to IntelliJ's .idea/modules.xml. If required, dependencies of the added plugin will also be
+                added. The dependencies are resolved through parent-repos.json
         
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository. The output is a .dot file.
