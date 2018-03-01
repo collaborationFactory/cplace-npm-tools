@@ -31,3 +31,9 @@ After building, the local version can be run using node:
 ```
 $ node dist/src/cli.js
 ```
+
+When developing, you can start gulp in watch mode:
+```
+$ gulp watch
+```
+Gulp will watch all `.ts` files and recompile them when they are modified.

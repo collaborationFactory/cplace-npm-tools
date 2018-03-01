@@ -75,4 +75,11 @@ gulp.task('pack', ['test'], shell.task([
   'npm pack'
 ]));
 
+/**
+ * Watch *.ts files and recompile them on modification.
+ */
+gulp.task('watch', ['clean-ts', 'compile-ts'],function() {
+  gulp.watch('src/**/*.ts', ['compile-ts']);
+});
+
 gulp.task('default', ['clean-ts', 'ts-lint', 'compile-ts', 'copy-json', 'test']);
