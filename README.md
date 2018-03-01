@@ -6,7 +6,11 @@ This package provides some CLI tools for working with cplace code.
 
 This package should be installed globally:
 ```
+# Fetches the latest release from a repo
 $ npm install -g @cplace/cli
+# Or clone this repo, build it and install the latest development version:
+$ npm install && gulp
+$ npm install -g .
 ```
 
 After installation you can just execute:
