@@ -36,21 +36,28 @@ const cli = meow(
         
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
-            1. --update|-u [--nofetch]:
+            --update|-u [--nofetch]:
                 Updates all parent repos.
-                If <force> is set the update will take place even if the working copies of the parent repos are not clean.                
-            2. --write|-w [--freeze]:
+                If <force> is set the update will take place even if the working copies of the parent repos are not clean.
+            --write|-w [--freeze]:
                 Write the states of the parent repos to parent-repos.json.
                 If <freeze> is set the exact commit hashes of the currently checked out parent repos will be written regardless
                 whether there already was a commit hash in the descriptor or not.
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
-            3. --clone|-c:
+            --clone|-c:
                 Clones all parent repos if missing. <force> has no effect for this command.
+            --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
+                Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will checkout the new branch and their
+                parent-repos.json will be updated to match the branch name. The topmost repo must be named 'main'. This can be overridden by providing
+                the --parent parameter. If --push is provided, the new branches are pushed after creation.
+                You can provide a remote-branch name using the --from <branch-name> parameter. This determines the remote branch based on which
+                the new branches are created. If this parameter is missing, the local branches currently checked out are used.
         
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository. The output is a .dot file.
-            If <regexForExclusion> is not given "HEAD|attic\/.*" is used. Use quotes if you want to use the | symbol.
+            If <regexForExclusion> is not given "HEAD|attic/.*" is used. Use quotes if you want to use the | symbol.
             Use --pdf to create a PDF from the .dot file. Requires Graphviz to be installed and the dot binary to be on the path.
+
 
         flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files]
             Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your local

@@ -26,6 +26,10 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
+    get baseDir(): string {
+        return this.git._baseDir;
+    }
+
     public static clone(toPath: string, remoteUrl: string, branch: string): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             Global.isVerbose() && console.log('cloning branch', branch, 'from', remoteUrl, 'to', toPath);
@@ -174,10 +178,11 @@ export class Repository {
         });
     }
 
-    public push(remote: string, remoteBranchName: string): Promise<void> {
+    public push(remote: string, remoteBranchName?: string): Promise<void> {
+        const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`pushing to ${remote}/${remoteBranchName}`);
-            this.git.push(remote, 'HEAD:' + remoteBranchName, (err) => {
+            this.git.push(remote, remoteBranch, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -186,7 +191,6 @@ export class Repository {
                 }
             });
         });
-
     }
 
     public checkoutCommit(commit: string): Promise<void> {
@@ -393,6 +397,34 @@ export class Repository {
         });
     }
 
+    public add(filename: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`Adding file ${filename}`);
+            this.git.add(filename, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public commit(message: string, files: string[] | string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`Committing branch ${this.baseDir} with message ${message}`);
+            // Git.prototype.commit = function (message, files, options, then) {
+            this.git.commit(message, files, {}, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`Committed branch ${this.baseDir}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
         if (!match || match.length < 2 || !match[1]) {
@@ -431,4 +463,5 @@ export class Repository {
         const branchName = match[1];
         return branchName ? branchName : null;
     }
+
 }
