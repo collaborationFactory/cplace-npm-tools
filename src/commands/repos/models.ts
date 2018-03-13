@@ -11,3 +11,9 @@ export interface IRepoStatus {
     branch: string;
     commit?: string;
 }
+
+export interface ISubModule {
+    fileurl: string;
+    filepath: string;
+    group?: string;
+}
