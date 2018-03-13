@@ -22,42 +22,12 @@ export class AddDependency extends AbstractReposCommand {
             return Promise.reject(`Plugin ${this.pluginToAdd} is already a dependency.`);
         }
 
-        return this.findDependencies(this.pluginToAdd)
-            .map((plugin) => this.findSubmodules(plugin))
-            .reduce((previous, current) => previous.concat(current.filter((item) => previous.indexOf(item) < 0)), [])
+        return this.findSubmodules(this.pluginToAdd)
             .then((result) => console.log(result));
         /* TODO
          *  - add them to .idea/modules.xml
          *  - goal is that the dependencies are part of the Project in IntelliJ
          */
-    }
-
-    private findDependencies(plugin: string): Promise<string[]> {
-        return this.readParentReposJson(plugin)
-            .then((json) => {
-                if (json) {
-                    return Promise
-                        .all(Object.keys(json).map((key) => this.findDependencies(key)))
-                        .reduce((p, dep) => p.concat(dep.filter((item) => p.indexOf(item) < 0)), [plugin]);
-                }
-                return Promise.resolve([plugin]);
-            });
-    }
-
-    private readParentReposJson(plugin: string): Promise<string> {
-        const pathToRepo = path.resolve('..', plugin);
-        if (!fs.existsSync(pathToRepo)) {
-            return Promise.reject(`Plugin ${plugin} not found in file system.`);
-        }
-
-        const parentReposJson = path.resolve(pathToRepo, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
-        if (!fs.existsSync(parentReposJson)) {
-            return Promise.resolve(null);
-        }
-
-        return fs.readFileAsync(parentReposJson, 'utf8')
-            .then((fileContent) => JSON.parse(fileContent))
-            .catch((e) => console.error(`Failed to parse repo description ${parentReposJson}`, e));
     }
 
     private findSubmodules(plugin: string): Promise<ISubModule[]> {
