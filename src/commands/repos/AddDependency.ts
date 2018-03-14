@@ -23,6 +23,7 @@ export class AddDependency extends AbstractReposCommand {
         }
 
         return this.findSubmodules(this.pluginToAdd)
+            .then((submodules) => this.adjustPaths(submodules))
             .then((submodules) => this.appendToModulesXml(submodules));
     }
 
@@ -55,6 +56,19 @@ export class AddDependency extends AbstractReposCommand {
                 }
             });
         });
+    }
+
+    private adjustPaths(modules: ISubModule[]): Promise<ISubModule[]> {
+        modules = modules.filter((m) => m.filepath !== '$PROJECT_DIR$/release-notes/release-notes.iml');
+        modules.forEach((m) => {
+            if (!m.fileurl.startsWith('file://$PROJECT_DIR$/../')) {
+                m.fileurl = m.fileurl.replace('file://$PROJECT_DIR$/', `file://$PROJECT_DIR$/../${this.pluginToAdd}/`);
+            }
+            if (!m.filepath.startsWith('$PROJECT_DIR$/../')) {
+                m.filepath = m.filepath.replace('$PROJECT_DIR$/', `$PROJECT_DIR$/../${this.pluginToAdd}/`);
+            }
+        });
+        return Promise.resolve(modules);
     }
 
     private appendToModulesXml(modules: ISubModule[]): Promise<void> {
