@@ -23,20 +23,20 @@ export class AddDependency extends AbstractReposCommand {
         }
 
         return this.findSubmodules(this.pluginToAdd)
-            .then((result) => console.log(result));
-        /* TODO
-         *  - add them to .idea/modules.xml
-         *  - goal is that the dependencies are part of the Project in IntelliJ
-         */
+            .then((submodules) => this.appendToModulesXml(submodules));
     }
 
-    private findSubmodules(plugin: string): Promise<ISubModule[]> {
-        const modulesXml = path.resolve('..', plugin, '.idea', 'modules.xml');
+    private readModulesXml(pluginPath: string): Promise<object> {
+        const modulesXml = path.resolve(pluginPath, '.idea', 'modules.xml');
         if (!fs.existsSync(modulesXml)) {
             return Promise.reject(`${modulesXml} not found.`);
         }
         return fs.readFileAsync(modulesXml, 'utf8')
-            .then(this.parseXml)
+            .then(this.parseXml);
+    }
+
+    private findSubmodules(plugin: string): Promise<ISubModule[]> {
+        return this.readModulesXml(path.resolve('..', plugin))
             .then((xml) => {
                 Global.isVerbose() && console.log(xml.project.component[0].modules[0]);
                 const modules = xml.project.component[0].modules[0].module.map((m) => m.$ as ISubModule);
@@ -55,5 +55,18 @@ export class AddDependency extends AbstractReposCommand {
                 }
             });
         });
+    }
+
+    private appendToModulesXml(modules: ISubModule[]): Promise<void> {
+        return this.readModulesXml('.')
+            .then((modulesXml) => {
+                // TODO remove duplicated modules
+                const modulesAsAttributes = modules.map((m) => ({ $: m }));
+                modulesXml.project.component[0].modules[0].module.push(...modulesAsAttributes);
+                const xml = new xml2js.Builder().buildObject(modulesXml);
+                Global.isVerbose() && console.log(`Updated xml: ${xml}`);
+                return xml;
+            })
+            .then((xml) => fs.writeFileAsync(path.resolve('.idea', 'modules.xml'), xml, 'utf8'));
     }
 }
