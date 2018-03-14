@@ -60,9 +60,12 @@ export class AddDependency extends AbstractReposCommand {
     private appendToModulesXml(modules: ISubModule[]): Promise<void> {
         return this.readModulesXml('.')
             .then((modulesXml) => {
-                // TODO remove duplicated modules
-                const modulesAsAttributes = modules.map((m) => ({ $: m }));
-                modulesXml.project.component[0].modules[0].module.push(...modulesAsAttributes);
+                const existingModules = modulesXml.project.component[0].modules[0].module;
+                modules.map((m) => ({ $: m })).forEach((m) => {
+                   if (existingModules.filter((e) => JSON.stringify(e) === JSON.stringify(m)).length === 0) {
+                       existingModules.push(m);
+                   }
+                });
                 const xml = new xml2js.Builder().buildObject(modulesXml);
                 Global.isVerbose() && console.log(`Updated xml: ${xml}`);
                 return xml;
