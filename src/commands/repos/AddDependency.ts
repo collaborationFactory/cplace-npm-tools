@@ -2,7 +2,7 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as Promise from 'bluebird';
-import {ISubModule} from './models';
+import {IModulesXmlModule, IModulesXmlRoot} from './models';
 import * as xml2js from 'xml2js';
 import {Global} from '../../Global';
 
@@ -27,7 +27,7 @@ export class AddDependency extends AbstractReposCommand {
             .then((submodules) => this.appendToModulesXml(submodules));
     }
 
-    private readModulesXml(pluginPath: string): Promise<object> {
+    private readModulesXml(pluginPath: string): Promise<IModulesXmlRoot> {
         const modulesXml = path.resolve(pluginPath, '.idea', 'modules.xml');
         if (!fs.existsSync(modulesXml)) {
             return Promise.reject(`${modulesXml} not found.`);
@@ -36,29 +36,29 @@ export class AddDependency extends AbstractReposCommand {
             .then(this.parseXml);
     }
 
-    private findSubmodules(plugin: string): Promise<ISubModule[]> {
+    private findSubmodules(plugin: string): Promise<IModulesXmlModule[]> {
         return this.readModulesXml(path.resolve('..', plugin))
-            .then((xml) => {
+            .then((xml: IModulesXmlRoot) => {
                 Global.isVerbose() && console.log(xml.project.component[0].modules[0]);
-                const modules = xml.project.component[0].modules[0].module.map((m) => m.$ as ISubModule);
+                const modules = xml.project.component[0].modules[0].module.map((m) => m.$);
                 Global.isVerbose() && console.log(modules);
                 return modules;
             });
     }
 
-    private parseXml(xml: string): Promise<object> {
+    private parseXml<T>(xml: string): Promise<T> {
         return new Promise((resolve, reject) => {
             xml2js.parseString(xml, (err, result) => {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(result);
+                    resolve(result as T);
                 }
             });
         });
     }
 
-    private adjustPaths(modules: ISubModule[]): Promise<ISubModule[]> {
+    private adjustPaths(modules: IModulesXmlModule[]): Promise<IModulesXmlModule[]> {
         modules = modules.filter((m) => m.filepath !== '$PROJECT_DIR$/release-notes/release-notes.iml');
         modules.forEach((m) => {
             if (!m.fileurl.startsWith('file://$PROJECT_DIR$/../')) {
@@ -71,9 +71,9 @@ export class AddDependency extends AbstractReposCommand {
         return Promise.resolve(modules);
     }
 
-    private appendToModulesXml(modules: ISubModule[]): Promise<void> {
+    private appendToModulesXml(modules: IModulesXmlModule[]): Promise<void> {
         return this.readModulesXml('.')
-            .then((modulesXml) => {
+            .then((modulesXml: IModulesXmlRoot) => {
                 const existingModules = modulesXml.project.component[0].modules[0].module;
                 modules.map((m) => ({ $: m })).forEach((m) => {
                    if (existingModules.filter((e) => JSON.stringify(e) === JSON.stringify(m)).length === 0) {
