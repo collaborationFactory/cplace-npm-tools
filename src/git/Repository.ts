@@ -108,16 +108,31 @@ export class Repository {
     }
 
     public status(): Promise<IGitStatus> {
+        /* tslint:disable */
         return new Promise<IGitStatus>((resolve, reject) => {
-            this.git.status((err, status: IGitStatus) => {
+            let numTries = 1;
+            const gitStatus = () => this.git.status((err, status: IGitStatus) => {
                 if (err) {
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`result of gitStatus in ${this.repoName}`, status);
-                    resolve(status);
+
+                    if (!status.current) {
+                        if (numTries >= 5) {
+                            reject(`tried gitStatus 5 times for ${this.repoName} - still failing, aborting...`);
+                        } else {
+                            numTries = numTries + 1;
+                            console.warn(`failed to correctly get gitStatus of ${this.repoName}, trying again... (try #${numTries})`);
+                            gitStatus();
+                        }
+                    } else {
+                        resolve(status);
+                    }
                 }
             });
+            gitStatus();
         });
+        /* tslint:enable */
     }
 
     public checkoutBranch(branch: string | string[]): Promise<void> {
