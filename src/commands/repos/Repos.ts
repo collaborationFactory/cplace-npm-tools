@@ -12,14 +12,14 @@ import {AddDependency} from './AddDependency';
 export class Repos implements ICommand {
     public static readonly PARAMETER_BRANCH: string = 'branch';
     public static readonly PARAMETER_BRANCH_SHORT: string = 'b';
-    private static readonly PARAMETER_UPDATE: string = 'update';
-    private static readonly PARAMETER_UPDATE_SHORT: string = 'u';
-    private static readonly PARAMETER_WRITE: string = 'write';
-    private static readonly PARAMETER_WRITE_SHORT: string = 'w';
-    private static readonly PARAMETER_CLONE: string = 'clone';
-    private static readonly PARAMETER_CLONE_SHORT: string = 'c';
-    private static readonly PARAMETER_ADD_DEPENDENCY: string = 'add-dependency';
-    private static readonly PARAMETER_ADD_DEPENDENCY_SHORT: string = 'd';
+    public static readonly PARAMETER_UPDATE: string = 'update';
+    public static readonly PARAMETER_UPDATE_SHORT: string = 'u';
+    public static readonly PARAMETER_WRITE: string = 'write';
+    public static readonly PARAMETER_WRITE_SHORT: string = 'w';
+    public static readonly PARAMETER_CLONE: string = 'clone';
+    public static readonly PARAMETER_CLONE_SHORT: string = 'c';
+    public static readonly PARAMETER_ADD_DEPENDENCY: string = 'add-dependency';
+    public static readonly PARAMETER_ADD_DEPENDENCY_SHORT: string = 'd';
 
     private cmd: ICommand;
 
@@ -33,13 +33,7 @@ export class Repos implements ICommand {
         } else if (params[Repos.PARAMETER_BRANCH] || params[Repos.PARAMETER_BRANCH_SHORT]) {
             this.cmd = new BranchRepos();
         } else if (params[Repos.PARAMETER_ADD_DEPENDENCY] || params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT]) {
-            let plugin: string;
-            if (params[Repos.PARAMETER_ADD_DEPENDENCY]) {
-                plugin = params[Repos.PARAMETER_ADD_DEPENDENCY] as string;
-            } else {
-                plugin = params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT] as string;
-            }
-            this.cmd = new AddDependency(plugin);
+            this.cmd = new AddDependency();
         } else {
             console.error('unknown repos command');
             return false;

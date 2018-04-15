@@ -7,6 +7,7 @@ import {fs} from '../../p/fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
 import {IGitStatus, Repository} from '../../git';
+import {enforceNewline} from '../../util';
 
 export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -61,5 +62,15 @@ export abstract class AbstractReposCommand implements ICommand {
         } else {
             return Promise.reject(`working copy of repo ${repo.repoName} is not clean`);
         }
+    }
+
+    protected writeNewParentRepos(newParentRepos: IReposDescriptor): Promise<void> {
+        const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
+        Global.isVerbose() && console.log('new repo description', newParentReposContent);
+        return fs
+            .writeFileAsync(AbstractReposCommand.PARENT_REPOS_FILE_NAME, newParentReposContent, 'utf8')
+            .then(() => {
+                this.parentRepos = newParentRepos;
+            });
     }
 }
