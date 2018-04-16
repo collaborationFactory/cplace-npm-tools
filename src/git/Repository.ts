@@ -440,6 +440,19 @@ export class Repository {
         });
     }
 
+    public getOriginUrl(): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            Global.isVerbose() && console.log(`Retrieving origin remote URL...`);
+            this.git.raw(['remote', 'get-url', 'origin'], (err, result) => {
+                if (err || !result) {
+                    reject(err);
+                } else {
+                    resolve(result.trim());
+                }
+            });
+        });
+    }
+
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
         if (!match || match.length < 2 || !match[1]) {

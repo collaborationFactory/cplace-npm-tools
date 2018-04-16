@@ -52,6 +52,12 @@ const cli = meow(
                 the --parent parameter. If --push is provided, the new branches are pushed after creation.
                 You can provide a remote-branch name using the --from <branch-name> parameter. This determines the remote branch based on which
                 the new branches are created. If this parameter is missing, the local branches currently checked out are used.
+            --add-dependency|-d <name> [--all]
+                Adds a new dependency to another plugin or repository.
+                If <name> is another sub-repository, the parent-repos.json will be updated to include this repository as a new dependency. If the
+                flag --all is given then also all modules of this repository will be added to the IDEA project. 
+                Otherwise <name> is treated as the name of a plugin and cplace-cli will try to resolve the corresponding IDEA module among all
+                currently known referenced repositories.
         
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository. The output is a .dot file.

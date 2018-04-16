@@ -36,6 +36,7 @@
     "bluebird": "^3.4.7",
     "meow": "^3.7.0",
     "randomatic": "^1.1.6",
-    "simple-git": "^1.65.0"
+    "simple-git": "^1.65.0",
+    "xml2js": "^0.4.19"
   }
 }

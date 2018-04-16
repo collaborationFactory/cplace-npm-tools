@@ -24,14 +24,7 @@ export class WriteRepos extends AbstractReposCommand {
                 states.forEach((s) => newParentRepos[s.repoName] = s.status);
 
                 Global.isVerbose() && console.log('status and revparse successfully completed');
-                const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
-                Global.isVerbose() && console.log('new repo description', newParentReposContent);
-
-                return fs
-                    .writeFileAsync(AbstractReposCommand.PARENT_REPOS_FILE_NAME, newParentReposContent, 'utf8')
-                    .then(() => {
-                        this.parentRepos = newParentRepos;
-                    });
+                return this.writeNewParentRepos(newParentRepos);
             });
     }
 
