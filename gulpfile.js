@@ -24,7 +24,7 @@ gulp.task('ts-lint', ['clean-ts'], function () {
 /**
  * Compile TypeScript and include references to library and app .d.ts files.
  */
-gulp.task('compile-ts', ['ts-lint'], function () {
+gulp.task('compile-ts', function () {
   var tsResult = tsProject.src()
     .pipe(sourcemaps.init())
     .pipe(tsProject());
@@ -61,7 +61,7 @@ gulp.task('clean-ts', function (cb) {
   return del(typeScriptGenFiles, cb);
 });
 
-gulp.task('test', ['copy-json'], function () {
+gulp.task('test', ['ts-lint', 'copy-json'], function () {
   return gulp
     .src('dist/test/**/*.spec.js', {read: false})
     // gulp-mocha needs filepaths so you can't have any plugins before it
