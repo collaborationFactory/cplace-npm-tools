@@ -14,7 +14,7 @@ import {ImlParser} from './ImlParser';
  * Add Dependency command
  */
 export class AddDependency extends AbstractReposCommand {
-    private static readonly PARAMETER_ALL_FROM_REPO: string = 'all';
+    private static readonly PARAMETER_ALL: string = 'all';
 
     private pluginOrRepoToAdd: string;
     private addAllFromRepo: boolean = false;
@@ -36,7 +36,7 @@ export class AddDependency extends AbstractReposCommand {
         } else {
             this.pluginOrRepoToAdd = params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT] as string;
         }
-        this.addAllFromRepo = !!params[AddDependency.PARAMETER_ALL_FROM_REPO];
+        this.addAllFromRepo = !!params[AddDependency.PARAMETER_ALL];
         return !!this.pluginOrRepoToAdd;
     }
 
