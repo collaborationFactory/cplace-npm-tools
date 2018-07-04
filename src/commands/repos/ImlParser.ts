@@ -1,24 +1,28 @@
-declare function require(name: string): any;
+import * as fs from 'fs';
+import * as xml2js from 'xml2js';
+import {IIml, IImlComponent} from './models';
 
-const fs = require('fs');
-const parseString = require('xml2js').parseString;
-
+/**
+ * Parses IntelliJ's IML files.
+ */
 export class ImlParser {
-    private _module: any;
+    private moduleIml: IIml;
+    private pathToIml: string;
 
-    constructor(private pathToIml: string) {
+    constructor(pathToIml: string) {
+        this.pathToIml = pathToIml;
         if (!fs.existsSync(pathToIml)) {
             throw Error(`IML ${pathToIml} does not exist`);
         }
         this.parseFile();
     }
 
-    getReferencedModules(): string[] {
-        const components = this._module.component as any[];
+    public getReferencedModules(): string[] {
+        const components = this.moduleIml.component;
         let result: string[] = [];
 
         if (components) {
-            components.forEach(component => {
+            components.forEach((component) => {
                 if (component.$.name === 'NewModuleRootManager') {
                     result = this.getReferencedModulesFromManager(component);
                 }
@@ -28,29 +32,29 @@ export class ImlParser {
         return result;
     }
 
-    private getReferencedModulesFromManager(component: any): string[] {
-        const entries = component.orderEntry as any[];
+    private getReferencedModulesFromManager(component: IImlComponent): string[] {
+        const entries = component.orderEntry;
         if (!entries) {
             return [];
         }
 
         return entries
-            .map(entry => {
+            .map((entry) => {
                 return entry.$.type && entry.$.type === 'module' ? entry.$['module-name'] : null;
             })
-            .filter(name => {
+            .filter((name) => {
                 return !!name;
             });
     }
 
     private parseFile(): void {
-        if (this._module) {
+        if (this.moduleIml) {
             return;
         }
 
         const imlContent = fs.readFileSync(this.pathToIml, 'utf8');
-        parseString(imlContent, (err, result) => {
-            this._module = result.module;
+        xml2js.parseString(imlContent, (err, result) => {
+            this.moduleIml = result.module;
         });
     }
 }

@@ -40,3 +40,25 @@ export interface IModulesXmlModule {
     filepath: string;
     group?: string;
 }
+
+export interface IIml {
+    component: IImlComponent[];
+}
+
+export interface IImlComponent {
+    /* tslint:disable */
+    orderEntry: Array<IXmlAttribues<ITypeAttribute>>;
+    /* tslint:enable */
+    $: INameAttribute;
+}
+
+export interface INameAttribute {
+    name: string;
+}
+
+export interface ITypeAttribute {
+    /* tslint:disable */
+    // type is a keyword, but we need it here
+    type: string;
+    /* tslint:enable */
+}
