@@ -8,12 +8,13 @@ import {Global} from '../../Global';
 import {ICommandParameters} from '../models';
 import {Repos} from './Repos';
 import {IGitStatus, Repository} from '../../git';
+import {ImlParser} from './ImlParser';
 
 /**
  * Add Dependency command
  */
 export class AddDependency extends AbstractReposCommand {
-    public static readonly PARMAETER_ALL_FROM_REPO: string = 'all';
+    private static readonly PARAMETER_ALL_FROM_REPO: string = 'all';
 
     private pluginOrRepoToAdd: string;
     private addAllFromRepo: boolean = false;
@@ -24,7 +25,8 @@ export class AddDependency extends AbstractReposCommand {
         } else {
             return this.findPluginInRepos(this.pluginOrRepoToAdd)
                 .then(({repoName, moduleEntry}) => this.adjustPathsAndGroup(repoName, moduleEntry))
-                .then((moduleEntry) => this.appendToModulesXml([moduleEntry]));
+                .then((moduleEntry) => this.addAllFromRepo? this.findDependencies(moduleEntry) : Promise.resolve([moduleEntry]))
+                .then((moduleEntries) => this.appendToModulesXml(moduleEntries));
         }
     }
 
@@ -34,7 +36,7 @@ export class AddDependency extends AbstractReposCommand {
         } else {
             this.pluginOrRepoToAdd = params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT] as string;
         }
-        this.addAllFromRepo = !!params[AddDependency.PARMAETER_ALL_FROM_REPO];
+        this.addAllFromRepo = !!params[AddDependency.PARAMETER_ALL_FROM_REPO];
         return !!this.pluginOrRepoToAdd;
     }
 
@@ -144,6 +146,23 @@ export class AddDependency extends AbstractReposCommand {
             mod.filepath = mod.filepath.replace('$PROJECT_DIR$/', `$PROJECT_DIR$/../${repoName}/`);
         }
         return mod;
+    }
+
+    private static absolutePath(path: string): string {
+        return path.replace('$PROJECT_DIR$/', '');
+    }
+
+    private findDependencies(moduleEntry: IModulesXmlModule): Promise<IModulesXmlModule[]> {
+        try {
+            const imlParser = new ImlParser(AddDependency.absolutePath(moduleEntry.filepath));
+            return Promise.map(
+                Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName))),
+                (entry) => entry.moduleEntry
+            );
+        } catch (e) {
+            console.log(e);
+            return Promise.reject(e);
+        }
     }
 
     private appendToModulesXml(moduleEntries: IModulesXmlModule[]): Promise<void> {

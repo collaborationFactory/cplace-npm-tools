@@ -57,7 +57,7 @@ const cli = meow(
                 If <name> is another sub-repository, the parent-repos.json will be updated to include this repository as a new dependency. If the
                 flag --all is given then also all modules of this repository will be added to the IDEA project. 
                 Otherwise <name> is treated as the name of a plugin and cplace-cli will try to resolve the corresponding IDEA module among all
-                currently known referenced repositories.
+                currently known referenced repositories. When --all is given, all dependencies of the plugin will also be added as dependencies.
         
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository. The output is a .dot file.
