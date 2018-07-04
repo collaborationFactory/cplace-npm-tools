@@ -25,7 +25,7 @@ export class AddDependency extends AbstractReposCommand {
         } else {
             return this.findPluginInRepos(this.pluginOrRepoToAdd)
                 .then(({repoName, moduleEntry}) => AddDependency.adjustPathsAndGroup(repoName, moduleEntry))
-                .then((moduleEntry) => this.addAllFromRepo? this.findDependencies(moduleEntry) : Promise.resolve([moduleEntry]))
+                .then((moduleEntry) => this.addDependenciesIfRequired(moduleEntry))
                 .then((moduleEntries) => this.appendToModulesXml(moduleEntries));
         }
     }
@@ -146,6 +146,15 @@ export class AddDependency extends AbstractReposCommand {
             mod.filepath = mod.filepath.replace('$PROJECT_DIR$/', `$PROJECT_DIR$/../${repoName}/`);
         }
         return mod;
+    }
+
+    private addDependenciesIfRequired(moduleEntry) {
+        if (this.addAllFromRepo) {
+            return this.findDependencies(moduleEntry)
+                .then((entries) => entries.concat(moduleEntry));
+        } else {
+            return Promise.resolve([moduleEntry]);
+        }
     }
 
     private static absolutePath(path: string): string {
