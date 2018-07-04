@@ -157,7 +157,7 @@ export class AddDependency extends AbstractReposCommand {
             const imlParser = new ImlParser(AddDependency.absolutePath(moduleEntry.filepath));
             return Promise.map(
                 Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName))),
-                (entry) => entry.moduleEntry
+                (entry) => this.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)
             );
         } catch (e) {
             console.log(e);
