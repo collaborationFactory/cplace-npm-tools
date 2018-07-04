@@ -24,7 +24,7 @@ export class AddDependency extends AbstractReposCommand {
             return this.addNewParentRepo(this.pluginOrRepoToAdd, this.addAllFromRepo);
         } else {
             return this.findPluginInRepos(this.pluginOrRepoToAdd)
-                .then(({repoName, moduleEntry}) => AddDependency.adjustPathsAndGroup(repoName, moduleEntry))
+                .then(({repoName, moduleEntry}) => this.adjustPathsAndGroup(repoName, moduleEntry))
                 .then((moduleEntry) => this.addDependenciesIfRequired(moduleEntry))
                 .then((moduleEntries) => this.appendToModulesXml(moduleEntries));
         }
@@ -75,7 +75,7 @@ export class AddDependency extends AbstractReposCommand {
             .then((moduleRoot) => moduleRoot.project.component[0].modules[0].module.map((m) => m.$))
             .then((modules: IModulesXmlModule[]) => modules.filter((m) => !m.filepath.endsWith('release-notes.iml')))
             .then((modules) => modules.map((m) => {
-                const mod = AddDependency.adjustPathsAndGroup(repoName, m);
+                const mod = this.adjustPathsAndGroup(repoName, m);
                 Global.isVerbose() && console.log(`adding module for filepath ${mod.filepath}`);
                 return mod;
             }))
@@ -130,7 +130,7 @@ export class AddDependency extends AbstractReposCommand {
         });
     }
 
-    private static adjustPathsAndGroup(repoName: string, moduleEntry: IModulesXmlModule): IModulesXmlModule {
+    private adjustPathsAndGroup(repoName: string, moduleEntry: IModulesXmlModule): IModulesXmlModule {
         const mod = {...moduleEntry};
         if (!mod.fileurl.startsWith('file://$PROJECT_DIR$/../')) {
             mod.fileurl = mod.fileurl.replace('file://$PROJECT_DIR$/', `file://$PROJECT_DIR$/../${repoName}/`);
@@ -148,7 +148,7 @@ export class AddDependency extends AbstractReposCommand {
         return mod;
     }
 
-    private addDependenciesIfRequired(moduleEntry) {
+    private addDependenciesIfRequired(moduleEntry: IModulesXmlModule): Promise<IModulesXmlModule[]> {
         if (this.addAllFromRepo) {
             return this.findDependencies(moduleEntry)
                 .then((entries) => entries.concat(moduleEntry));
@@ -157,16 +157,16 @@ export class AddDependency extends AbstractReposCommand {
         }
     }
 
-    private static absolutePath(path: string): string {
+    private absolutePath(path: string): string {
         return path.replace('$PROJECT_DIR$/', '');
     }
 
     private findDependencies(moduleEntry: IModulesXmlModule): Promise<IModulesXmlModule[]> {
         try {
-            const imlParser = new ImlParser(AddDependency.absolutePath(moduleEntry.filepath));
+            const imlParser = new ImlParser(this.absolutePath(moduleEntry.filepath));
             return Promise.map(
                 Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName))),
-                (entry) => AddDependency.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)
+                (entry) => this.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)
             );
         } catch (e) {
             console.log(e);
