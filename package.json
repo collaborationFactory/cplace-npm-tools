@@ -2,13 +2,19 @@
   "name": "@cplace/cli",
   "version": "0.6.0",
   "description": "",
-  "main": "dist/src/index.js",
-  "typings": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:tsc": "tsc",
+    "dev:lint": "tslint --project tsconfig.json",
+    "dev": "npm run dev:lint && npm run dev:tsc",
+    "dev:link": "npm run dev:lint && npm run dev:tsc && npm link",
+    "clean": "rimraf dist/",
+    "prod": "npm run clean && npm run dev:lint && npm run dev:tsc"
   },
   "bin": {
-    "cplace-cli": "dist/src/cli.js"
+    "cplace-cli": "dist/cli.js"
   },
   "author": "collaboration Factory AG",
   "repository": {
@@ -17,25 +23,17 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
-    "chai": "^3.5.0",
+    "@types/node": "^10.12.11",
     "del": "^2.2.2",
-    "gulp": "^3.9.1",
-    "gulp-mocha": "^3.0.1",
-    "gulp-rename": "^1.2.2",
-    "gulp-shell": "^0.5.2",
-    "gulp-sourcemaps": "^2.4.0",
-    "gulp-tslint": "^7.0.1",
-    "gulp-typescript": "^3.1.4",
     "merge2": "^1.0.2",
-    "tslint": "^4.4.2",
-    "tslint-microsoft-contrib": "^4.0.0",
-    "typescript": "^2.2.1",
-    "@types/node": "^9.4.6"
+    "tslint": "^5.11.0",
+    "tslint-microsoft-contrib": "^6.0.0",
+    "typescript": "^3.2.1"
   },
   "dependencies": {
     "bluebird": "^3.4.7",
-    "meow": "^3.7.0",
-    "randomatic": "^1.1.6",
+    "meow": "^5.0.0",
+    "randomatic": "^3.1.1",
     "simple-git": "^1.65.0",
     "xml2js": "^0.4.19"
   }

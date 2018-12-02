@@ -157,13 +157,10 @@ export class AddDependency extends AbstractReposCommand {
         }
     }
 
-    private absolutePath(path: string): string {
-        return path.replace('$PROJECT_DIR$/', '');
-    }
-
     private findDependencies(moduleEntry: IModulesXmlModule): Promise<IModulesXmlModule[]> {
         try {
-            const imlParser = new ImlParser(this.absolutePath(moduleEntry.filepath));
+            const filepath = moduleEntry.filepath.replace('$PROJECT_DIR$/', '');
+            const imlParser = new ImlParser(filepath);
             return Promise.map(
                 Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName))),
                 (entry) => this.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)

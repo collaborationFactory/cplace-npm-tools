@@ -6,12 +6,13 @@ import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
 
+/* tslint:disable */
 const cli = meow(
     {
         help: `
     Usage:
         $ cplace-cli <command>
-       
+
     Commands:
         release-notes (--from <from> [--to <to>] [--lang <lang>] [--force]) | (--check [--size <size>])
             Generates release notes between the two given commits (excluding <from>, including <to>).
@@ -91,10 +92,9 @@ const cli = meow(
             Print verbose information to console
 `
     },
-    /* tslint:disable */
     {'string': 'release'}
-    /* tslint:enable */
 );
+/* tslint:enable */
 
 if (!cli.input.length) {
     console.error('missing required parameter <command>');

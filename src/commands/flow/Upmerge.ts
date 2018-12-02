@@ -121,7 +121,7 @@ export class Upmerge implements ICommand {
     }
 
     private filterReleaseBranchesAndCreateOrder(release: ReleaseNumber, branches: IGitBranchDetails[]): IBranchDetails[] {
-        const trackedRemoteBranches = new Map<String, IBranchDetails>();
+        const trackedRemoteBranches = new Map<string, IBranchDetails>();
 
         const customerPattern = this.allCustomers ? '[\\w-]*' : this.customer;
         const customerBranchPattern = new RegExp(`^${this.remote}/customer/(${customerPattern})/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
