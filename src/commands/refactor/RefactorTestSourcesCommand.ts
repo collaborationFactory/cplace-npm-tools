@@ -3,6 +3,7 @@ import {IRefactoringCommand} from './IRefactoringCommand';
 import * as path from 'path';
 import * as fs from 'fs';
 import {Global} from '../../Global';
+import * as rimraf from 'rimraf';
 
 /**
  * This command will refactor an "old" plugin structure using only `src/classes/...` or `src/java/...`
@@ -21,7 +22,6 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
     // TODO: handle resource folders...?
 
     private static async createDirectoryIfMissing(dirPath: string): Promise<void> {
-        console.log(`createDirectoryIfMissing: ${dirPath}`);
         if (fs.existsSync(dirPath)) {
             const srcMainStats = await fs.statAsync(dirPath);
             if (!srcMainStats.isDirectory()) {
@@ -70,6 +70,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         await this.moveRemainingSourceFiles();
         await this.refactorTestSourceFiles(testPackageTestPath);
         await this.adjustImlFile();
+        await this.removeOldSourceAndBuildFolder();
     }
 
     private async ensureNewDirectoriesExist(): Promise<void> {
@@ -156,5 +157,45 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         await fs.writeFileAsync(imlPath, content, 'utf8');
 
         Global.isVerbose() && console.log(`Adjusted ${this.pluginName}.iml: ${imlPath}`);
+    }
+
+    private async removeOldSourceAndBuildFolder(): Promise<void> {
+        let pathToRemove = this.sourcesPath;
+        const basename = path.basename(this.sourcesPath);
+        if (basename === 'src') {
+            // of course we may not remove the src folder - otherwise all would be lost
+            // but we can remove the first package-root folder
+            pathToRemove = path.resolve(this.sourcesPath, this.pluginName.split('.')[0]);
+        }
+
+        const sourcePromise = new Promise<void>((resolve, reject) => {
+            rimraf(pathToRemove, (e) => {
+                if (!e) {
+                    console.log(`Removed old source directory ${pathToRemove}`);
+                    resolve();
+                } else {
+                    reject(e);
+                }
+            });
+        });
+
+        const buildPromise = new Promise<void>((resolve, reject) => {
+            const buildPath = path.resolve(this.pluginPath, 'build');
+            if (!fs.existsSync(buildPath)) {
+                resolve();
+                return;
+            }
+
+            rimraf(buildPath, (e) => {
+                if (!e) {
+                    console.log(`Removed old build directory ${buildPath}`);
+                    resolve();
+                } else {
+                    reject(e);
+                }
+            });
+        });
+
+        await Promise.all([sourcePromise, buildPromise]);
     }
 }
