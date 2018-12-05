@@ -66,14 +66,17 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
 
     public async execute(): Promise<void> {
         await this.ensureNewDirectoriesExist();
-        await this.moveTestPackage();
+        const testPackageTestPath = await this.moveTestPackage();
+        await this.moveRemainingSourceFiles();
+        await this.refactorTestSourceFiles(testPackageTestPath);
+        await this.adjustImlFile();
     }
 
     private async ensureNewDirectoriesExist(): Promise<void> {
         const srcMainPath = path.resolve(this.pluginPath, 'src', 'main');
         await RefactorTestSourcesCommand.createDirectoryIfMissing(srcMainPath);
         const srcMainJavaPath = path.resolve(srcMainPath, 'java');
-        await RefactorTestSourcesCommand.createDirectoryIfMissing(srcMainPath);
+        await RefactorTestSourcesCommand.createDirectoryIfMissing(srcMainJavaPath);
         this.mainSourcesPath = srcMainJavaPath;
 
         const srcTestPath = path.resolve(this.pluginPath, 'src', 'test');
@@ -83,7 +86,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         this.testSourcesPath = srcTestJavaPath;
     }
 
-    private async moveTestPackage(): Promise<void> {
+    private async moveTestPackage(): Promise<string> {
         const testPackageSources = path.resolve(this.packageSourcesRoot, 'test');
         if (!fs.existsSync(this.testSourcesPath)) {
             Global.isVerbose() && console.log(`Test package does not exist for ${this.pluginName}: ${testPackageSources}`);
@@ -100,5 +103,58 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         Global.isVerbose() && console.log(`Moving test package for ${this.pluginName} to: ${testPackageTestPath}`);
         await fs.renameAsync(testPackageSources, testPackageTestPath);
         console.log(`Moved test package ${this.pluginName}.test to ${testPackageTestPath}`);
+
+        return testPackageTestPath;
+    }
+
+    private async moveRemainingSourceFiles(): Promise<void> {
+        const pluginNameParts = this.pluginName.split('.');
+        let pluginPackageSourcePath = this.mainSourcesPath;
+        for (const part of pluginNameParts) {
+            pluginPackageSourcePath = path.join(pluginPackageSourcePath, part);
+            await RefactorTestSourcesCommand.createDirectoryIfMissing(pluginPackageSourcePath);
+        }
+
+        Global.isVerbose() && console.log(`Moving source package for ${this.pluginName} to: ${pluginPackageSourcePath}`);
+        await fs.renameAsync(this.packageSourcesRoot, pluginPackageSourcePath);
+        console.log(`Moved source package ${this.pluginName} to ${pluginPackageSourcePath}`);
+    }
+
+    private async refactorTestSourceFiles(testPackageTestPath: string): Promise<void> {
+        const allTestsPath = path.resolve(testPackageTestPath, 'AllTests.java');
+        if (!fs.existsSync(allTestsPath)) {
+            console.warn(`Expected AllTests class but didn't exist: ${allTestsPath}`);
+            return;
+        }
+
+        let content = await fs.readFileAsync(allTestsPath, 'utf8');
+        content = content
+            .replace('import cf.cplace.platform.test.util.PackageSuite;', 'import cf.cplace.platform.test.util.PluginSuite;')
+            .replace('@RunWith(PackageSuite.class)', '@RunWith(PluginSuite.class)');
+        await fs.writeFileAsync(allTestsPath, content, 'utf8');
+
+        Global.isVerbose() && console.log(`Refactored AllTests.java: ${allTestsPath}`);
+    }
+
+    private async adjustImlFile(): Promise<void> {
+        const imlPath = path.resolve(this.pluginPath, `${this.pluginName}.iml`);
+        if (!fs.existsSync(imlPath)) {
+            console.error(`IML file for ${this.pluginName} does not exist: ${imlPath}`);
+            return;
+        }
+
+        const oldSourceFolderWithClassesEntry = `<sourceFolder url="file://$MODULE_DIR$/src/classes" isTestSource="false" />`;
+        const oldSourceFolderWithoutClassesEntry = `<sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />`;
+        const newSourceAndTestFolderEntry = `<sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />\n` +
+            `      <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />`;
+
+        let content = await fs.readFileAsync(imlPath, 'utf8');
+        // only one of the old entries exists - so we can replace twice
+        content = content
+            .replace(oldSourceFolderWithClassesEntry, newSourceAndTestFolderEntry)
+            .replace(oldSourceFolderWithoutClassesEntry, newSourceAndTestFolderEntry);
+        await fs.writeFileAsync(imlPath, content, 'utf8');
+
+        Global.isVerbose() && console.log(`Adjusted ${this.pluginName}.iml: ${imlPath}`);
     }
 }
