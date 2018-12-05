@@ -8,8 +8,9 @@ This package should be installed globally:
 ```
 # Fetches the latest release from a repo
 $ npm install -g @cplace/cli
+
 # Or clone this repo, build it and install the latest development version:
-$ npm install && gulp
+$ npm install && npm run prod
 $ npm install -g .
 ```
 
@@ -19,21 +20,18 @@ $ cplace-cli
 ```
 to get the available commands and help.
 
-=======
 ## Building and Running 
 
-Building is done via gulp, but dependencies must first be installed through npm (which also installs gulp if required):
+Building is done via npm package commands, but dependencies must first be installed through npm:
 ```
 $ npm install
-$ gulp
+$ npm run prod
 ```
 After building, the local version can be run using node:
 ```
-$ node dist/src/cli.js
+$ node dist/cli.js
 ```
-
-When developing, you can start gulp in watch mode:
+In order to just run the TypeScript compiler and tslint use:
 ```
-$ gulp watch
+$ npm run dev
 ```
-Gulp will watch all `.ts` files and recompile them when they are modified.
