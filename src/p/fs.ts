@@ -35,6 +35,8 @@ declare module 'fs' {
     export function readdirAsync(path: string | Buffer): Promise<string[]>;
 
     export function renameAsync(oldPath: PathLike, newPath: PathLike): Promise<void>;
+
+    export function unlinkAsync(path: PathLike): Promise<void>;
 }
 
 export {fs};

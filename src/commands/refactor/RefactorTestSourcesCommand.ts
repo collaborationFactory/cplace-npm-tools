@@ -1,5 +1,6 @@
 import {ICommandParameters} from '../models';
 import {IRefactoringCommand} from './IRefactoringCommand';
+import * as cpr from 'cpr';
 import * as path from 'path';
 import * as fs from 'fs';
 import {Global} from '../../Global';
@@ -102,7 +103,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         }
 
         Global.isVerbose() && console.log(`Moving test package for ${this.pluginName} to: ${testPackageTestPath}`);
-        await fs.renameAsync(testPackageSources, testPackageTestPath);
+        await this.moveDirectory(testPackageSources, testPackageTestPath);
         console.log(`Moved test package ${this.pluginName}.test to ${testPackageTestPath}`);
 
         return testPackageTestPath;
@@ -117,7 +118,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         }
 
         Global.isVerbose() && console.log(`Moving source package for ${this.pluginName} to: ${pluginPackageSourcePath}`);
-        await fs.renameAsync(this.packageSourcesRoot, pluginPackageSourcePath);
+        await this.moveDirectory(this.packageSourcesRoot, pluginPackageSourcePath);
         console.log(`Moved source package ${this.pluginName} to ${pluginPackageSourcePath}`);
     }
 
@@ -197,5 +198,35 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         });
 
         await Promise.all([sourcePromise, buildPromise]);
+    }
+
+    private async moveDirectory(fromPath: string, toPath: string): Promise<void> {
+        try {
+            await fs.renameAsync(fromPath, toPath);
+            return;
+        } catch (err) {
+            if (err.code !== 'EPERM') {
+                throw err;
+            }
+        }
+
+        // we try with copy-and-remove-after
+        return new Promise<void>((resolve, reject) => {
+            cpr(fromPath, toPath, {overwrite: true}, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        }).then(() => new Promise<void>((resolve, reject) => {
+            rimraf(fromPath, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        }));
     }
 }
