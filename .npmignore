@@ -8,4 +8,4 @@ tslint.json
 typings.json
 dist/test
 src/
-release_notes/
+release-notes/
