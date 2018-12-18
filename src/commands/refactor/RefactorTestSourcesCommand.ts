@@ -20,8 +20,6 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
     private testSourcesPath: string;
     private packageSourcesRoot: string;
 
-    // TODO: handle resource folders...?
-
     private static async createDirectoryIfMissing(dirPath: string): Promise<void> {
         if (fs.existsSync(dirPath)) {
             const srcMainStats = await fs.statAsync(dirPath);
@@ -49,7 +47,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
             const srcClasses = potentialSrcPath;
             potentialSrcPath = path.resolve.apply(null, [this.pluginPath, 'src', ...this.pluginName.split('.')]);
             if (!fs.existsSync(potentialSrcPath)) {
-                console.error(`Could find sources directory for plugin ${this.pluginName} - tried the following directories:`);
+                console.error(`Could not find sources directory for plugin ${this.pluginName} - tried the following directories:`);
                 console.error(`- ${srcClasses}`);
                 console.error(`- ${potentialSrcPath}`);
                 return false;
@@ -66,7 +64,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
     }
 
     public async execute(): Promise<void> {
-        await this.ensureNewDirectoriesExist();
+        await this.createNewDirectoriesIfMissing();
         const testPackageTestPath = await this.moveTestPackage();
         await this.moveRemainingSourceFiles();
         await this.refactorTestSourceFiles(testPackageTestPath);
@@ -74,7 +72,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         await this.removeOldSourceAndBuildFolder();
     }
 
-    private async ensureNewDirectoriesExist(): Promise<void> {
+    private async createNewDirectoriesIfMissing(): Promise<void> {
         const srcMainPath = path.resolve(this.pluginPath, 'src', 'main');
         await RefactorTestSourcesCommand.createDirectoryIfMissing(srcMainPath);
         const srcMainJavaPath = path.resolve(srcMainPath, 'java');
@@ -130,9 +128,22 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         }
 
         let content = await fs.readFileAsync(allTestsPath, 'utf8');
-        content = content
-            .replace('import cf.cplace.platform.test.util.PackageSuite;', 'import cf.cplace.platform.test.util.PluginSuite;')
-            .replace('@RunWith(PackageSuite.class)', '@RunWith(PluginSuite.class)');
+        content = content.replace('@RunWith(PackageSuite.class)', '@RunWith(PluginSuite.class)');
+        // Check if any other PackageSuite usages are in there -> specific annotations
+        if (content.indexOf('@PackageSuite') === -1) {
+            // No usages, just replace
+            content = content.replace(
+                'import cf.cplace.platform.test.util.PackageSuite;',
+                'import cf.cplace.platform.test.util.PluginSuite;'
+            );
+        } else {
+            // Still used, just append our new import
+            content = content.replace(
+                'import cf.cplace.platform.test.util.PackageSuite;',
+                'import cf.cplace.platform.test.util.PackageSuite;\n' +
+                'import cf.cplace.platform.test.util.PluginSuite;'
+            );
+        }
         await fs.writeFileAsync(allTestsPath, content, 'utf8');
 
         Global.isVerbose() && console.log(`Refactored AllTests.java: ${allTestsPath}`);
