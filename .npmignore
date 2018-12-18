@@ -1,11 +1,11 @@
 node_modules/
 *.log
 *.tgz
-
+.idea/
 test/
-gulpfile.js
 tsconfig.json
 tslint.json
 typings.json
-typings
 dist/test
+src/
+release_notes/
