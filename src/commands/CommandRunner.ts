@@ -7,12 +7,14 @@ import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
 import {VisualizeDelegate} from './visualize';
+import {RefactorDelegate} from './refactor';
 
 const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
     'repos': new Repos(),
     'flow': new Flow(),
-    'visualize': new VisualizeDelegate()
+    'visualize': new VisualizeDelegate(),
+    'refactor': new RefactorDelegate()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

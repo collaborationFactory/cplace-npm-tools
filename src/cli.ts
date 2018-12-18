@@ -86,6 +86,12 @@ const cli = meow(
             
             --show-files
                 List files to be merged
+                
+        refactor <subcommand> --plugin|-p <plugin>
+            Handles plugin specific refactorings where <subcommand> is one of the following:
+            --test-sources
+                Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like structure with
+                'src/main/java' and 'src/test/java'
 
     Global options:
         --verbose

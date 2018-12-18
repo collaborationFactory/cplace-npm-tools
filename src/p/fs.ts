@@ -3,6 +3,7 @@
  */
 import * as Promise from 'bluebird';
 import * as fs from 'fs';
+import {PathLike} from 'fs';
 
 Promise.promisifyAll(fs);
 
@@ -32,6 +33,10 @@ declare module 'fs' {
     export function readFileSync(filename: string, encoding: string): string;
 
     export function readdirAsync(path: string | Buffer): Promise<string[]>;
+
+    export function renameAsync(oldPath: PathLike, newPath: PathLike): Promise<void>;
+
+    export function unlinkAsync(path: PathLike): Promise<void>;
 }
 
 export {fs};
