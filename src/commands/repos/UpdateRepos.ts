@@ -9,8 +9,10 @@ import {Global} from '../../Global';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
+    private static readonly PARAMETER_RESET_TO_REMOTE: string = 'resetToRemote';
 
     protected noFetch: boolean;
+    protected resetToRemote: boolean;
 
     public execute(): Promise<void> {
         return Promise.each(
@@ -25,6 +27,10 @@ export class UpdateRepos extends AbstractReposCommand {
         this.noFetch = params[UpdateRepos.PARAMETER_NO_FETCH] as boolean;
         if (this.noFetch) {
             Global.isVerbose() && console.log('running in nofetch mode');
+        }
+        this.resetToRemote = params[UpdateRepos.PARAMETER_RESET_TO_REMOTE] as boolean;
+        if (this.resetToRemote) {
+            Global.isVerbose() && console.log('ATTENTION: resetting to remote state!');
         }
         return true;
     }
@@ -51,6 +57,8 @@ export class UpdateRepos extends AbstractReposCommand {
             .then(() => {
                 if (commit) {
                     return repo.checkoutCommit(commit);
+                } else if (this.resetToRemote) {
+                    return repo.resetHard(branch);
                 } else {
                     return repo.pullOnlyFastForward();
                 }
