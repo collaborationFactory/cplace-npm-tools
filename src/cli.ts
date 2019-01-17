@@ -37,9 +37,13 @@ const cli = meow(
         
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
-            --update|-u [--nofetch]:
+            --update|-u [--nofetch] [--reset-to-remote]:
                 Updates all parent repos.
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
+                    WARNING: Uncommited changes WILL BE LOST.
+                If <resetToRemote> is set then the update will do a hard reset in order to make sure the local copy
+                matches the remote repository state.
+                    WARNING: Committed but not pushed changes WILL BE LOST.
             --write|-w [--freeze]:
                 Write the states of the parent repos to parent-repos.json.
                 If <freeze> is set the exact commit hashes of the currently checked out parent repos will be written regardless

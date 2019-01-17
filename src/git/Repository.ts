@@ -74,8 +74,8 @@ export class Repository {
             const pathSpec = `${fromHash}..${toHash}`;
             options[pathSpec] = null;
             this.git.log(options, (err, data: IGitLogSummary) => {
-                    err ? reject(err) : resolve(data);
-                }
+                             err ? reject(err) : resolve(data);
+                         }
             );
         });
     }
@@ -255,9 +255,12 @@ export class Repository {
             });
     }
 
-    public resetHard(): Promise<void> {
+    public resetHard(branch?: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.git.reset('hard', (err) => {
+            const args = !branch
+                ? ['--hard']
+                : ['--hard', `origin/${branch}`];
+            this.git.reset(args, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -370,7 +373,7 @@ export class Repository {
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
                                 console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
-                                    ', ignoring branch ' + branchAndCommit.branch);
+                                                ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
                                 return false;
