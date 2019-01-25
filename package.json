@@ -5,13 +5,12 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"SSSSHhhhhh... no test specified\"",
     "dev:tsc": "tsc",
     "dev:lint": "tslint --project tsconfig.json",
     "dev": "npm run dev:lint && npm run dev:tsc",
-    "dev:link": "npm run dev:lint && npm run dev:tsc && npm link",
-    "clean": "rimraf dist/",
-    "prod": "npm run clean && npm run dev:lint && npm run dev:tsc"
+    "clean": "rimraf dist/ *.tgz",
+    "prepare": "npm run clean && npm run dev"
   },
   "bin": {
     "cplace-cli": "dist/cli.js"
