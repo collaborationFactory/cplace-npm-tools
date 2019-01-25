@@ -7,9 +7,7 @@ import {CommandRunner} from './commands';
 import {Global} from './Global';
 
 /* tslint:disable */
-const cli = meow(
-    {
-        help: `
+const cli = meow(`
     Usage:
         $ cplace-cli <command>
 
@@ -100,10 +98,13 @@ const cli = meow(
     Global options:
         --verbose
             Print verbose information to console
-`
-    },
-    {'string': 'release'}
-);
+`, {
+    flags: {
+        release: {
+            type: 'string'
+        }
+    }
+});
 /* tslint:enable */
 
 if (!cli.input.length) {
