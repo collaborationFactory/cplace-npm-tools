@@ -11,6 +11,7 @@ export class ProjectPlanningRefactor implements ICommand {
     private targetBranchName: string;
     private cplaceRepo: simpleGit.Git;
     private projectPlanningRepo: simpleGit.Git;
+    private sourceBranchName: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.cplaceRepo = new Repository();
@@ -26,7 +27,7 @@ export class ProjectPlanningRefactor implements ICommand {
     }
 
     public execute(): Promise<void> {
-        const localCplaceGit = path.join(this.cplaceRepo.baseDir, '.git');
+        const localCplaceGit = path.join(process.cwd(), '.git');
         return this.cplaceRepo.checkIsRepo()
             .then(() => this.projectPlanningRepo.checkIsRepo())
             .then(() => this.getSourceBranch())
@@ -36,6 +37,7 @@ export class ProjectPlanningRefactor implements ICommand {
                 `git rm --cached -r -q -- . ; git reset -q $GIT_COMMIT ${PROJECT_PLANNING_PARAM}`, '--', '--all']))
             .then(() => this.projectPlanningRepo.addRemote(this.CPLACE_TEMP_REPO, localCplaceGit))
             .then(() => this.projectPlanningRepo.rawWrapper(['checkout', '-b', this.targetBranchName]))
+            .then(() => this.projectPlanningRepo.rawWrapper(['pull', this.CPLACE_TEMP_REPO, this.sourceBranchName, '--allow-unrelated-histories']))
             .then(() => this.projectPlanningRepo.removeRemote(this.CPLACE_TEMP_REPO));
     }
 
@@ -64,12 +66,12 @@ export class ProjectPlanningRefactor implements ICommand {
 
     private getSourceBranch(): Promise<void> {
         return this.cplaceRepo.rawWrapper(['rev-parse', '--abbrev-ref', 'HEAD']).then((currentBranch) => {
-            const sourceBranchName = currentBranch.trim();
-            if (sourceBranchName === 'master') {
+            this.sourceBranchName = currentBranch.trim();
+            if (this.sourceBranchName === 'master') {
                 const currentDate = new Date();
                 this.targetBranchName = `cplace-master-${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
             } else {
-                this.targetBranchName = sourceBranchName;
+                this.targetBranchName = this.sourceBranchName;
             }
             return Promise.resolve();
         });
