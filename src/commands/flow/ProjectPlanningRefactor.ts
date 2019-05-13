@@ -1,16 +1,21 @@
 import {ICommand, ICommandParameters} from '../models';
-import * as simpleGit from 'simple-git';
 import * as path from 'path';
-import {PROJECT_PLANNING_PARAM} from './models';
 import {Repository} from '../../git';
 
 export class ProjectPlanningRefactor implements ICommand {
     private static readonly PATH_TO_PROJECT_PLANNING_REPO: string = 'pathProjectPlanning';
     private readonly CPLACE_TEMP_REPO: string = 'cplace-temp-repo';
+    private readonly PROJECT_PLANNING_PARAM: string = '-- cf.cplace.projektplanung cf.cplace.rplanRxfImport cf.cplace.integration.ganttAndRiskmanagementAndTaskBoard' +
+        ' cf.cplace.restrictToEditableParentProject cf.cplace.mainProject' +
+        ' cf.cplace.lockChildrenOfProject cf.cplace.marketplace.common cf.cplace.marketplace.receiver cf.cplace.marketplace.sender cf.cplace.marketplace.testAll' +
+        ' cf.cplace.integration.ganttAndTaskBoard cf.cplace.integration.ganttAndRiskmanagement' +
+        ' cf.cplace.projectTree cf.cplace.pptexport cf.cplace.orgaTree cf.cplace.projektplanungCalendar cf.cplace.planauswahl cf.cplace.projektplanungMasterData' +
+        ' cf.cplace.gantt cf.cplace.itemList cf.cplace.mcl cf.cplace.roles.ownerOfProject ' +
+        'cf.cplace.personalScheduleWorkspace cf.cplace.marketplace.integration.receiverMainProject cf.cplace.personalScheduleWorkspaceWithMarketplace';
 
     private targetBranchName: string;
-    private cplaceRepo: simpleGit.Git;
-    private projectPlanningRepo: simpleGit.Git;
+    private cplaceRepo: Repository;
+    private projectPlanningRepo: Repository;
     private sourceBranchName: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
@@ -34,7 +39,7 @@ export class ProjectPlanningRefactor implements ICommand {
             .then(() => this.checkProjectPlanningRepoIsOnMaster())
             .then(() => this.checkResultingBranchIsNotPresent())
             .then(() => this.cplaceRepo.rawWrapper(['filter-branch', '--prune-empty', '--index-filter',
-                `git rm --cached -r -q -- . ; git reset -q $GIT_COMMIT ${PROJECT_PLANNING_PARAM}`, '--', '--all']))
+                `git rm --cached -r -q -- . ; git reset -q $GIT_COMMIT ${this.PROJECT_PLANNING_PARAM}`, '--', '--all']))
             .then(() => this.projectPlanningRepo.addRemote(this.CPLACE_TEMP_REPO, localCplaceGit))
             .then(() => this.projectPlanningRepo.rawWrapper(['checkout', '-b', this.targetBranchName]))
             .then(() => this.projectPlanningRepo.rawWrapper(['pull', this.CPLACE_TEMP_REPO, this.sourceBranchName, '--allow-unrelated-histories']))

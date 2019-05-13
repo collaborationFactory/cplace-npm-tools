@@ -98,6 +98,15 @@ $ cplace-cli --help
         
           --show-files
               List files to be merged
+              
+      flow --projectPlanningRefactor --pathProjectPlanning <path-to-local-project-planning-repo>
+          Iterates through the complete history of current branch and recreate the commits which only affects 25 plugins mentioned in 
+          PFM-ISSUE-1934. It is highly suggested to use --verbose while running this option as it takes 3 hours to finish and you can 
+          see how much time is left. 
+          
+          At the end the script will create a branch with the same name in the project planning repo(except master,for master it will create
+          master_<current_date>). 
+          
             
       refactor <subcommand> --plugin|-p <plugin>
           Handles plugin specific refactorings where <subcommand> is one of the following:
