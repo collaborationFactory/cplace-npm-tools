@@ -4,19 +4,19 @@
 import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Upmerge} from './Upmerge';
-import {ProjectPlanningRefactor} from './ProjectPlanningRefactor';
+import {SplitRepository} from './SplitRepository';
 
 export class Flow implements ICommand {
     private static readonly PARAMETER_UPMERGE: string = 'upmerge';
-    private static readonly PROJECT_PLANNING_REFACTOR: string = 'projectPlanningRefactor';
+    private static readonly SPLIT_REPOSITORY: string = 'splitRepository';
 
     private cmd: ICommand;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         if (params[Flow.PARAMETER_UPMERGE]) {
             this.cmd = new Upmerge();
-        } else if (params[Flow.PROJECT_PLANNING_REFACTOR]) {
-            this.cmd = new ProjectPlanningRefactor();
+        } else if (params[Flow.SPLIT_REPOSITORY]) {
+            this.cmd = new SplitRepository();
         } else {
             console.error('unknown flow command');
             return false;
