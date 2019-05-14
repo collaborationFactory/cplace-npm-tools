@@ -20,6 +20,7 @@ export class SplitRepository implements ICommand {
     private targetRepo: Repository;
     private sourceBranchName: string;
     private sourceDirectoriesToMigrate: string;
+    private sourceCommitHash: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.sourceRepo = new Repository();
@@ -47,14 +48,15 @@ export class SplitRepository implements ICommand {
         return this.sourceRepo.checkIsRepo()
             .then(() => this.targetRepo.checkIsRepo())
             .then(() => this.getSourceBranch())
-            .then(() => this.checkTargetRepoIsOnEmptyBranch())
+            .then(() => this.sourceRepo.getCurrentCommitHash())
+            .then((commitHash) => this.setCommitHash(commitHash))
             .then(() => this.checkResultingBranchIsNotPresent())
             .then(() => this.sourceRepo.rawWrapper(['filter-branch', '--prune-empty', '--index-filter',
                 `git rm --cached -r -q -- . ; git reset -q $GIT_COMMIT ${this.sourceDirectoriesToMigrate}`, '--', '--all']))
             .then(() => this.targetRepo.addRemote(this.SOURCE_TEMP_REPO, sourceGitRepo))
-            .then(() => this.targetRepo.rawWrapper(['checkout', '-b', this.targetBranchName]))
-            .then(() => this.targetRepo.rawWrapper(['pull', this.SOURCE_TEMP_REPO, this.sourceBranchName, '--allow-unrelated-histories']))
-            .then(() => this.targetRepo.removeRemote(this.SOURCE_TEMP_REPO));
+            .then(() => this.targetRepo.rawWrapper(['fetch', this.SOURCE_TEMP_REPO, `${this.sourceBranchName}:${this.targetBranchName}`]))
+            .then(() => this.targetRepo.removeRemote(this.SOURCE_TEMP_REPO))
+            .then(() => this.printWayForward());
     }
 
     private checkResultingBranchIsNotPresent(): Promise<void> {
@@ -71,13 +73,9 @@ export class SplitRepository implements ICommand {
         });
     }
 
-    private checkTargetRepoIsOnEmptyBranch(): Promise<void> {
-        return this.targetRepo.rawWrapper(['rev-parse', '--abbrev-ref', 'HEAD']).then((currentBranch) => {
-            if (!currentBranch.includes('empty-branch')) {
-                return Promise.reject('Target repo is not on empty branch, please switch to you empty branch and re run the command');
-            }
-            return Promise.resolve();
-        });
+    private setCommitHash(commitHash: string): Promise<void> {
+        this.sourceCommitHash = commitHash;
+        return Promise.resolve();
     }
 
     private getSourceBranch(): Promise<void> {
@@ -85,7 +83,7 @@ export class SplitRepository implements ICommand {
             this.sourceBranchName = currentBranch.trim();
             if (this.sourceBranchName === 'master') {
                 const currentDate = new Date();
-                this.targetBranchName = `cplace-master-${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+                this.targetBranchName = `source-master-${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
             } else {
                 this.targetBranchName = this.sourceBranchName;
             }
@@ -93,4 +91,11 @@ export class SplitRepository implements ICommand {
         });
     }
 
+    private printWayForward(): Promise<void> {
+        console.log(`The target repository has a branch name: ${this.targetBranchName} with all the commits from branch ${this.sourceBranchName} of source repo`);
+        console.log(`Please merge ${this.targetBranchName} into your working branch using below command line`);
+        console.log(`git merge -m "Merging latest from ${this.sourceBranchName} of source repository with last commit hash ${this.sourceCommitHash}"
+         ${this.targetBranchName} --allow-unrelated-histories`);
+        return Promise.resolve();
+    }
 }
