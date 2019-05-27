@@ -16,7 +16,6 @@ export class WdioConfigGenerator {
         this.baseUrl = baseUrl;
         this.timeout = timeout;
         this.workingDir = workingDir;
-
     }
 
     public generateWdioConfig(): void {
@@ -28,7 +27,8 @@ export class WdioConfigGenerator {
     }
 
     private pathToE2EFolder(pluginName: string): string {
-        return path.join(this.workingDir, pluginName, 'assets', 'e2e');
+        const e2ePath = path.join(this.workingDir, pluginName, 'assets', 'e2e');
+        return e2ePath.replace(/\\/g, '/');  // For Windows
     }
 
 }

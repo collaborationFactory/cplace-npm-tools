@@ -9,7 +9,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export class E2E implements ICommand {
-    public static readonly INTERNET_EXPLORER: string = 'internet explorer';
     private static readonly BASE_URL: string = 'baseUrl';
     private static readonly PLUGINS: string = 'plugins';
     private static readonly BROWSER: string = 'browser';
@@ -22,7 +21,6 @@ export class E2E implements ICommand {
     private pluginsToBeTested: string [];
     private baseUrl: string;
     private browser: string;
-    private browserVersion: string;
     private workingDir: string;
     private timeout: number;
 
@@ -52,12 +50,7 @@ export class E2E implements ICommand {
 
         const browser = params[E2E.BROWSER];
         if (typeof browser === 'string' && browser.length > 0) {
-            if (browser === 'ie11' || browser.startsWith('internet')) {
-                this.browser = E2E.INTERNET_EXPLORER;
-                this.browserVersion = '11';
-            } else {
                 this.browser = browser;
-            }
         } else {
             this.browser = E2E.DEFAULT_BROWSER;
         }
