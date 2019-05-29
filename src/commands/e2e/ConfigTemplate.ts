@@ -1,7 +1,28 @@
 export class ConfigTemplate {
     private readonly template: string;
 
-    constructor(e2eFolder: string, browser: string, baseUrl: string, timeout: number) {
+    constructor(e2eFolder: string, browser: string, baseUrl: string, timeout: number, headless: boolean) {
+        let capabilities = '';
+        if (headless) {
+            capabilities = `
+            capabilities: [{
+                maxInstances: 1,
+                browserName: '${browser}',
+                'goog:chromeOptions': {
+                    args: [
+                        '--headless',
+                        '--disable-gpu'
+                    ]
+                }
+            }],`;
+        } else {
+            capabilities = `
+            capabilities: [{
+                maxInstances: 1,
+                browserName: '${browser}'
+            }],`;
+        }
+
         this.template = `exports.config = {
             before: function () {
                 var config = require('${e2eFolder}/tsconfig.json');
@@ -20,10 +41,7 @@ export class ConfigTemplate {
             ],
             exclude: [],
             maxInstances: 1,
-            capabilities: [{
-                maxInstances: 1,
-                browserName: '${browser}'
-            }],
+            ${capabilities}
             logLevel: 'info',
             bail: 0,
             baseUrl: '${baseUrl}',

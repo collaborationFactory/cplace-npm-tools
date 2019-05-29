@@ -14,15 +14,18 @@ export class E2E implements ICommand {
     private static readonly BROWSER: string = 'browser';
 
     private static readonly TIMEOUT: string = 'timeout';
+    private static readonly HEADLESS: string = 'headless';
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
+    private static readonly DEFAULT_HEADLESS: boolean = false;
 
     private pluginsToBeTested: string [];
     private baseUrl: string;
     private browser: string;
     private workingDir: string;
     private timeout: number;
+    private headless: boolean;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.workingDir = process.cwd();
@@ -50,7 +53,7 @@ export class E2E implements ICommand {
 
         const browser = params[E2E.BROWSER];
         if (typeof browser === 'string' && browser.length > 0) {
-                this.browser = browser;
+            this.browser = browser;
         } else {
             this.browser = E2E.DEFAULT_BROWSER;
         }
@@ -62,11 +65,18 @@ export class E2E implements ICommand {
             this.timeout = E2E.DEFAULT_TIMEOUT;
         }
 
+        const headless = params[E2E.HEADLESS];
+        if (typeof headless === 'boolean') {
+            this.headless = true;
+        } else {
+            this.headless = E2E.DEFAULT_HEADLESS;
+        }
+
         return true;
     }
 
     public execute(): Promise<void> {
-        const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir);
+        const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir, this.headless);
         console.log('Generation WDIO configuration files...');
         wdioGenerator.generateWdioConfig();
         console.log('Starting test runner...');
