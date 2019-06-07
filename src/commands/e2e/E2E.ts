@@ -9,16 +9,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export class E2E implements ICommand {
-    private static readonly BASE_URL: string = 'baseUrl';
-    private static readonly PLUGINS: string = 'plugins';
-    private static readonly BROWSER: string = 'browser';
-
-    private static readonly TIMEOUT: string = 'timeout';
-    private static readonly HEADLESS: string = 'headless';
+    private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
+    private static readonly PARAMETER_PLUGINS: string = 'plugins';
+    private static readonly PARAMETER_BROWSER: string = 'browser';
+    private static readonly PARAMETER_TIMEOUT: string = 'timeout';
+    private static readonly PARAMETER_HEADLESS: string = 'headless';
+    // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
-    private static readonly DEFAULT_HEADLESS: boolean = false;
 
     private pluginsToBeTested: string [];
     private baseUrl: string;
@@ -30,7 +29,7 @@ export class E2E implements ICommand {
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.workingDir = process.cwd();
 
-        const plugins = params[E2E.PLUGINS];
+        const plugins = params[E2E.PARAMETER_PLUGINS];
         if (typeof plugins === 'string' && plugins.length > 0) {
             this.pluginsToBeTested = plugins.split(',').filter((plugin) => this.hasE2EAssets(plugin));
 
@@ -44,32 +43,34 @@ export class E2E implements ICommand {
             console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
         }
 
-        const baseUrl = params[E2E.BASE_URL];
+        const baseUrl = params[E2E.PARAMETER_BASE_URL];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
             this.baseUrl = baseUrl;
         } else {
             this.baseUrl = E2E.DEFAULT_BASE_URL;
         }
 
-        const browser = params[E2E.BROWSER];
+        const browser = params[E2E.PARAMETER_BROWSER];
         if (typeof browser === 'string' && browser.length > 0) {
             this.browser = browser;
         } else {
             this.browser = E2E.DEFAULT_BROWSER;
         }
 
-        const timeout = params[E2E.TIMEOUT];
+        const timeout = params[E2E.PARAMETER_TIMEOUT];
         if (typeof timeout === 'number') {
             this.timeout = timeout;
         } else {
             this.timeout = E2E.DEFAULT_TIMEOUT;
         }
 
-        const headless = params[E2E.HEADLESS];
+        const headless = params[E2E.PARAMETER_HEADLESS];
         if (typeof headless === 'boolean') {
-            this.headless = true;
-        } else {
-            this.headless = E2E.DEFAULT_HEADLESS;
+            this.headless = headless;
+        }
+
+        if (this.browser.toLowerCase() !== 'chrome') {
+            this.headless = false;
         }
 
         return true;
@@ -77,7 +78,7 @@ export class E2E implements ICommand {
 
     public execute(): Promise<void> {
         const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir, this.headless);
-        console.log('Generation WDIO configuration files...');
+        console.log('Generating WDIO configuration files...');
         wdioGenerator.generateWdioConfig();
         console.log('Starting test runner...');
 
