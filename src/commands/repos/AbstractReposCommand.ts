@@ -3,30 +3,22 @@
  */
 import * as Promise from 'bluebird';
 import {Global} from '../../Global';
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
 import {IGitStatus, Repository} from '../../git';
 import {enforceNewline} from '../../util';
 import * as path from 'path';
+import * as rimraf from 'rimraf';
 
 export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
     protected static readonly PARAMETER_FORCE: string = 'force';
+    protected static readonly NODE_MODULES: string = 'node_modules';
+    protected static readonly __NODE_MODULES_COPY: string = '__node_modules';
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
-
-    public static convertToUnixPath(input: string): string {
-        const isExtendedLengthPath = /^\\\\\?\\/.test(input);
-        const hasNonAscii = /[^\u0000-\u0080]+/.test(input);
-
-        if (isExtendedLengthPath || hasNonAscii) {
-            return input;
-        }
-
-        return input.replace(/\\/g, '/');
-    }
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
@@ -58,14 +50,14 @@ export abstract class AbstractReposCommand implements ICommand {
         return true;
     }
 
+    protected removeFolderInRepo(repo: Repository, folderName: string): void {
+        if (fs.existsSync(path.join(repo.baseDir, folderName))) {
+            console.log(`[${repo.repoName.toUpperCase()}]: Removing ${folderName} folder`);
+            rimraf.sync(path.join(repo.baseDir, folderName));
+        }
+    }
+
     protected checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
-        fs.move(AbstractReposCommand.convertToUnixPath(path.join(repo.baseDir, 'node_modules')),
-                AbstractReposCommand.convertToUnixPath(path.join(repo.baseDir, '__node_modules')), (err) => {
-                if (err) {
-                    console.error('Failed to move node_modules folder', err);
-                    return false;
-                }
-            });
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&

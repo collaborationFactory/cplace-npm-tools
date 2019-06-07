@@ -6,6 +6,8 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import {ICommandParameters} from '../models';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
@@ -35,6 +37,56 @@ export class UpdateRepos extends AbstractReposCommand {
         return true;
     }
 
+    private moveNodeModules(repo: Repository): void {
+        if (!fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES))) {
+            console.log(`[${repo.repoName.toUpperCase()}]: No ${AbstractReposCommand.NODE_MODULES} folder`);
+        } else {
+            if (fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY))) {
+                console.log(`[${repo.repoName.toUpperCase()}]: ${AbstractReposCommand.__NODE_MODULES_COPY} folder already exists`);
+                this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
+            }
+            console.log(`[${repo.repoName.toUpperCase()}]: Moving ${AbstractReposCommand.NODE_MODULES} to ${AbstractReposCommand.__NODE_MODULES_COPY}`);
+            fs.renameSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES),
+                          path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY));
+        }
+    }
+
+    private restoreNodeModules(repo: Repository): void {
+        if (!fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY))) {
+            console.log(`[${repo.repoName.toUpperCase()}]: No ${AbstractReposCommand.__NODE_MODULES_COPY} folder`);
+        } else {
+            if (fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES))) {
+                console.log(`[${repo.repoName.toUpperCase()}]: ${AbstractReposCommand.NODE_MODULES} folder already exists`);
+                this.removeFolderInRepo(repo, AbstractReposCommand.NODE_MODULES);
+            }
+            console.log(`[${repo.repoName.toUpperCase()}]: Restoring ${AbstractReposCommand.NODE_MODULES} from ${AbstractReposCommand.__NODE_MODULES_COPY}`);
+            fs.renameSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY),
+                          path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES));
+        }
+    }
+
+    private areNodeModulesCheckedIn(repo: Repository): boolean {
+        const packageJsonPath = path.join(repo.baseDir, 'package.json');
+        if (!fs.existsSync(packageJsonPath)) {
+            console.log(`[${repo.repoName.toUpperCase()}]: package.json is not provided`);
+            return false;
+        } else {
+            const packageJsonString = fs.readFileSync(packageJsonPath, 'utf8');
+            const packageJson = JSON.parse(packageJsonString);
+            console.log(`[${repo.repoName.toUpperCase()}]: package.json version is ${packageJson.version}`);
+            return packageJson.version === '1.0.0';
+        }
+    }
+
+    private handleNodeModules(repo: Repository): void {
+        if (this.areNodeModulesCheckedIn(repo)) {
+            console.log(`[${repo.repoName.toUpperCase()}]: No need to restore ${AbstractReposCommand.NODE_MODULES}`);
+            this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
+        } else {
+            this.restoreNodeModules(repo);
+        }
+    }
+
     private handleRepo(repoName: string): Promise<void> {
         Global.isVerbose() && console.log('repo', repoName);
 
@@ -50,8 +102,10 @@ export class UpdateRepos extends AbstractReposCommand {
         const repo = new Repository(`../${repoName}`);
         const p = this.noFetch ? Promise.resolve() : repo.fetch();
         return p
+            .then(() => this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY))
             .then(() => repo.status())
             .then((status) => this.checkRepoClean(repo, status))
+            .then(() => this.moveNodeModules(repo))
             .then(() => repo.checkoutBranch(branch))
             .then(() => repo.resetHard())
             .then(() => {
@@ -63,6 +117,7 @@ export class UpdateRepos extends AbstractReposCommand {
                     return repo.pullOnlyFastForward();
                 }
             })
+            .then(() => this.handleNodeModules(repo))
             .then(() => {
                 Global.isVerbose() && console.log('successfully updated', repoName);
             });

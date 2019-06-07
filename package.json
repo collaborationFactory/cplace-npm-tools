@@ -22,7 +22,6 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
-    "@types/fs-extra": "^7.0.0",
     "@types/node": "^10.12.11",
     "@types/rimraf": "^2.0.2",
     "del": "^2.2.2",
@@ -34,7 +33,6 @@
   "dependencies": {
     "bluebird": "^3.4.7",
     "cpr": "^3.0.1",
-    "fs-extra": "^8.0.1",
     "meow": "^5.0.0",
     "randomatic": "^3.1.1",
     "rimraf": "^2.6.2",
