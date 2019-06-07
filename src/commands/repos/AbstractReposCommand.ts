@@ -3,11 +3,12 @@
  */
 import * as Promise from 'bluebird';
 import {Global} from '../../Global';
-import {fs} from '../../p/fs';
+import * as fs from 'fs-extra';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
 import {IGitStatus, Repository} from '../../git';
 import {enforceNewline} from '../../util';
+import * as path from 'path';
 
 export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -15,6 +16,17 @@ export abstract class AbstractReposCommand implements ICommand {
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
+
+    public static convertToUnixPath(input: string): string {
+        const isExtendedLengthPath = /^\\\\\?\\/.test(input);
+        const hasNonAscii = /[^\u0000-\u0080]+/.test(input);
+
+        if (isExtendedLengthPath || hasNonAscii) {
+            return input;
+        }
+
+        return input.replace(/\\/g, '/');
+    }
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
@@ -47,6 +59,13 @@ export abstract class AbstractReposCommand implements ICommand {
     }
 
     protected checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
+        fs.move(AbstractReposCommand.convertToUnixPath(path.join(repo.baseDir, 'node_modules')),
+                AbstractReposCommand.convertToUnixPath(path.join(repo.baseDir, '__node_modules')), (err) => {
+                if (err) {
+                    console.error('Failed to move node_modules folder', err);
+                    return false;
+                }
+            });
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&
