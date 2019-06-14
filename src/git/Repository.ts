@@ -459,6 +459,55 @@ export class Repository {
         });
     }
 
+    public checkIsRepo(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.git.checkIsRepo((err) => {
+                if (err) {
+                    Global.isVerbose() && console.log(`repo ${this.repoName} not a git repo`);
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public addRemote(remoteName: string, remoteUrl: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.git.addRemote(remoteName, remoteUrl, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public removeRemote(remoteName: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.git.removeRemote(remoteName, (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public rawWrapper(rawCommand: string[]): Promise<void> {
+        return new Promise<string[]>((resolve, reject) => {
+            this.git.raw(rawCommand, (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
         if (!match || match.length < 2 || !match[1]) {

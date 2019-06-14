@@ -98,6 +98,21 @@ $ cplace-cli --help
         
           --show-files
               List files to be merged
+              
+      flow --splitRepository --pathToTargetRepo <path-to-local-target-repo> [--directories <"space separated directory names">]
+          Iterates through the complete history of current branch and recreate the commits which only affects the mentioned directories.
+          It is highly suggested to use --verbose while running this option as it takes considerable time to finish and you can 
+          see how much time is left. 
+          At the end the script, it will create a branch with the same name in the target repo(except master,
+          for master it will create master_<current_date>).
+          
+          --pathToTargetRepo
+            Your local path to target repo eg. (/Users/shariqhaque/cplace-dev/repos/cplace-project-planning)
+           
+          --directories (OPTIONAL, required only if refactor is not for project planning related plugins)
+            Space separated names of directories to be split to new repository, remember to add double quotes before and at the end. 
+            If not provided it means the splitting is happening for project planning related plugins.
+          
             
       refactor <subcommand> --plugin|-p <plugin>
           Handles plugin specific refactorings where <subcommand> is one of the following:
