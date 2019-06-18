@@ -94,6 +94,15 @@ const cli = meow(`
             --test-sources
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like structure with
                 'src/main/java' and 'src/test/java'
+        
+        e2e [--baseUrl <baseUrl>] [--browser <browser>] [--plugins <plugins>] [--timeout <timeout>] [--headless]
+        
+            --baseUrl to configure where to run the tests against (default: localhost)
+            --browser to specify which browser to use (default: Chrome)
+            --plugins to specify a comma separated list of plugins to run tests for (default: all plugins in the current repository)
+            --timeout to specify a global Timeout for Test Execution
+            --headless currently only possible in Chrome
+            
 
     Global options:
         --verbose

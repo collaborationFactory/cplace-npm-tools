@@ -17,11 +17,6 @@
     "no-eval": true,
     "no-exec-script": true,
     "no-function-constructor-with-string-args": true,
-    "no-http-string": [
-      true,
-      "http://www.example.com/?.*",
-      "http://www.examples.com/?.*"
-    ],
     "no-inner-html": true,
     "no-octal-literal": true,
     "no-reserved-keywords": true,
@@ -138,7 +133,6 @@
     "no-null-keyword": false,
     // turn no-null-keyword off and use undefined to mean not initialized and null to mean without a value
     "no-relative-imports": false,
-    "no-require-imports": true,
     "no-shadowed-variable": true,
     "no-typeof-undefined": true,
     "no-unnecessary-local-variable": true,

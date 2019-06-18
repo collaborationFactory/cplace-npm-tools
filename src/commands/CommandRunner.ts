@@ -8,13 +8,15 @@ import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
 import {VisualizeDelegate} from './visualize';
 import {RefactorDelegate} from './refactor';
+import {E2E} from './e2e';
 
 const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
     'repos': new Repos(),
     'flow': new Flow(),
     'visualize': new VisualizeDelegate(),
-    'refactor': new RefactorDelegate()
+    'refactor': new RefactorDelegate(),
+    'e2e': new E2E()
 };
 
 export type Result = 'missing' | 'failed' | 'success';
