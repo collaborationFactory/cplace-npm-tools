@@ -22,6 +22,10 @@ export class TestRunner {
         }
     }
 
+    public isWdioExecutableAvailable(): boolean {
+        return fs.existsSync(this.getWdioCliExecutable());
+    }
+
     private getWdioCliExecutable(): string {
         let mainRepoDir;
         if (fs.existsSync(path.join(this.workingDir, 'cf.cplace.platform'))) {

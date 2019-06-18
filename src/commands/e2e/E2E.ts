@@ -26,22 +26,23 @@ export class E2E implements ICommand {
     private timeout: number;
     private headless: boolean;
 
+    private testRunner: TestRunner | null = null;
+
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.workingDir = process.cwd();
 
         const plugins = params[E2E.PARAMETER_PLUGINS];
         if (typeof plugins === 'string' && plugins.length > 0) {
             this.pluginsToBeTested = plugins.split(',').filter((plugin) => this.hasE2EAssets(plugin));
-
             if (this.pluginsToBeTested.length === 0) {
                 console.error('All of the specified plugins do not have E2E assets or are not ready (see --verbose)');
                 return false;
             }
         } else {
-            Global.isVerbose() && console.log('Running E2E tests for all plugins...');
             this.pluginsToBeTested = this.findAllPluginsInWorkingDirectory();
-            console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
         }
+
+        console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
 
         const baseUrl = params[E2E.PARAMETER_BASE_URL];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
@@ -73,17 +74,26 @@ export class E2E implements ICommand {
             this.headless = false;
         }
 
+        this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir);
+        if (!this.testRunner.isWdioExecutableAvailable()) {
+            console.error(`Failed to find wdio executable - make sure node_modules are installed in the main repository and you are on a branch based on 4.57 or higher`);
+            return false;
+        }
+
         return true;
     }
 
     public execute(): Promise<void> {
+        if (this.pluginsToBeTested.length === 0) {
+            return Promise.resolve();
+        }
+
         const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir, this.headless);
         console.log('Generating WDIO configuration files...');
         wdioGenerator.generateWdioConfig();
         console.log('Starting test runner...');
 
-        const testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir);
-        return testRunner.runTests();
+        return this.testRunner.runTests();
     }
 
     private hasE2EAssets(plugin: string): boolean {
