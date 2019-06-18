@@ -10,17 +10,22 @@ import * as fs from 'fs';
 
 export class E2E implements ICommand {
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
+    private static readonly PARAMETER_CONTEXT: string = 'context';
+    private static readonly PARAMETER_TENANTID: string = 'tenantId';
     private static readonly PARAMETER_PLUGINS: string = 'plugins';
     private static readonly PARAMETER_BROWSER: string = 'browser';
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
+    private static readonly DEFAULT_CONTEXT: string = 'intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
 
     private pluginsToBeTested: string [];
     private baseUrl: string;
+    private context: string;
+    private tenantId: string;
     private browser: string;
     private workingDir: string;
     private timeout: number;
@@ -49,6 +54,20 @@ export class E2E implements ICommand {
             this.baseUrl = baseUrl;
         } else {
             this.baseUrl = E2E.DEFAULT_BASE_URL;
+        }
+
+        const context = params[E2E.PARAMETER_CONTEXT];
+        if (typeof context === 'string' && context.length > 0) {
+            this.context = context;
+        } else {
+            this.context = E2E.DEFAULT_CONTEXT;
+        }
+
+        const tenantId = params[E2E.PARAMETER_TENANTID];
+        if (typeof tenantId === 'string' && tenantId.length > 0) {
+            this.tenantId = tenantId;
+        } else {
+            this.tenantId = '';
         }
 
         const browser = params[E2E.PARAMETER_BROWSER];
@@ -88,8 +107,9 @@ export class E2E implements ICommand {
             return Promise.resolve();
         }
 
-        const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir, this.headless);
+        const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.context, this.tenantId, this.timeout, this.workingDir, this.headless);
         console.log('Generating WDIO configuration files...');
+        wdioGenerator.generateE2EEnv();
         wdioGenerator.generateWdioConfig();
         console.log('Starting test runner...');
 
