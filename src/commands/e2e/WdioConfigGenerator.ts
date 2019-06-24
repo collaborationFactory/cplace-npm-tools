@@ -5,7 +5,7 @@ import {E2EEnvTemplate} from './E2EEnvTemplate';
 
 export class WdioConfigGenerator {
     public static readonly WDIO_CONF_NAME: string = 'wdio.conf.js';
-    public static readonly E2E_ENV_NAME: string = 'E2EENV.ts';
+    public static readonly E2E_ENV_NAME: string = 'e2e.ts';
     private readonly baseUrl: string;
     private readonly context: string;
     private readonly tenantId: string = '';
@@ -29,7 +29,7 @@ export class WdioConfigGenerator {
     public generateE2EEnv(): void {
         const e2eFolder = this.pathToE2EFolder('cf.cplace.platform');
         const e2eEnv = new E2EEnvTemplate(this.baseUrl, this.context, this.tenantId);
-        fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.E2E_ENV_NAME), e2eEnv.getTemplate(), {encoding: 'utf8'});
+        fs.writeFileSync(path.join(e2eFolder, 'lib', 'config', WdioConfigGenerator.E2E_ENV_NAME), e2eEnv.getTemplate(), {encoding: 'utf8'});
     }
 
     public generateWdioConfig(): void {

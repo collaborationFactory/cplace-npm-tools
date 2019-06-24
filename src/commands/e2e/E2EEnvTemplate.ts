@@ -2,12 +2,14 @@ export class E2EEnvTemplate {
     private readonly template: string;
 
     constructor(baseUrl: string, context: string, tenantId: string) {
-        this.template =
-            `export namespace E2EENV {
-    export const baseUrl = '${baseUrl}';
-    export const context = '${context}';
-    export const tenantId = '${tenantId}';
-}`;
+        this.template = `import { E2EENV } from './E2EENV';
+
+export const config: E2EENV = {
+    baseUrl: '${baseUrl}',
+    context: '${context}',
+    tenantId: '${tenantId}'
+};
+`;
     }
 
     public getTemplate(): string {
