@@ -1,7 +1,7 @@
 export class ConfigTemplate {
     private readonly template: string;
 
-    constructor(e2eFolder: string, browser: string, baseUrl: string, timeout: number, headless: boolean) {
+    constructor(mainRepoDir: string, e2eFolder: string, browser: string, baseUrl: string, timeout: number, headless: boolean) {
         let capabilities = '';
         if (headless) {
             capabilities = `
@@ -26,11 +26,11 @@ export class ConfigTemplate {
         this.template = `exports.config = {
             before: function () {
                 var config = require('${e2eFolder}/tsconfig.json');
-                require('tsconfig-paths').register({
+                require('${mainRepoDir}/node_modules/tsconfig-paths').register({
                    baseUrl: '${e2eFolder}',
                    paths: config.compilerOptions.paths || []
                });
-                require('ts-node').register({
+                require('${mainRepoDir}/node_modules/ts-node').register({
                     files: true,
                     project: '${e2eFolder}/tsconfig.json'
                 });

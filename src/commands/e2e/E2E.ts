@@ -7,22 +7,31 @@ import {TestRunner} from './TestRunner';
 import {Global} from '../../Global';
 import * as path from 'path';
 import * as fs from 'fs';
+import {IE2EContext} from './E2EEnvTemplate';
+import {getPathToMainRepo} from '../../util';
 
 export class E2E implements ICommand {
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
+    private static readonly PARAMETER_CONTEXT: string = 'context';
+    private static readonly PARAMETER_TENANTID: string = 'tenantId';
     private static readonly PARAMETER_PLUGINS: string = 'plugins';
     private static readonly PARAMETER_BROWSER: string = 'browser';
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     // Default
-    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
+    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
+    private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
 
+    private workingDir: string;
+    private mainRepoDir: string;
+
     private pluginsToBeTested: string [];
     private baseUrl: string;
+    private context: string;
+    private tenantId: string;
     private browser: string;
-    private workingDir: string;
     private timeout: number;
     private headless: boolean;
 
@@ -30,6 +39,11 @@ export class E2E implements ICommand {
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.workingDir = process.cwd();
+        this.mainRepoDir = getPathToMainRepo(this.workingDir);
+        if (!this.mainRepoDir) {
+            console.error(`Could not determine path to main repo!`);
+            return false;
+        }
 
         const plugins = params[E2E.PARAMETER_PLUGINS];
         if (typeof plugins === 'string' && plugins.length > 0) {
@@ -44,11 +58,38 @@ export class E2E implements ICommand {
 
         console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
 
+        // NOTE: The slashes of baseUrl and context need to match the
+        // specifications required by the cplace base system. Also see the E2EENV
+        // comments in main.
+
         const baseUrl = params[E2E.PARAMETER_BASE_URL];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
             this.baseUrl = baseUrl;
+            if (this.baseUrl.endsWith('/')) {
+                this.baseUrl = this.baseUrl.substr(0, this.baseUrl.length - 1);
+            }
         } else {
             this.baseUrl = E2E.DEFAULT_BASE_URL;
+        }
+
+        const context = params[E2E.PARAMETER_CONTEXT];
+        if (typeof context === 'string' && context.length > 0) {
+            this.context = context;
+            if (!this.context.startsWith('/')) {
+                this.context = '/' + this.context;
+            }
+            if (!this.context.endsWith('/')) {
+                this.context += '/';
+            }
+        } else {
+            this.context = E2E.DEFAULT_CONTEXT;
+        }
+
+        const tenantId = params[E2E.PARAMETER_TENANTID];
+        if (typeof tenantId === 'string' && tenantId.length > 0) {
+            this.tenantId = tenantId;
+        } else {
+            this.tenantId = '';
         }
 
         const browser = params[E2E.PARAMETER_BROWSER];
@@ -88,8 +129,20 @@ export class E2E implements ICommand {
             return Promise.resolve();
         }
 
-        const wdioGenerator = new WdioConfigGenerator(this.pluginsToBeTested, this.baseUrl, this.browser, this.timeout, this.workingDir, this.headless);
+        const context: IE2EContext = {
+            baseUrl: this.baseUrl,
+            context: this.context,
+            tenantId: this.tenantId
+        };
+
+        const wdioGenerator = new WdioConfigGenerator(
+            this.workingDir, this.mainRepoDir,
+            this.pluginsToBeTested, this.browser, context,
+            this.timeout, this.headless
+        );
+
         console.log('Generating WDIO configuration files...');
+        wdioGenerator.generateE2EEnv();
         wdioGenerator.generateWdioConfig();
         console.log('Starting test runner...');
 
