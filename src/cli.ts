@@ -97,8 +97,8 @@ const cli = meow(`
         
         e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <context>] [--browser <browser>] [--plugins <plugins>] [--timeout <timeout>] [--headless]
         
-            --baseUrl to configure where to run the tests against (default: 'http://localhost:8083/'), you can add context and tenant e.g. http://localhost:8083/intern/tricia/t1
-            --context to define in which context cplace is running (default: 'intern/tricia/')
+            --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
+            --context to define in which context cplace is running (default: '/intern/tricia/')
             --tenantId to define against which tenant the tests are run (default: '' single tenant mode)
             --browser to specify which browser to use (default: Chrome)
             --plugins to specify a comma separated list of plugins to run tests for (default: all plugins in the current repository)
