@@ -25,23 +25,27 @@ export class WdioConfigGenerator {
         this.headless = headless;
     }
 
+    private static pathToE2EFolder(pluginName: string, baseDir: string): string {
+        const e2ePath = path.join(baseDir, pluginName, 'assets', 'e2e');
+        return e2ePath.replace(/\\/g, '/');  // For Windows
+    }
+
     public generateE2EEnv(): void {
-        const e2eFolder = this.pathToE2EFolder('cf.cplace.platform');
+        const e2eFolder = WdioConfigGenerator.pathToE2EFolder('cf.cplace.platform', this.mainDir);
         const e2eEnv = new E2EEnvTemplate(this.context);
-        fs.writeFileSync(path.join(e2eFolder, 'lib', 'config', WdioConfigGenerator.E2E_ENV_NAME), e2eEnv.getTemplate(), {encoding: 'utf8'});
+        fs.writeFileSync(
+            path.join(e2eFolder, 'lib', 'config', WdioConfigGenerator.E2E_ENV_NAME),
+            e2eEnv.getTemplate(),
+            {encoding: 'utf8'}
+        );
     }
 
     public generateWdioConfig(): void {
         this.plugins.forEach((plugin) => {
-            const e2eFolder = this.pathToE2EFolder(plugin);
-            const config = new ConfigTemplate(e2eFolder, this.browser, this.context.baseUrl, this.timeout, this.headless);
+            const e2eFolder = WdioConfigGenerator.pathToE2EFolder(plugin, this.workingDir);
+            const config = new ConfigTemplate(this.mainDir, e2eFolder, this.browser, this.context.baseUrl, this.timeout, this.headless);
             fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});
         });
-    }
-
-    private pathToE2EFolder(pluginName: string): string {
-        const e2ePath = path.join(this.workingDir, pluginName, 'assets', 'e2e');
-        return e2ePath.replace(/\\/g, '/');  // For Windows
     }
 
 }
