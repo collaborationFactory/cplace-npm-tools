@@ -113,6 +113,7 @@ export class E2E implements ICommand {
 
         if (this.browser.toLowerCase() !== 'chrome') {
             this.headless = false;
+            console.error(`! Headless disabled - only available for Chrome execution`);
         }
 
         this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir);
