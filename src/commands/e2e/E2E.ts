@@ -19,8 +19,8 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     // Default
-    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
-    private static readonly DEFAULT_CONTEXT: string = 'intern/tricia/';
+    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
+    private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
 
@@ -58,9 +58,16 @@ export class E2E implements ICommand {
 
         console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
 
+        // NOTE: The slashes of baseUrl and context need to match the
+        // specifications required by the cplace base system. Also see the E2EENV
+        // comments in main.
+
         const baseUrl = params[E2E.PARAMETER_BASE_URL];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
             this.baseUrl = baseUrl;
+            if (this.baseUrl.endsWith('/')) {
+                this.baseUrl = this.baseUrl.substr(0, this.baseUrl.length - 1);
+            }
         } else {
             this.baseUrl = E2E.DEFAULT_BASE_URL;
         }
@@ -68,6 +75,12 @@ export class E2E implements ICommand {
         const context = params[E2E.PARAMETER_CONTEXT];
         if (typeof context === 'string' && context.length > 0) {
             this.context = context;
+            if (!this.context.startsWith('/')) {
+                this.context = '/' + this.context;
+            }
+            if (!this.context.endsWith('/')) {
+                this.context += '/';
+            }
         } else {
             this.context = E2E.DEFAULT_CONTEXT;
         }
