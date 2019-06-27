@@ -25,9 +25,13 @@ export class WdioConfigGenerator {
         this.headless = headless;
     }
 
+    private static safePath(filePath: string): string {
+        return filePath.replace(/\\/g, '/');  // For Windows
+    }
+
     private static pathToE2EFolder(pluginName: string, baseDir: string): string {
         const e2ePath = path.join(baseDir, pluginName, 'assets', 'e2e');
-        return e2ePath.replace(/\\/g, '/');  // For Windows
+        return WdioConfigGenerator.safePath(e2ePath);  // For Windows
     }
 
     public generateE2EEnv(): void {
@@ -43,7 +47,8 @@ export class WdioConfigGenerator {
     public generateWdioConfig(): void {
         this.plugins.forEach((plugin) => {
             const e2eFolder = WdioConfigGenerator.pathToE2EFolder(plugin, this.workingDir);
-            const config = new ConfigTemplate(this.mainDir, e2eFolder, this.browser, this.context.baseUrl, this.timeout, this.headless);
+            const mainDir = WdioConfigGenerator.safePath(this.mainDir);
+            const config = new ConfigTemplate(mainDir, e2eFolder, this.browser, this.context.baseUrl, this.timeout, this.headless);
             fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});
         });
     }
