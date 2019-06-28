@@ -2,6 +2,7 @@ export interface IE2EContext {
     baseUrl: string;
     context: string;
     tenantId: string;
+    e2eToken?: string;
 }
 
 export class E2EEnvTemplate {
@@ -13,7 +14,8 @@ export class E2EEnvTemplate {
 export const config: E2EENV = {
     baseUrl: '${context.baseUrl}',
     context: '${context.context}',
-    tenantId: '${context.tenantId}'
+    tenantId: '${context.tenantId}',
+    testSetupHandlerE2EToken: '${context.e2eToken || ''}'
 };
 `;
     }
