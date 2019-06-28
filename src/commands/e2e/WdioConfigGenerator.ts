@@ -11,18 +11,24 @@ export class WdioConfigGenerator {
     private readonly mainDir: string;
     private readonly context: IE2EContext;
     private readonly plugins: string[];
+    private readonly specs: string;
     private readonly browser: string;
     private readonly timeout: number;
     private readonly headless: boolean;
+    private readonly noInstall: boolean;
 
-    constructor(workingDir: string, mainDir: string, plugins: string[], browser: string, context: IE2EContext, timeout: number, headless: boolean) {
+    constructor(workingDir: string, mainDir: string,
+                plugins: string[], specs: string, browser: string, context: IE2EContext,
+                timeout: number, headless: boolean, noInstall: boolean) {
         this.workingDir = workingDir;
         this.mainDir = mainDir;
         this.browser = browser;
         this.plugins = plugins;
+        this.specs = specs;
         this.context = context;
         this.timeout = timeout;
         this.headless = headless;
+        this.noInstall = noInstall;
     }
 
     private static safePath(filePath: string): string {
@@ -48,7 +54,11 @@ export class WdioConfigGenerator {
         this.plugins.forEach((plugin) => {
             const e2eFolder = WdioConfigGenerator.pathToE2EFolder(plugin, this.workingDir);
             const mainDir = WdioConfigGenerator.safePath(this.mainDir);
-            const config = new ConfigTemplate(mainDir, e2eFolder, this.browser, this.context.baseUrl, this.timeout, this.headless);
+            const config = new ConfigTemplate(
+                mainDir, e2eFolder,
+                this.specs, this.browser, this.context.baseUrl,
+                this.timeout, this.headless, this.noInstall
+            );
             fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});
         });
     }

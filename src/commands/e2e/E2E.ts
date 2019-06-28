@@ -17,9 +17,12 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_E2E_TOKEN: string = 'e2eToken';
 
     private static readonly PARAMETER_PLUGINS: string = 'plugins';
+    private static readonly PARAMETER_SPECS: string = 'specs';
     private static readonly PARAMETER_BROWSER: string = 'browser';
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
+    private static readonly PARAMETER_NO_INSTALL: string = 'noInstall';
+
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
     private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
@@ -34,10 +37,12 @@ export class E2E implements ICommand {
     private tenantId: string;
     private e2eToken: string;
 
-    private pluginsToBeTested: string [];
+    private pluginsToBeTested: string[];
+    private specs: string;
     private browser: string;
     private timeout: number;
     private headless: boolean;
+    private noInstall: boolean;
 
     private testRunner: TestRunner | null = null;
 
@@ -61,6 +66,11 @@ export class E2E implements ICommand {
         }
 
         console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
+
+        const specs = params[E2E.PARAMETER_SPECS];
+        if (typeof specs === 'string' && specs.length > 0) {
+            this.specs = specs;
+        }
 
         // NOTE: The slashes of baseUrl and context need to match the
         // specifications required by the cplace base system. Also see the E2EENV
@@ -122,6 +132,13 @@ export class E2E implements ICommand {
             this.headless = headless;
         }
 
+        const noInstall = params[E2E.PARAMETER_NO_INSTALL];
+        if (typeof noInstall === 'boolean') {
+            this.noInstall = noInstall;
+        } else {
+            this.noInstall = false;
+        }
+
         if (this.browser.toLowerCase() !== 'chrome') {
             this.headless = false;
             console.error(`! Headless disabled - only available for Chrome execution`);
@@ -150,8 +167,8 @@ export class E2E implements ICommand {
 
         const wdioGenerator = new WdioConfigGenerator(
             this.workingDir, this.mainRepoDir,
-            this.pluginsToBeTested, this.browser, context,
-            this.timeout, this.headless
+            this.pluginsToBeTested, this.specs, this.browser, context,
+            this.timeout, this.headless, this.noInstall
         );
 
         console.log('Generating WDIO configuration files...');

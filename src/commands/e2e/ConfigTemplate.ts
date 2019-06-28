@@ -1,7 +1,9 @@
 export class ConfigTemplate {
     private readonly template: string;
 
-    constructor(mainRepoDir: string, e2eFolder: string, browser: string, baseUrl: string, timeout: number, headless: boolean) {
+    constructor(mainRepoDir: string, e2eFolder: string,
+                specs: string, browser: string, baseUrl: string,
+                timeout: number, headless: boolean, noInstall: boolean) {
         let capabilities = '';
         if (headless) {
             capabilities = `
@@ -37,7 +39,7 @@ export class ConfigTemplate {
             },
             runner: 'local',
             specs: [
-                '${e2eFolder}/specs/**/*.spec.ts'
+                '${e2eFolder}/specs/${specs || '**/*.spec.ts'}'
             ],
             exclude: [],
             maxInstances: 1,
@@ -49,6 +51,7 @@ export class ConfigTemplate {
             connectionRetryTimeout: 90000,
             connectionRetryCount: 3,
             services: ['selenium-standalone', 'intercept'],
+            skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
             framework: 'jasmine',
             jasmineNodeOpts: {
                 defaultTimeoutInterval: ${timeout}
