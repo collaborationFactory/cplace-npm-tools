@@ -95,7 +95,7 @@ const cli = meow(`
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like structure with
                 'src/main/java' and 'src/test/java'
         
-        e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--timeout <timeout>] [--headless]
+        e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] [--headless] [--noInstall]
         
             --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
             --context to define in which context cplace is running (default: '/intern/tricia/')
@@ -103,8 +103,10 @@ const cli = meow(`
             --e2eToken to define the Test Setup Handler E2E token (default: '')
             --browser to specify which browser to use (default: Chrome)
             --plugins to specify a comma separated list of plugins to run tests for (default: all plugins in the current repository)
+            --specs to specify the pattern used to search for specification files inside plugins (default: '**/*.spec.ts')
             --timeout to specify a global Timeout for Test Execution
             --headless currently only possible in Chrome
+            --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
             
 
     Global options:
