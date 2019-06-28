@@ -14,6 +14,8 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
     private static readonly PARAMETER_TENANTID: string = 'tenantId';
+    private static readonly PARAMETER_E2E_TOKEN: string = 'e2eToken';
+
     private static readonly PARAMETER_PLUGINS: string = 'plugins';
     private static readonly PARAMETER_BROWSER: string = 'browser';
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
@@ -27,10 +29,12 @@ export class E2E implements ICommand {
     private workingDir: string;
     private mainRepoDir: string;
 
-    private pluginsToBeTested: string [];
     private baseUrl: string;
     private context: string;
     private tenantId: string;
+    private e2eToken: string;
+
+    private pluginsToBeTested: string [];
     private browser: string;
     private timeout: number;
     private headless: boolean;
@@ -92,6 +96,13 @@ export class E2E implements ICommand {
             this.tenantId = '';
         }
 
+        const e2eToken = params[E2E.PARAMETER_E2E_TOKEN];
+        if (typeof e2eToken === 'string' && e2eToken.length > 0) {
+            this.e2eToken = e2eToken;
+        } else {
+            this.e2eToken = '';
+        }
+
         const browser = params[E2E.PARAMETER_BROWSER];
         if (typeof browser === 'string' && browser.length > 0) {
             this.browser = browser;
@@ -133,7 +144,8 @@ export class E2E implements ICommand {
         const context: IE2EContext = {
             baseUrl: this.baseUrl,
             context: this.context,
-            tenantId: this.tenantId
+            tenantId: this.tenantId,
+            e2eToken: this.e2eToken
         };
 
         const wdioGenerator = new WdioConfigGenerator(
