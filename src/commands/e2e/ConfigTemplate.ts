@@ -1,3 +1,5 @@
+import {E2E} from './E2E';
+
 export class ConfigTemplate {
     private readonly template: string;
 
@@ -6,8 +8,7 @@ export class ConfigTemplate {
                 timeout: number, headless: boolean, noInstall: boolean) {
         let capabilities = '';
         if (headless) {
-            capabilities = `
-            capabilities: [{
+            capabilities = `[{
                 maxInstances: 1,
                 browserName: '${browser}',
                 'goog:chromeOptions': {
@@ -16,13 +17,37 @@ export class ConfigTemplate {
                         '--disable-gpu'
                     ]
                 }
-            }],`;
+            }]`;
         } else {
-            capabilities = `
-            capabilities: [{
+            capabilities = `[{
                 maxInstances: 1,
                 browserName: '${browser}'
-            }],`;
+            }]`;
+        }
+
+        let ieDriver: string = '';
+        if (browser === E2E.IE) {
+            ieDriver = `
+            seleniumArgs: {
+                baseURL: 'https://selenium-release.storage.googleapis.com',
+                drivers: {
+                    ie: {
+                        version: '3.4.0',
+                        arch: 'ia32',
+                        baseURL: 'https://selenium-release.storage.googleapis.com'
+                    }
+                }
+            },
+            seleniumInstallArgs: {
+                baseURL: 'https://selenium-release.storage.googleapis.com',
+                drivers: {
+                    ie: {
+                        version: '3.4.0',
+                        arch: 'ia32',
+                        baseURL: 'https://selenium-release.storage.googleapis.com'
+                    }
+                }
+            },`;
         }
 
         this.template = `exports.config = {
@@ -43,7 +68,7 @@ export class ConfigTemplate {
             ],
             exclude: [],
             maxInstances: 1,
-            ${capabilities}
+            capabilities: ${capabilities},
             logLevel: 'info',
             bail: 0,
             baseUrl: '${baseUrl}',
@@ -59,6 +84,7 @@ export class ConfigTemplate {
             plugins: {
                 webdriverajax: {}
             },
+            ${ieDriver}
             reporters: ['spec']
         };`;
     }
