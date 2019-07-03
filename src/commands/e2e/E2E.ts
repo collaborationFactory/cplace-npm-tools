@@ -25,6 +25,7 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     private static readonly PARAMETER_NO_INSTALL: string = 'noInstall';
+    private static readonly PARAMETER_JUNIT: string = 'jUnit';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
@@ -46,6 +47,7 @@ export class E2E implements ICommand {
     private timeout: number;
     private headless: boolean;
     private noInstall: boolean;
+    private jUnit: boolean;
 
     private testRunner: TestRunner | null = null;
 
@@ -141,6 +143,11 @@ export class E2E implements ICommand {
             this.headless = headless;
         }
 
+        const jUnit = params[E2E.PARAMETER_JUNIT];
+        if (typeof jUnit === 'boolean') {
+            this.jUnit = jUnit;
+        }
+
         const noInstall = params[E2E.PARAMETER_NO_INSTALL];
         if (typeof noInstall === 'boolean') {
             this.noInstall = noInstall;
@@ -177,7 +184,7 @@ export class E2E implements ICommand {
         const wdioGenerator = new WdioConfigGenerator(
             this.workingDir, this.mainRepoDir,
             this.pluginsToBeTested, this.specs, this.browser, context,
-            this.timeout, this.headless, this.noInstall
+            this.timeout, this.headless, this.noInstall, this.jUnit
         );
 
         console.log('Generating WDIO configuration files...');
