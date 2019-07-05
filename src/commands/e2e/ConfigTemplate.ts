@@ -5,7 +5,7 @@ export class ConfigTemplate {
 
     constructor(mainRepoDir: string, e2eFolder: string,
                 specs: string, browser: string, baseUrl: string,
-                timeout: number, headless: boolean, noInstall: boolean, jUnit: boolean) {
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string) {
         let capabilities = '';
         if (headless) {
             capabilities = `[{
@@ -50,9 +50,9 @@ export class ConfigTemplate {
             },`;
         }
         let junitConfig = '';
-        if (jUnit) {
+        if (jUnitReportPath) {
             junitConfig = `, ['junit', {
-                outputDir: './e2eJUnitReports',
+                outputDir: './${jUnitReportPath}',
                 outputFileFormat:
                     function(opts) {
                         return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString()}.xml\`;

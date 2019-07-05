@@ -108,7 +108,7 @@ const cli = meow(`
             --timeout to specify a global Timeout for Test Execution
             --headless currently only possible in Chrome
             --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
-            --jUnit will create jUnit Reports (default: false)
+            --jUnit will create jUnit Reports in the specified location (default 'e2eJunitReports')
 
             
 
