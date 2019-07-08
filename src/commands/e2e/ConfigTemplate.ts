@@ -1,4 +1,5 @@
 import {E2E} from './E2E';
+import * as path from 'path';
 
 export class ConfigTemplate {
     private readonly template: string;
@@ -52,7 +53,7 @@ export class ConfigTemplate {
         let junitConfig = '';
         if (jUnitReportPath) {
             junitConfig = `, ['junit', {
-                outputDir: './${jUnitReportPath}',
+                outputDir: '${path.resolve(jUnitReportPath)}',
                 outputFileFormat:
                     function(opts) {
                         return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString()}.xml\`;

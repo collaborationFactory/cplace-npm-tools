@@ -32,7 +32,7 @@ export class E2E implements ICommand {
     private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
-    private static readonly DEFAULT_JUNITREPORTPATH: string = 'e2eJunitReports';
+    private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
 
     private workingDir: string;
     private mainRepoDir: string;
