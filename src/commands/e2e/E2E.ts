@@ -11,6 +11,9 @@ import {IE2EContext} from './E2EEnvTemplate';
 import {getPathToMainRepo} from '../../util';
 
 export class E2E implements ICommand {
+    public static readonly IE: string = 'internet explorer';
+    public static readonly EDGE: string = 'MicrosoftEdge';
+
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
     private static readonly PARAMETER_TENANTID: string = 'tenantId';
@@ -115,7 +118,13 @@ export class E2E implements ICommand {
 
         const browser = params[E2E.PARAMETER_BROWSER];
         if (typeof browser === 'string' && browser.length > 0) {
-            this.browser = browser;
+            if (browser.toLowerCase().includes('ie') || browser.toLowerCase().includes('internet') || browser.toLowerCase().includes('explorer')) {
+                this.browser = E2E.IE;
+            } else if (browser.toLowerCase().includes('edge')) {
+                this.browser = E2E.EDGE;
+            } else {
+                this.browser = browser;
+            }
         } else {
             this.browser = E2E.DEFAULT_BROWSER;
         }
@@ -139,7 +148,7 @@ export class E2E implements ICommand {
             this.noInstall = false;
         }
 
-        if (this.browser.toLowerCase() !== 'chrome') {
+        if (this.browser.toLowerCase() !== 'chrome' && this.headless) {
             this.headless = false;
             console.error(`! Headless disabled - only available for Chrome execution`);
         }
