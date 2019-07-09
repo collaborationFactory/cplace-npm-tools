@@ -25,12 +25,14 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_TIMEOUT: string = 'timeout';
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     private static readonly PARAMETER_NO_INSTALL: string = 'noInstall';
+    private static readonly PARAMETER_JUNIT: string = 'jUnit';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
     private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
+    private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
 
     private workingDir: string;
     private mainRepoDir: string;
@@ -46,6 +48,7 @@ export class E2E implements ICommand {
     private timeout: number;
     private headless: boolean;
     private noInstall: boolean;
+    private jUnitReportPath: string;
 
     private testRunner: TestRunner | null = null;
 
@@ -141,6 +144,13 @@ export class E2E implements ICommand {
             this.headless = headless;
         }
 
+        const jUnit = params[E2E.PARAMETER_JUNIT];
+        if (typeof jUnit === 'string' && jUnit.length > 0) {
+            this.jUnitReportPath = jUnit;
+        } else if (typeof jUnit === 'boolean') {
+            this.jUnitReportPath = E2E.DEFAULT_JUNITREPORTPATH;
+        }
+
         const noInstall = params[E2E.PARAMETER_NO_INSTALL];
         if (typeof noInstall === 'boolean') {
             this.noInstall = noInstall;
@@ -177,7 +187,7 @@ export class E2E implements ICommand {
         const wdioGenerator = new WdioConfigGenerator(
             this.workingDir, this.mainRepoDir,
             this.pluginsToBeTested, this.specs, this.browser, context,
-            this.timeout, this.headless, this.noInstall
+            this.timeout, this.headless, this.noInstall, this.jUnitReportPath
         );
 
         console.log('Generating WDIO configuration files...');

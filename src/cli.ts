@@ -95,7 +95,8 @@ const cli = meow(`
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like structure with
                 'src/main/java' and 'src/test/java'
         
-        e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] [--headless] [--noInstall]
+        e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] 
+            [--headless] [--noInstall] [--jUnit <?reportsPath>]
         
             --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
             --context to define in which context cplace is running (default: '/intern/tricia/')
@@ -107,6 +108,8 @@ const cli = meow(`
             --timeout to specify a global Timeout for Test Execution
             --headless currently only possible in Chrome
             --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
+            --jUnit will create jUnit Reports and oyu can specifiy the location where the reports are stored (default './e2eJunitReports')
+
             
 
     Global options:

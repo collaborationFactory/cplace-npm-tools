@@ -1,11 +1,12 @@
 import {E2E} from './E2E';
+import * as path from 'path';
 
 export class ConfigTemplate {
     private readonly template: string;
 
     constructor(mainRepoDir: string, e2eFolder: string,
                 specs: string, browser: string, baseUrl: string,
-                timeout: number, headless: boolean, noInstall: boolean) {
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string) {
         let capabilities = '';
         if (headless) {
             capabilities = `[{
@@ -49,6 +50,16 @@ export class ConfigTemplate {
                 }
             },`;
         }
+        let junitConfig = '';
+        if (jUnitReportPath) {
+            junitConfig = `, ['junit', {
+                outputDir: '${path.resolve(jUnitReportPath)}',
+                outputFileFormat:
+                    function(opts) {
+                        return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString()}.xml\`;
+                    }
+                }]`;
+        }
 
         this.template = `exports.config = {
             before: function () {
@@ -85,7 +96,9 @@ export class ConfigTemplate {
                 webdriverajax: {}
             },
             ${ieDriver}
-            reporters: ['spec']
+            reporters: ['spec'
+            ${junitConfig}
+            ]
         };`;
     }
 
