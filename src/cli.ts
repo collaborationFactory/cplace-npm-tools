@@ -38,7 +38,7 @@ const cli = meow(`
             --update|-u [--nofetch] [--reset-to-remote]:
                 Updates all parent repos.
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
-                    WARNING: Uncommited changes WILL BE LOST.
+                    WARNING: Uncommitted changes WILL BE LOST.
                 If <resetToRemote> is set then the update will do a hard reset in order to make sure the local copy
                 matches the remote repository state.
                     WARNING: Committed but not pushed changes WILL BE LOST.
@@ -108,7 +108,7 @@ const cli = meow(`
             --timeout to specify a global Timeout for Test Execution
             --headless currently only possible in Chrome
             --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
-            --jUnit will create jUnit Reports and oyu can specifiy the location where the reports are stored (default './e2eJunitReports')
+            --jUnit will create jUnit reports and allows you to specify the location where the reports are stored (default: './e2eJunitReports')
 
             
 
