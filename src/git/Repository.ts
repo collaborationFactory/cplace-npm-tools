@@ -254,7 +254,7 @@ export class Repository {
                         });
                     });
                 } else {
-                    const errorMessage: string = `Pull Fast Forward not possible because remote Branch ${branch} does not exist in remote repository ${this.repoName}`;
+                    const errorMessage: string = `Not possible because cannot find tracking branch for branch ${branch} in repository ${this.repoName}`;
                     Global.isVerbose() && console.error(errorMessage);
                     return Promise.reject(errorMessage);
                 }
