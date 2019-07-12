@@ -230,28 +230,34 @@ export class Repository {
         }
     }
 
-    public pullOnlyFastForward(): Promise<void> {
+    public pullOnlyFastForward(branch: string | string[]): Promise<void> {
         return this.status()
             .then(({tracking}) => {
-                Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} which is tracking ${tracking}`);
-                const i = tracking.indexOf('/');
-                if (i < 0) {
-                    return Promise.reject(`cannot determine remote and branch for ${tracking}`);
-                }
+                if (tracking != null) {
+                    Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} which is tracking ${tracking}`);
+                    const i = tracking.indexOf('/');
+                    if (i < 0) {
+                        return Promise.reject(`cannot determine remote and branch for ${tracking}`);
+                    }
 
-                const remote = tracking.substring(0, i);
-                const branch = tracking.substr(i + 1);
+                    const remote = tracking.substring(0, i);
+                    const trackingBranch = tracking.substr(i + 1);
 
-                Global.isVerbose() && console.log(`pulling branch ${branch} from remote ${remote}`);
-                return new Promise((resolve, reject) => {
-                    this.git.pull(remote, branch, {'--ff-only': true}, (err) => {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            resolve();
-                        }
+                    Global.isVerbose() && console.log(`pulling branch ${branch} from remote ${trackingBranch}`);
+                    return new Promise((resolve, reject) => {
+                        this.git.pull(remote, trackingBranch, {'--ff-only': true}, (err) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve();
+                            }
+                        });
                     });
-                });
+                } else {
+                    const errorMessage: string = `Not possible because cannot find tracking branch for branch ${branch} in repository ${this.repoName}`;
+                    Global.isVerbose() && console.error(errorMessage);
+                    return Promise.reject(errorMessage);
+                }
             });
     }
 

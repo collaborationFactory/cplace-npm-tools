@@ -114,7 +114,7 @@ export class UpdateRepos extends AbstractReposCommand {
                 } else if (this.resetToRemote) {
                     return repo.resetHard(branch);
                 } else {
-                    return repo.pullOnlyFastForward();
+                    return repo.pullOnlyFastForward(branch);
                 }
             })
             .then(() => this.handleNodeModules(repo))
