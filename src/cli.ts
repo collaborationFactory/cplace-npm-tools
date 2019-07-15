@@ -5,7 +5,24 @@
 import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
+import updateNotifier = require('update-notifier');
+import * as fs from 'fs';
+import * as path from 'path';
 
+const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
+const packageJson = JSON.parse(packageJsonContent);
+
+// Checks for available update on every startup
+const notifier = updateNotifier({
+                                    pkg: {
+                                        name: packageJson.name,
+                                        version: packageJson.version
+                                    },
+                                    updateCheckInterval: 0,
+                                    type: 'minor'
+                                });
+
+notifier.notify();
 /* tslint:disable */
 const cli = meow(`
     Usage:
