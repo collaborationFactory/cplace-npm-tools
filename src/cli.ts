@@ -5,7 +5,7 @@
 import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
-import updateNotifier = require('update-notifier');
+import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -18,11 +18,10 @@ const notifier = updateNotifier({
                                         name: packageJson.name,
                                         version: packageJson.version
                                     },
-                                    updateCheckInterval: 0,
-                                    type: 'minor'
+                                    updateCheckInterval: 0
                                 });
-
 notifier.notify();
+
 /* tslint:disable */
 const cli = meow(`
     Usage:
