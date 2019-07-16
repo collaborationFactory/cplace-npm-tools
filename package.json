@@ -24,6 +24,7 @@
   "devDependencies": {
     "@types/node": "^10.12.11",
     "@types/rimraf": "^2.0.2",
+    "@types/update-notifier": "^2.5.0",
     "del": "^2.2.2",
     "merge2": "^1.0.2",
     "tslint": "^5.11.0",
@@ -37,6 +38,7 @@
     "randomatic": "^3.1.1",
     "rimraf": "^2.6.2",
     "simple-git": "^1.65.0",
+    "update-notifier": "^3.0.1",
     "xml2js": "^0.4.19"
   }
 }
