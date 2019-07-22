@@ -96,7 +96,7 @@ const cli = meow(`
                 'src/main/java' and 'src/test/java'
         
         e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] 
-            [--headless] [--noInstall] [--jUnit <?reportsPath>]
+            [--headless] [--noInstall] [--jUnit <?reportsPath>] [--screenshot <?screenshotPath>]
         
             --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
             --context to define in which context cplace is running (default: '/intern/tricia/')
@@ -109,7 +109,7 @@ const cli = meow(`
             --headless currently only possible in Chrome
             --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
             --jUnit will create jUnit reports and allows you to specify the location where the reports are stored (default: './e2eJunitReports')
-
+            --screenshot will create Screenshots on each failed Test and store them in given Path (default: './e2eScreenshots')
             
 
     Global options:

@@ -1,12 +1,13 @@
 import {E2E} from './E2E';
 import * as path from 'path';
+import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class ConfigTemplate {
     private readonly template: string;
 
     constructor(mainRepoDir: string, e2eFolder: string,
                 specs: string, browser: string, baseUrl: string,
-                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string) {
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string) {
         let capabilities = '';
         if (headless) {
             capabilities = `[{
@@ -53,53 +54,78 @@ export class ConfigTemplate {
         let junitConfig = '';
         if (jUnitReportPath) {
             junitConfig = `, ['junit', {
-                outputDir: '${path.resolve(jUnitReportPath)}',
+                outputDir: '${WdioConfigGenerator.safePath(path.resolve(jUnitReportPath))}',
                 outputFileFormat:
                     function(opts) {
-                        return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString()}.xml\`;
+                        return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString().replace(/[:]/g, '-')}.xml\`;
                     }
                 }]`;
         }
 
-        this.template = `exports.config = {
-            before: function () {
-                var config = require('${e2eFolder}/tsconfig.json');
-                require('${mainRepoDir}/node_modules/tsconfig-paths').register({
-                   baseUrl: '${e2eFolder}',
-                   paths: config.compilerOptions.paths || []
-               });
-                require('${mainRepoDir}/node_modules/ts-node').register({
-                    files: true,
-                    project: '${e2eFolder}/tsconfig.json'
-                });
-            },
-            runner: 'local',
-            specs: [
-                '${e2eFolder}/specs/${specs || '**/*.spec.ts'}'
-            ],
-            exclude: [],
-            maxInstances: 1,
-            capabilities: ${capabilities},
-            logLevel: 'info',
-            bail: 0,
-            baseUrl: '${baseUrl}',
-            waitforTimeout: 100000,
-            connectionRetryTimeout: 90000,
-            connectionRetryCount: 3,
-            services: ['selenium-standalone', 'intercept'],
-            skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
-            framework: 'jasmine',
-            jasmineNodeOpts: {
-                defaultTimeoutInterval: ${timeout}
-            },
-            plugins: {
-                webdriverajax: {}
-            },
-            ${ieDriver}
-            reporters: ['spec'
-            ${junitConfig}
-            ]
-        };`;
+        let screenshotConfig = '';
+        if (screenShotPath) {
+            screenshotConfig = `if (!test.passed) {
+            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(screenShotPath))}';
+            screenshotDir = path.join(screenshotDir, test.parent.replace(/[^a-z0-9]/gi, '_').toLowerCase())
+
+            if (!fs.existsSync(screenshotDir)) {
+                fs.mkdirSync(screenshotDir, { recursive: true });
+            }
+
+            const filePath = path.join(
+                screenshotDir,
+                new Date().toISOString().replace(/[:]/g, '-') + '_' + test.fullName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+            );
+
+            browser.saveScreenshot(filePath + '.png');
+        }`;
+        }
+
+        this.template =
+            `const fs = require('fs');
+const path = require('path');
+exports.config = {
+    before: function () {
+        var config = require('${e2eFolder}/tsconfig.json');
+        require('${mainRepoDir}/node_modules/tsconfig-paths').register({
+           baseUrl: '${e2eFolder}',
+           paths: config.compilerOptions.paths || []
+       });
+        require('${mainRepoDir}/node_modules/ts-node').register({
+            files: true,
+            project: '${e2eFolder}/tsconfig.json'
+        });
+    },
+    runner: 'local',
+    specs: [
+        '${e2eFolder}/specs/${specs || '**/*.spec.ts'}'
+    ],
+    exclude: [],
+    maxInstances: 1,
+    capabilities: ${capabilities},
+    logLevel: 'info',
+    bail: 0,
+    baseUrl: '${baseUrl}',
+    waitforTimeout: 100000,
+    connectionRetryTimeout: 90000,
+    connectionRetryCount: 3,
+    services: ['selenium-standalone', 'intercept'],
+    skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
+    framework: 'jasmine',
+    jasmineNodeOpts: {
+        defaultTimeoutInterval: ${timeout}
+    },
+    plugins: {
+        webdriverajax: {}
+    },
+    afterTest: function(test) {
+    ${screenshotConfig}
+    },
+    ${ieDriver}
+    reporters: ['spec'
+    ${junitConfig}
+    ]
+};`;
     }
 
     public getTemplate(): string {
