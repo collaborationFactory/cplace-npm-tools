@@ -85,7 +85,7 @@ export class E2E implements ICommand {
         // specifications required by the cplace base system. Also see the E2EENV
         // comments in main.
 
-        const baseUrl = params[E2E.PARAMETER_BASE_URL];
+        const baseUrl = params[E2E.PARAMETER_BASE_URL] || params[E2E.PARAMETER_BASE_URL.toLowerCase()];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
             this.baseUrl = baseUrl;
             if (this.baseUrl.endsWith('/')) {
@@ -108,14 +108,14 @@ export class E2E implements ICommand {
             this.context = E2E.DEFAULT_CONTEXT;
         }
 
-        const tenantId = params[E2E.PARAMETER_TENANTID];
+        const tenantId = params[E2E.PARAMETER_TENANTID] || params[E2E.PARAMETER_TENANTID.toLowerCase()];
         if (typeof tenantId === 'string' && tenantId.length > 0) {
             this.tenantId = tenantId;
         } else {
             this.tenantId = '';
         }
 
-        const e2eToken = params[E2E.PARAMETER_E2E_TOKEN];
+        const e2eToken = params[E2E.PARAMETER_E2E_TOKEN] || params[E2E.PARAMETER_E2E_TOKEN.toLowerCase()];
         if (typeof e2eToken === 'string' && e2eToken.length > 0) {
             this.e2eToken = e2eToken;
         } else {
@@ -147,7 +147,7 @@ export class E2E implements ICommand {
             this.headless = headless;
         }
 
-        const jUnit = params[E2E.PARAMETER_JUNIT];
+        const jUnit = params[E2E.PARAMETER_JUNIT] || params[E2E.PARAMETER_JUNIT.toLowerCase()];
         if (typeof jUnit === 'string' && jUnit.length > 0) {
             this.jUnitReportPath = jUnit;
         } else if (typeof jUnit === 'boolean') {
@@ -161,7 +161,7 @@ export class E2E implements ICommand {
             this.screenshotPath = E2E.DEFAULT_SCREEENSHOTPATH;
         }
 
-        const noInstall = params[E2E.PARAMETER_NO_INSTALL];
+        const noInstall = params[E2E.PARAMETER_NO_INSTALL] || params[E2E.PARAMETER_NO_INSTALL.toLowerCase()];
         if (typeof noInstall === 'boolean') {
             this.noInstall = noInstall;
         } else {
