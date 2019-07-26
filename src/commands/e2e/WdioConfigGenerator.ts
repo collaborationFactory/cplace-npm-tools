@@ -17,10 +17,11 @@ export class WdioConfigGenerator {
     private readonly headless: boolean;
     private readonly noInstall: boolean;
     private readonly jUnitReportPath: string;
+    private readonly screenshotPath: string;
 
     constructor(workingDir: string, mainDir: string,
                 plugins: string[], specs: string, browser: string, context: IE2EContext,
-                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string) {
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenshotPath: string) {
         this.workingDir = workingDir;
         this.mainDir = mainDir;
         this.browser = browser;
@@ -31,9 +32,10 @@ export class WdioConfigGenerator {
         this.headless = headless;
         this.noInstall = noInstall;
         this.jUnitReportPath = jUnitReportPath;
+        this.screenshotPath = screenshotPath;
     }
 
-    private static safePath(filePath: string): string {
+    public static safePath(filePath: string): string {
         return filePath.replace(/\\/g, '/');  // For Windows
     }
 
@@ -59,7 +61,7 @@ export class WdioConfigGenerator {
             const config = new ConfigTemplate(
                 mainDir, e2eFolder,
                 this.specs, this.browser, this.context.baseUrl,
-                this.timeout, this.headless, this.noInstall, this.jUnitReportPath
+                this.timeout, this.headless, this.noInstall, this.jUnitReportPath, this.screenshotPath
             );
             fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});
         });
