@@ -74,7 +74,7 @@ export class ConfigTemplate {
 
             const filePath = path.join(
                 screenshotDir,
-                new Date().toISOString().replace(/[:]/g, '-') + '_' + test.fullName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+                new Date().toISOString().replace(/[:]/g, '-') + '_' + test.fullTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
             );
 
             browser.saveScreenshot(filePath + '.png');
@@ -111,9 +111,10 @@ exports.config = {
     connectionRetryCount: 3,
     services: ['selenium-standalone', 'intercept'],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
-    framework: 'jasmine',
-    jasmineNodeOpts: {
-        defaultTimeoutInterval: ${timeout}
+    framework: 'mocha',
+    mochaOpts: {
+        ui: 'bdd',
+        timeout: ${timeout}
     },
     plugins: {
         webdriverajax: {}
