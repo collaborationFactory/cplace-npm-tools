@@ -4,10 +4,11 @@ import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class ConfigTemplate {
     private readonly template: string;
+    private readonly listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
     constructor(mainRepoDir: string, e2eFolder: string,
-                specs: string, browser: string, baseUrl: string,
-                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string) {
+                specs: string, browser: string, baseUrl: string, context: string,
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string, e2eToken: string) {
         let capabilities = '';
         if (headless) {
             capabilities = `[{
@@ -84,6 +85,8 @@ export class ConfigTemplate {
         this.template =
             `const fs = require('fs');
 const path = require('path');
+const request = require('sync-request');
+
 exports.config = {
     before: function () {
         var config = require('${e2eFolder}/tsconfig.json');
@@ -95,6 +98,15 @@ exports.config = {
             files: true,
             project: '${e2eFolder}/tsconfig.json'
         });
+        const result = request('GET', '${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}');
+        let listOfPlugins=[];
+        JSON.parse(result.getBody('utf8')).plugins.forEach(function(plugin) {
+            listOfPlugins.push({
+                pluginName: plugin.pluginName,
+                isActive: plugin.isActive
+            });
+        });
+        browser.plugins=listOfPlugins;
     },
     runner: 'local',
     specs: [
