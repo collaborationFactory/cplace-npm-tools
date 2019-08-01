@@ -100,7 +100,7 @@ exports.config = {
         });
         const result = request('GET', '${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}');
         let listOfPlugins=[];
-        JSON.parse(result.getBody('utf8')).plugins.forEach(function(plugin) {
+        JSON.parse(result.getBody('utf8')).forEach(function(plugin) {
             listOfPlugins.push({
                 pluginName: plugin.pluginName,
                 isActive: plugin.isActive
