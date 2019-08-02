@@ -85,7 +85,7 @@ export class ConfigTemplate {
         this.template =
             `const fs = require('fs');
 const path = require('path');
-const request = require('sync-request');
+const request = require('request');
 
 exports.config = {
     before: function () {
@@ -98,15 +98,29 @@ exports.config = {
             files: true,
             project: '${e2eFolder}/tsconfig.json'
         });
-        const result = request('GET', '${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}');
-        let listOfPlugins=[];
-        JSON.parse(result.getBody('utf8')).forEach(function(plugin) {
-            listOfPlugins.push({
-                pluginName: plugin.pluginName,
-                isActive: plugin.isActive
+        return new Promise(function(resolve) {
+            return request('${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
+                if (error) {
+                    console.error('Cplace instance is not reachable:', error);
+                    process.send({
+                        event: 'runner:end',
+                        failures: 1
+                    })
+                    process.exit(1)
+                } else {
+                    var listOfPlugins = [];
+                    JSON.parse(body).forEach(function(plugin) {
+                        listOfPlugins.push({
+                            pluginName: plugin.pluginName,
+                            isActive: plugin.isActive
+                        });
+                    });
+                    console.log('Cplace has the following plugins ' + JSON.stringify(listOfPlugins));
+                    browser.plugins = listOfPlugins;
+                    resolve();
+                }
             });
         });
-        browser.plugins=listOfPlugins;
     },
     runner: 'local',
     specs: [
@@ -127,7 +141,7 @@ exports.config = {
     mochaOpts: {
         ui: 'bdd',
         timeout: ${timeout}
-    },
+     },
     plugins: {
         webdriverajax: {}
     },
