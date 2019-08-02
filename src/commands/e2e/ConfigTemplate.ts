@@ -4,10 +4,11 @@ import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class ConfigTemplate {
     private readonly template: string;
+    private readonly listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
     constructor(mainRepoDir: string, e2eFolder: string,
-                specs: string, browser: string, baseUrl: string,
-                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string) {
+                specs: string, browser: string, baseUrl: string, context: string,
+                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string, e2eToken: string) {
         let capabilities = '';
         if (headless) {
             capabilities = `[{
@@ -84,6 +85,8 @@ export class ConfigTemplate {
         this.template =
             `const fs = require('fs');
 const path = require('path');
+const request = require('request');
+
 exports.config = {
     before: function () {
         var config = require('${e2eFolder}/tsconfig.json');
@@ -94,6 +97,29 @@ exports.config = {
         require('${mainRepoDir}/node_modules/ts-node').register({
             files: true,
             project: '${e2eFolder}/tsconfig.json'
+        });
+        return new Promise(function(resolve) {
+            return request('${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
+                if (error) {
+                    console.error('Cplace instance is not reachable:', error);
+                    process.send({
+                        event: 'runner:end',
+                        failures: 1
+                    })
+                    process.exit(1)
+                } else {
+                    var listOfPlugins = [];
+                    JSON.parse(body).forEach(function(plugin) {
+                        listOfPlugins.push({
+                            pluginName: plugin.pluginName,
+                            isActive: plugin.isActive
+                        });
+                    });
+                    console.log('Cplace has the following plugins ' + JSON.stringify(listOfPlugins));
+                    browser.plugins = listOfPlugins;
+                    resolve();
+                }
+            });
         });
     },
     runner: 'local',
@@ -115,7 +141,7 @@ exports.config = {
     mochaOpts: {
         ui: 'bdd',
         timeout: ${timeout}
-    },
+     },
     plugins: {
         webdriverajax: {}
     },
