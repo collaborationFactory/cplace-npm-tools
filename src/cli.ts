@@ -122,7 +122,7 @@ const cli = meow(`
             --plugins to specify a comma separated list of plugins to run tests for (default: all plugins in the current repository)
             --specs to specify the pattern used to search for specification files inside plugins (default: '**/*.spec.ts')
             --timeout to specify a global Timeout for Test Execution
-            --headless currently only possible in Chrome
+            --headless currently only possible in Chrome and Firefox
             --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
             --jUnit will create jUnit reports and allows you to specify the location where the reports are stored (default: './e2eJunitReports')
             --screenshot will create Screenshots on each failed Test and store them in given Path (default: './e2eScreenshots')

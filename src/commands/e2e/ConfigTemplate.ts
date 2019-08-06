@@ -6,11 +6,12 @@ export class ConfigTemplate {
     private readonly template: string;
     private readonly listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
+    // tslint:disable-next-line:max-func-body-length
     constructor(mainRepoDir: string, e2eFolder: string,
                 specs: string, browser: string, baseUrl: string, context: string,
                 timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string, e2eToken: string) {
         let capabilities = '';
-        if (headless) {
+        if (headless && browser.toLowerCase() === 'chrome') {
             capabilities = `[{
                 maxInstances: 1,
                 browserName: '${browser}',
@@ -19,6 +20,14 @@ export class ConfigTemplate {
                         '--headless',
                         '--disable-gpu'
                     ]
+                }
+            }]`;
+        } else if (headless && browser.toLowerCase() === 'firefox') {
+            capabilities = `[{
+                maxInstances: 1,
+                browserName: '${browser}',
+                'moz:firefoxOptions': {
+                    'args': ['-headless']
                 }
             }]`;
         } else {
