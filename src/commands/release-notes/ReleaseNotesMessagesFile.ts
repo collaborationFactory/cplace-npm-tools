@@ -8,6 +8,7 @@ import {fs} from '../../p/fs';
 import {enforceNewline, makeSingleLine} from '../../util';
 
 type MessageEntryStatus = 'ok' | 'commented' | 'conflict';
+
 interface IReleaseNotesMessageEntry {
     readonly hash: string;
     status: MessageEntryStatus;
@@ -21,9 +22,6 @@ export class ReleaseNotesMessagesFile {
     private static readonly CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n)changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/);
     private static readonly RELEVANCE_PATTERNS: string[] = [
         'merge pull request #\\d+', // GitHub Pull Request
-        '\\bcloses? #\\d+', // GitHub Issues
-        '\\bissue-\\d+', // Intranet / Project Issues
-        '\\bus-\\d+', // Intranet / Project User Stories
         '\\bchangelog\\b' // Explicit changelog marker
     ];
 
@@ -177,11 +175,11 @@ export class ReleaseNotesMessagesFile {
         });
 
         const content = allEntries
-                .map((e) => {
-                    const hash = this.getPrefixForStatus(e.status) + e.hash;
-                    return `${hash}:${e.message}`;
-                })
-                .join('\n') + '\n';
+            .map((e) => {
+                const hash = this.getPrefixForStatus(e.status) + e.hash;
+                return `${hash}:${e.message}`;
+            })
+            .join('\n') + '\n';
         return fs
             .writeFileAsync(this.path, content, 'utf8')
             .then(
