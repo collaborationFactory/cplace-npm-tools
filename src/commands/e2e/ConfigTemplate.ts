@@ -94,11 +94,11 @@ export class ConfigTemplate {
         this.template =
             `const fs = require('fs');
 const path = require('path');
-const request = require('request');
+const request = require('${mainRepoDir}/node_modules/request');
 
 exports.config = {
     before: function () {
-        var config = require('${e2eFolder}/tsconfig.json');
+        const config = require('${e2eFolder}/tsconfig.json');
         require('${mainRepoDir}/node_modules/tsconfig-paths').register({
            baseUrl: '${e2eFolder}',
            paths: config.compilerOptions.paths || []
@@ -114,8 +114,8 @@ exports.config = {
                     process.send({
                         event: 'runner:end',
                         failures: 1
-                    })
-                    process.exit(1)
+                    });
+                    process.exit(1);
                 } else {
                     var listOfPlugins = [];
                     JSON.parse(body).forEach(function(plugin) {
