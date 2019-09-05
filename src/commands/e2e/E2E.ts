@@ -173,7 +173,7 @@ export class E2E implements ICommand {
             console.error(`! Headless disabled - only available for Chrome and Firefox execution`);
         }
 
-        this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir);
+        this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir, this.mainRepoDir);
         if (!this.testRunner.isWdioExecutableAvailable()) {
             console.error(`Failed to find wdio executable - make sure node_modules are installed in the main repository and you are on a branch based on 4.57 or higher`);
             return false;
