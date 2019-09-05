@@ -20,14 +20,21 @@ export function getPathToMainRepo(workingDir: string = ''): string | null {
         workingDir = process.cwd();
     }
     workingDir = path.resolve(workingDir);
-    if (path.basename(workingDir) === 'main') {
+    if (path.basename(workingDir) === 'main' || path.basename(workingDir) === 'cplace') {
+        console.log(`main/cplace Repository folder was found in ${workingDir}`);
         return workingDir;
     }
 
     const expectedMain = path.resolve(workingDir, '..', 'main');
-    if (!fs.existsSync(expectedMain)) {
-        return null;
-    } else {
+    const expectedCplace = path.resolve(workingDir, '..', 'cplace');
+
+    if (fs.existsSync(expectedMain)) {
+        console.log(`main/cplace Repository folder was found in ${expectedMain}`);
         return expectedMain;
+    } else if (fs.existsSync(expectedCplace)) {
+        console.log(`main/cplace Repository folder was found in ${expectedCplace}`);
+        return expectedCplace;
+    } else {
+        return null;
     }
 }

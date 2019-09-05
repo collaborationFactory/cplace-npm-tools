@@ -6,11 +6,13 @@ export class TestRunner {
 
     private readonly plugins: string[];
     private readonly workingDir: string;
+    private readonly mainRepoDir: string;
 
     constructor(plugins: string[],
-                workingDir: string) {
+                workingDir: string, mainRepoDir: string) {
         this.workingDir = workingDir;
         this.plugins = plugins;
+        this.mainRepoDir = mainRepoDir;
     }
 
     public async runTests(): Promise<void> {
@@ -27,19 +29,14 @@ export class TestRunner {
     }
 
     private getWdioCliExecutable(): string {
-        let mainRepoDir;
-        if (fs.existsSync(path.join(this.workingDir, 'cf.cplace.platform'))) {
-            mainRepoDir = this.workingDir;
-        } else {
-            mainRepoDir = path.join(this.workingDir, '..', 'main');
-            if (!fs.existsSync(mainRepoDir)) {
-                console.error(`Could not find main repository :( Expected it at: ${mainRepoDir}`);
-                throw new Error();
-            }
+
+        if (!fs.existsSync(this.mainRepoDir)) {
+            console.error(`Could not find main repository :( Expected it at: ${this.mainRepoDir}`);
+            throw new Error();
         }
 
         return path.resolve(
-            mainRepoDir,
+            this.mainRepoDir,
             'node_modules',
             '@wdio',
             'cli',
