@@ -17,10 +17,18 @@ export class TestRunner {
 
     public async runTests(): Promise<void> {
         const launcherModule = require(this.getWdioCliExecutable());
+        let hasFailedTest: boolean = false;
         for (const plugin of this.plugins) {
             const wdioConf = path.join(this.workingDir, plugin, 'assets', 'e2e', WdioConfigGenerator.WDIO_CONF_NAME);
             const launcher = new launcherModule.default(wdioConf, {args: ['']});
-            await launcher.run();
+            const testHasFailed: boolean = await launcher.run();
+            if (testHasFailed) {
+                console.warn(`One of the E2E Tests in plugin ${plugin} has failed`);
+                hasFailedTest = true;
+            }
+        }
+        if (hasFailedTest) {
+            throw new Error(`One of the E2E Tests has failed`);
         }
     }
 
