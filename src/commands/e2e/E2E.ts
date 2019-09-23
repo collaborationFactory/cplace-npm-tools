@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {IE2EContext} from './E2EEnvTemplate';
 import {getPathToMainRepo} from '../../util';
+import * as glob from 'glob';
 
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
@@ -73,8 +74,13 @@ export class E2E implements ICommand {
         } else {
             this.pluginsToBeTested = this.findAllPluginsInWorkingDirectory();
         }
+        this.filterPluginsByHasSpecifiedTests();
+        if (this.pluginsToBeTested.length === 0) {
+            console.log(`No Test Specifications were found, shutting down`);
+            return true;
+        }
 
-        console.log('Running E2E tests for: ', this.pluginsToBeTested.join(', '));
+        console.log(`Found Test Specifications in the following plugins ${this.pluginsToBeTested.join(', ')} and running E2E tests respectively`);
 
         const specs = params[E2E.PARAMETER_SPECS];
         if (typeof specs === 'string' && specs.length > 0) {
@@ -222,6 +228,22 @@ export class E2E implements ICommand {
         }
 
         return true;
+    }
+
+    private filterPluginsByHasSpecifiedTests(): void {
+        this.pluginsToBeTested = this.pluginsToBeTested
+            .filter((plugin) => {
+                        const pathToSpecFiles = path.join(this.workingDir, plugin, 'assets', 'e2e', 'specs');
+                        if (fs.existsSync(pathToSpecFiles)) {
+                            if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
+                                Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
+                                return true;
+                            }
+                        }
+                        Global.isVerbose() && console.warn(`Plugin ${plugin} does not have an E2E specs folder - please provide the folder and specify a Test first`);
+                        return false;
+                    }
+            );
     }
 
     private findAllPluginsInWorkingDirectory(): string[] {
