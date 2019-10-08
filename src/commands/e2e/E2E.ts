@@ -238,9 +238,10 @@ export class E2E implements ICommand {
                             if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
                                 Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
                                 return true;
+                            } else {
+                                console.log(`Plugin ${plugin} has an E2E specs folder but there are no Tests specified - please specify a Test first`);
                             }
                         }
-                        Global.isVerbose() && console.warn(`Plugin ${plugin} does not have an E2E specs folder - please provide the folder and specify a Test first`);
                         return false;
                     }
             );
