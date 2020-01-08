@@ -5,7 +5,7 @@ import {IE2EContext} from './E2EEnvTemplate';
 
 export class ConfigTemplate {
     private readonly template: string;
-    private readonly listPluginsURL: string = 'application/administrationDashboard/listPlugins';
+    private readonly listPluginsURL: string = '/application/administrationDashboard/listPlugins';
 
     // tslint:disable-next-line:max-func-body-length
     constructor(mainRepoDir: string, e2eFolder: string,

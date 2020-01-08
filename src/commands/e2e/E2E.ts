@@ -30,8 +30,8 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
 
     // Default
-    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083/';
-    private static readonly DEFAULT_CONTEXT: string = 'intern/tricia/';
+    private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
+    private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
     private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
@@ -113,7 +113,6 @@ export class E2E implements ICommand {
         } else {
             this.tenantId = '';
         }
-        this.tenantId = this.conformSlashes(this.tenantId);
 
         const e2eToken = params[E2E.PARAMETER_E2E_TOKEN] || params[E2E.PARAMETER_E2E_TOKEN.toLowerCase()];
         if (typeof e2eToken === 'string' && e2eToken.length > 0) {
@@ -209,11 +208,13 @@ export class E2E implements ICommand {
     }
 
     public conformSlashes(partOfUrl: string): string {
-        if (partOfUrl.startsWith('/')) {
-            partOfUrl = partOfUrl.substr(1);
-        }
-        if (!partOfUrl.endsWith('/')) {
-            partOfUrl += '/';
+        if (partOfUrl && partOfUrl.length !== 0) {
+            if (partOfUrl.startsWith('/')) {
+                partOfUrl = partOfUrl.substr(1);
+            }
+            if (!partOfUrl.endsWith('/')) {
+                partOfUrl += '/';
+            }
         }
         return partOfUrl;
     }
