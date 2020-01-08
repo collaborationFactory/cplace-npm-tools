@@ -94,18 +94,25 @@ export class E2E implements ICommand {
         const baseUrl = params[E2E.PARAMETER_BASE_URL] || params[E2E.PARAMETER_BASE_URL.toLowerCase()];
         if (typeof baseUrl === 'string' && baseUrl.length > 0) {
             this.baseUrl = baseUrl;
+            if (this.baseUrl.endsWith('/')) {
+                this.baseUrl = this.baseUrl.substr(0, this.baseUrl.length - 1);
+            }
         } else {
             this.baseUrl = E2E.DEFAULT_BASE_URL;
         }
-        this.baseUrl = this.conformSlashes(this.baseUrl);
 
         const context = params[E2E.PARAMETER_CONTEXT];
         if (typeof context === 'string' && context.length > 0) {
             this.context = context;
+            if (!this.context.startsWith('/')) {
+                this.context = '/' + this.context;
+            }
+            if (!this.context.endsWith('/')) {
+                this.context += '/';
+            }
         } else {
             this.context = E2E.DEFAULT_CONTEXT;
         }
-        this.context = this.conformSlashes(this.context);
 
         const tenantId = params[E2E.PARAMETER_TENANTID] || params[E2E.PARAMETER_TENANTID.toLowerCase()];
         if (typeof tenantId === 'string' && tenantId.length > 0) {
@@ -205,18 +212,6 @@ export class E2E implements ICommand {
         console.log('Starting test runner...');
 
         return this.testRunner.runTests();
-    }
-
-    public conformSlashes(partOfUrl: string): string {
-        if (partOfUrl && partOfUrl.length !== 0) {
-            if (partOfUrl.startsWith('/')) {
-                partOfUrl = partOfUrl.substr(1);
-            }
-            if (!partOfUrl.endsWith('/')) {
-                partOfUrl += '/';
-            }
-        }
-        return partOfUrl;
     }
 
     private hasE2EAssets(plugin: string): boolean {
