@@ -1,16 +1,21 @@
 import {E2E} from './E2E';
 import * as path from 'path';
 import {WdioConfigGenerator} from './WdioConfigGenerator';
+import {IE2EContext} from './E2EEnvTemplate';
 
 export class ConfigTemplate {
     private readonly template: string;
-    private readonly listPluginsURL: string = 'application/administrationDashboard/listPlugins';
+    private listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
     // tslint:disable-next-line:max-func-body-length
     constructor(mainRepoDir: string, e2eFolder: string,
-                specs: string, browser: string, baseUrl: string, context: string,
+                specs: string, browser: string, baseUrl: string, context: IE2EContext,
                 timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string, e2eToken: string) {
-        let capabilities = '';
+        let capabilities: string;
+        const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
+        if (context.context.length === 0 && context.tenantId.length === 0) {
+            this.listPluginsURL = '/' + this.listPluginsURL;
+        }
         if (headless && browser.toLowerCase() === 'chrome') {
             capabilities = `[{
                 maxInstances: 1,
@@ -108,7 +113,7 @@ exports.config = {
             project: '${e2eFolder}/tsconfig.json'
         });
         return new Promise(function(resolve) {
-            return request('${baseUrl}${context}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
+            return request('${baseUrl}${context.context}${tenant}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
                 if (error) {
                     console.error('Cplace instance is not reachable:', error);
                     process.send({

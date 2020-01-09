@@ -60,7 +60,7 @@ export class WdioConfigGenerator {
             const mainDir = WdioConfigGenerator.safePath(this.mainDir);
             const config = new ConfigTemplate(
                 mainDir, e2eFolder,
-                this.specs, this.browser, this.context.baseUrl, this.context.context,
+                this.specs, this.browser, this.context.baseUrl, this.context,
                 this.timeout, this.headless, this.noInstall, this.jUnitReportPath, this.screenshotPath, this.context.e2eToken
             );
             fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});

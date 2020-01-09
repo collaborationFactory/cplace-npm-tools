@@ -110,6 +110,8 @@ export class E2E implements ICommand {
             if (!this.context.endsWith('/')) {
                 this.context += '/';
             }
+        } else if (typeof context === 'string' && context.length === 0) {
+            this.context = '';
         } else {
             this.context = E2E.DEFAULT_CONTEXT;
         }
