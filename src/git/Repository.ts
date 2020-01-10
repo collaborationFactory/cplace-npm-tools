@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
+import {execSync} from 'child_process';
 
 export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
@@ -53,6 +54,16 @@ export class Repository {
             const match = branch.match(re);
             return !(match !== null && branch === match[0]);
         }
+    }
+
+    public checkRepoHasNodeModules(): boolean {
+        const result = execSync(
+            `git ls-tree --name-only HEAD`, {
+                cwd: path.join(this.baseDir)
+            }
+        );
+        const dirs = String.fromCharCode.apply(null, result).split(/\r?\n/);
+        return dirs.some((name) => name.includes('node_modules'));
     }
 
     public log(fromHash: string, toHash: string = 'HEAD'): Promise<IGitLogSummary> {

@@ -135,6 +135,7 @@ export class UpdateRepos extends AbstractReposCommand {
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
+        const startingBranchhasNodeModules = repo.checkRepoHasNodeModules();
 
         await this.moveNodeModules(repo);
         if (branch) {
