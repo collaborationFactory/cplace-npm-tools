@@ -57,22 +57,19 @@ export class Repository {
 
     public log(fromHash: string, toHash: string = 'HEAD'): Promise<IGitLogSummary> {
         return new Promise<IGitLogSummary>((resolve, reject) => {
-            // This is a hack - simpleGit will just append
-            // the keys of the `options` object to the command
-            // if the value is not of type string (or equal to some special keys)
             const options = {
                 splitter: '__fieldSplitter_1234eirhgnsergfse324__',
+                from: fromHash,
+                to: toHash,
                 format: {
                     hash: '%H',
                     date: '%ai',
                     message: '%B',
                     author_name: '%aN',
                     author_email: '%ae'
-                }
+                },
+                symmetric: false
             };
-            // We therefore just construct the path-spec as a special key
-            const pathSpec = `${fromHash}..${toHash}`;
-            options[pathSpec] = null;
             this.git.log(options, (err, data: IGitLogSummary) => {
                              err ? reject(err) : resolve(data);
                          }
