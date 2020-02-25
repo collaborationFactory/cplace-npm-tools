@@ -140,3 +140,9 @@ In order to just run the TypeScript compiler and tslint use:
 ```
 $ npm run dev
 ```
+
+You can also install your local development version and recompile with `npm run dev` afterwards:
+```
+$ npm link
+```
+When you `link`, make sure to clean the installation after publishing again (using `npm r -g @cplace/cli`).
