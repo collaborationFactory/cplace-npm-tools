@@ -1,8 +1,7 @@
-import * as os from 'os';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as rimraf from 'rimraf';
 import {GradleBuild} from './GradleBuild';
+import * as path from 'path';
+import * as fs from 'fs';
+import {withTempDirectory} from '../test/helpers/directories';
 
 test('Splitting and trimming lines', () => {
     const lines = `first\n`
@@ -14,14 +13,14 @@ test('Splitting and trimming lines', () => {
     );
 });
 
-test('Directory is detected as gradle build', (done) => {
-    withTempGradleBuild(done, (dir) => {
+test('Directory is detected as gradle build', async () => {
+    await withTempGradleBuild(async (dir) => {
         const build = new GradleBuild(dir);
         expect(build.containsGradleBuild()).toBe(true);
     });
 });
 
-test('Composite build repo extraction works correctly', (done) => {
+test('Composite build repo extraction works correctly', async () => {
     const settingsGradleContent = () => {
         return `rootProject.name = 'testProject'\n`
             + `\n`
@@ -32,9 +31,8 @@ test('Composite build repo extraction works correctly', (done) => {
             ;
     };
 
-    withTempGradleBuild(
-        done,
-        (dir) => {
+    await withTempGradleBuild(
+        async (dir) => {
             const build = new GradleBuild(dir);
             expect(build.getIncludedCompositeRepoPaths()).toEqual(
                 ['../main', '../../other-project']
@@ -45,29 +43,18 @@ test('Composite build repo extraction works correctly', (done) => {
     );
 });
 
-function createTempGradleBuildDirectory(buildGradleContent?: () => string, settingsGradleContent?: () => string): string {
-    const dirPath = path.join(
-        os.tmpdir(),
-        new Date().getTime() + '-cplace-cli-test'
-    );
-    fs.mkdirSync(dirPath);
+function withTempGradleBuild(func: (directory: string) => Promise<void>,
+                             buildGradleContent?: () => string,
+                             settingsGradleContent?: () => string): Promise<void> {
+    return withTempDirectory(
+        'gradle',
+        async (dir) => {
+            const buildGradle = path.join(dir, 'build.gradle');
+            fs.writeFileSync(buildGradle, buildGradleContent ? buildGradleContent() : '', {encoding: 'utf8'});
+            const settingsGradle = path.join(dir, 'settings.gradle');
+            fs.writeFileSync(settingsGradle, settingsGradleContent ? settingsGradleContent() : '', {encoding: 'utf8'});
 
-    const buildGradle = path.join(dirPath, 'build.gradle');
-    fs.writeFileSync(buildGradle, buildGradleContent ? buildGradleContent() : '', {encoding: 'utf8'});
-    const settingsGradle = path.join(dirPath, 'settings.gradle');
-    fs.writeFileSync(settingsGradle, settingsGradleContent ? settingsGradleContent() : '', {encoding: 'utf8'});
-
-    return dirPath;
-}
-
-function withTempGradleBuild(done: () => void, func: (directory: string) => void, buildGradleContent?: () => string, settingsGradleContent?: () => string): void {
-    const dir = createTempGradleBuildDirectory(buildGradleContent, settingsGradleContent);
-    func(dir);
-    rimraf(dir, (e) => {
-        if (e) {
-            console.error('failed to remove directory', e);
-            throw e;
+            await func(dir);
         }
-        done();
-    });
+    );
 }
