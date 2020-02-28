@@ -7,6 +7,8 @@ import {ICommandParameters} from '../../models';
 import {Repos} from '../Repos';
 import {DependencyManagement} from './DependencyManagement';
 import {IdeaDependencyManagement} from './IdeaDependencyManagement';
+import {GradleBuild} from '../../../helpers/GradleBuild';
+import {GradleDependencyManagement} from './GradleDependencyManagement';
 
 /**
  * Add Dependency command
@@ -27,7 +29,13 @@ export class AddDependency extends AbstractReposCommand {
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
-        this.dependencyManagement = new IdeaDependencyManagement(process.cwd(), this.parentRepos);
+        const potentialGradleBuild = new GradleBuild(process.cwd());
+        if (potentialGradleBuild.containsGradleBuild()) {
+            this.dependencyManagement = new GradleDependencyManagement(process.cwd(), this.parentRepos);
+        } else {
+            this.dependencyManagement = new IdeaDependencyManagement(process.cwd(), this.parentRepos);
+        }
+
         if (params[Repos.PARAMETER_ADD_DEPENDENCY]) {
             this.pluginOrRepoToAdd = params[Repos.PARAMETER_ADD_DEPENDENCY] as string;
         } else {
