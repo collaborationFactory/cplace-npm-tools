@@ -7,7 +7,7 @@ test('Splitting and trimming lines', () => {
         + `\tthird\r\n`
         + `   fourth`;
     expect(GradleBuild.splitAndTrimLines(lines)).toEqual(
-        ['first', 'second', 'third', 'fourth']
+        ['first', 'second', '\tthird', '   fourth']
     );
 });
 
@@ -32,7 +32,31 @@ test('Composite build repo extraction works correctly', async () => {
     await withTempGradleBuild(
         async (dir) => {
             const build = new GradleBuild(dir);
-            expect(build.getIncludedCompositeRepoPaths()).toEqual(
+            const repoPaths = await build.getIncludedCompositeRepoPaths();
+            expect(repoPaths).toEqual(
+                ['../main', '../../other-project']
+            );
+        },
+        undefined,
+        settingsGradleContent
+    );
+});
+
+test('Adding a new composite build reference works', async () => {
+    const settingsGradleContent = () => {
+        return `rootProject.name = 'testProject'\n`
+            + `\n`
+            + `includeBuild('../main') {\n`
+            + `}\n`
+            ;
+    };
+
+    await withTempGradleBuild(
+        async (dir) => {
+            const build = new GradleBuild(dir);
+            await build.addNewCompositeRepo('../../other-project');
+            const repoPaths = await build.getIncludedCompositeRepoPaths();
+            expect(repoPaths).toEqual(
                 ['../main', '../../other-project']
             );
         },

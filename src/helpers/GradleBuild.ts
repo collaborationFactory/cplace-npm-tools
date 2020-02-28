@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as fs from 'fs';
+import {fs} from '../p/fs';
 
 export class GradleBuild {
     private static readonly GRADLE_BUILD_FILE: string = 'build.gradle';
@@ -18,9 +18,13 @@ export class GradleBuild {
 
     public static splitAndTrimLines(content: string): string[] {
         return content.split('\n')
-            .map((line) => line.trim());
+            .map((line) => line.trimRight());
     }
 
+    /**
+     * Returns whether the directory this gradle build points to contains a
+     * `build.gradle` and `settings.gradle` file.
+     */
     public containsGradleBuild(): boolean {
         return fs.existsSync(path.join(this.directory, GradleBuild.GRADLE_BUILD_FILE))
             && fs.existsSync(path.join(this.directory, GradleBuild.SETTINGS_FILE));
@@ -30,8 +34,8 @@ export class GradleBuild {
      * Returns the relative paths which are referenced in the settings file
      * with `includeBuild(<path>)`.
      */
-    public getIncludedCompositeRepoPaths(): string[] {
-        this.ensureSettingsGradleContentRead();
+    public async getIncludedCompositeRepoPaths(): Promise<string[]> {
+        await this.ensureSettingsGradleContentRead();
 
         return this.settingsGradleContent
             .map((line) => {
@@ -45,14 +49,43 @@ export class GradleBuild {
             });
     }
 
-    private ensureSettingsGradleContentRead(): void {
+    /**
+     * Adds a new composite build include to the given repository path.
+     * @param pathToRepo Path that should be used in `includeBuild`
+     */
+    public async addNewCompositeRepo(pathToRepo: string): Promise<void> {
+        const alreadyPresent = await this.getIncludedCompositeRepoPaths();
+        if (alreadyPresent.indexOf(pathToRepo) > -1) {
+            return;
+        }
+
+        const newIncludeBuild = [
+            `includeBuild('${pathToRepo}') {`,
+            `}`,
+            ``
+        ];
+
+        const newSettingsContent = [
+            ...this.settingsGradleContent,
+            ...newIncludeBuild
+        ];
+
+        await fs.writeFileAsync(
+            path.join(this.directory, GradleBuild.SETTINGS_FILE),
+            newSettingsContent.join('\n'),
+            'utf-8'
+        );
+        this.settingsGradleContent = undefined;
+    }
+
+    private async ensureSettingsGradleContentRead(): Promise<void> {
         if (this.settingsGradleContent !== undefined) {
             return;
         }
 
-        const content = fs.readFileSync(
+        const content = await fs.readFileAsync(
             path.join(this.directory, GradleBuild.SETTINGS_FILE),
-            {encoding: 'utf8'}
+            'utf-8'
         );
         this.settingsGradleContent = GradleBuild.splitAndTrimLines(content);
     }
