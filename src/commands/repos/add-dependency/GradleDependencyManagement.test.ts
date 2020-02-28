@@ -27,17 +27,22 @@ const currentRepos: IReposDescriptor = {
 };
 
 test('Adding Repository dependency works', async () => {
-    const settingsGradleContent = () => {
+    const entrySettingsGradle = () => {
+        return `rootProject.name = 'entryProject'\n`
+            + `\n`
+            ;
+    };
+    const testSettingsGradle = () => {
         return `rootProject.name = 'testProject'\n`
             + `\n`
-            + `includeBuild('../main') {\n`
-            + `}\n`
             ;
     };
     await withRepositories(
         allRepos,
         async (rootDir) => {
-            await createGradleBuild(rootDir, undefined, settingsGradleContent);
+            await createGradleBuild(path.join(rootDir, 'entry'), undefined, entrySettingsGradle);
+            await createGradleBuild(path.join(rootDir, 'test'), undefined, testSettingsGradle);
+
             const mgmt = new GradleDependencyManagement(path.join(rootDir, 'entry'), currentRepos);
             const newRepos = await mgmt.getReposDescriptorWithNewRepo('test');
             expect(newRepos).toEqual({

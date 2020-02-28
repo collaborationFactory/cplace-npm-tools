@@ -7,7 +7,7 @@ import * as child_process from 'child_process';
 export function withRepositories(repos: IReposDescriptor,
                                  func: (rootDir: string) => Promise<void>): Promise<void> {
     return withTempDirectory(
-        'repos',
+        'repos-' + (Math.random() * 100).toFixed(0),
         async (dir) => {
             await createRepositories(repos, dir);
             await func(dir);
@@ -23,7 +23,7 @@ function createRepositories(repos: IReposDescriptor, rootDir: string): Promise<v
 
         fs.mkdirSync(pathToRepo);
 
-        let command = `git init && git remote add origin "${descriptor.url}" && git commit --allow-empty -m "empty" `;
+        let command = `git init && git remote add origin "${descriptor.url}" && git commit --no-gpg-sign --allow-empty -m "empty" `;
         if (descriptor.branch !== 'master') {
             command = `${command} && git checkout -b "${descriptor.branch}"`;
         }
