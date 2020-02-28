@@ -10,3 +10,13 @@ export async function writeModulesXml(rootDir: string, repositoryName: string, c
         'utf8'
     );
 }
+
+export async function writeModuleIml(rootDir: string, repositoryName: string, moduleName: string, content: string): Promise<void> {
+    const moduleDir = path.join(rootDir, repositoryName, moduleName);
+    await fs.mkdirAsync(moduleDir);
+    await fs.writeFileAsync(
+        path.join(moduleDir, `${moduleName}.iml`),
+        content,
+        'utf8'
+    );
+}

@@ -137,7 +137,7 @@ export class IdeaDependencyManagement extends DependencyManagement {
     private async findDependencies(moduleEntry: IModulesXmlModule): Promise<IModulesXmlModule[]> {
         try {
             const filepath = moduleEntry.filepath.replace('$PROJECT_DIR$/', '');
-            const imlParser = new ImlParser(filepath);
+            const imlParser = new ImlParser(path.join(this.repositoryDir, filepath));
             const result = await Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName)));
             return result.map(
                 (entry) => this.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)
