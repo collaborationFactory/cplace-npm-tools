@@ -42,6 +42,29 @@ test('Composite build repo extraction works correctly', async () => {
     );
 });
 
+test('Composite build detection works', async () => {
+    const settingsGradleContent = () => {
+        return `rootProject.name = 'testProject'\n`
+            + `\n`
+            + `includeBuild('../main') {\n`
+            + `}\n`
+            + `\n`
+            + `includeBuild("../../other-project") {}\n`
+            ;
+    };
+
+    await withTempGradleBuild(
+        async (dir) => {
+            const build = new GradleBuild(dir);
+            expect(await build.hasCompositeRepoReference('../main')).toBe(true);
+            expect(await build.hasCompositeRepoReference('../../other-project')).toBe(true);
+            expect(await build.hasCompositeRepoReference('../xxxx')).toBe(false);
+        },
+        undefined,
+        settingsGradleContent
+    );
+});
+
 test('Adding a new composite build reference works', async () => {
     const settingsGradleContent = () => {
         return `rootProject.name = 'testProject'\n`

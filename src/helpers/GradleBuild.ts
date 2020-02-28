@@ -50,12 +50,19 @@ export class GradleBuild {
     }
 
     /**
+     * Returns whether the given `pathToRepo` is already included as composite build
+     * @param pathToRepo Path to check
+     */
+    public async hasCompositeRepoReference(pathToRepo: string): Promise<boolean> {
+        return (await this.getIncludedCompositeRepoPaths()).indexOf(pathToRepo) > -1;
+    }
+
+    /**
      * Adds a new composite build include to the given repository path.
      * @param pathToRepo Path that should be used in `includeBuild`
      */
     public async addNewCompositeRepo(pathToRepo: string): Promise<void> {
-        const alreadyPresent = await this.getIncludedCompositeRepoPaths();
-        if (alreadyPresent.indexOf(pathToRepo) > -1) {
+        if (await this.hasCompositeRepoReference(pathToRepo)) {
             return;
         }
 
