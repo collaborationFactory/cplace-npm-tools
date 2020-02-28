@@ -20,7 +20,7 @@ export abstract class DependencyManagement {
 
         const repoPath = path.resolve(this.repositoryDir, '..', repositoryName);
         return fs.statAsync(repoPath)
-            .then((stats) => !stats.isDirectory()
+            .then((stats) => (!stats.isDirectory() || !this.isValidRepository(repoPath))
                 ? Promise.reject(`expected a repository directory named: ${repositoryName}`)
                 : Promise.resolve()
             )
@@ -55,4 +55,11 @@ export abstract class DependencyManagement {
      */
     public abstract addSinglePlugin(pluginName: string, includeTransitive: boolean): Promise<void>;
 
+    /**
+     * Checks if the given repository is valid and can be used as dependency.
+     * @param repositoryPath Path to the repository
+     */
+    protected isValidRepository(repositoryPath: string): boolean {
+        return true;
+    }
 }

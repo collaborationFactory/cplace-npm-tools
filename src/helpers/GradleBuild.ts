@@ -21,6 +21,10 @@ export class GradleBuild {
             .map((line) => line.trimRight());
     }
 
+    public getDirectory(): string {
+        return this.directory;
+    }
+
     /**
      * Returns whether the directory this gradle build points to contains a
      * `build.gradle` and `settings.gradle` file.
