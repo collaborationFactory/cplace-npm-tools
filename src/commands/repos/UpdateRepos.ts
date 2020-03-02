@@ -1,7 +1,6 @@
 /**
  * General update-repos command
  */
-import * as Promise from 'bluebird';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {ICommandParameters} from '../models';
 import {Repository} from '../../git';
@@ -16,13 +15,11 @@ export class UpdateRepos extends AbstractReposCommand {
     protected noFetch: boolean;
     protected resetToRemote: boolean;
 
-    public execute(): Promise<void> {
-        return Promise.each(
-            Object.keys(this.parentRepos),
-            (repoName) => this.handleRepo(repoName)
-        ).then(() => {
-            Global.isVerbose() && console.log('all repositories successfully updated');
-        });
+    public async execute(): Promise<void> {
+        await Promise.all(
+            Object.keys(this.parentRepos).map((repoName) => this.handleRepo(repoName))
+        );
+        Global.isVerbose() && console.log('all repositories successfully updated');
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
@@ -87,7 +84,7 @@ export class UpdateRepos extends AbstractReposCommand {
         }
     }
 
-    private handleRepo(repoName: string): Promise<void> {
+    private async handleRepo(repoName: string): Promise<void> {
         Global.isVerbose() && console.log('repo', repoName);
 
         const repoProperties = this.parentRepos[repoName];
@@ -100,26 +97,26 @@ export class UpdateRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log('branch', branch);
 
         const repo = new Repository(`../${repoName}`);
-        const p = this.noFetch ? Promise.resolve() : repo.fetch();
-        return p
-            .then(() => this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY))
-            .then(() => repo.status())
-            .then((status) => this.checkRepoClean(repo, status))
-            .then(() => this.moveNodeModules(repo))
-            .then(() => repo.checkoutBranch(branch))
-            .then(() => repo.resetHard())
-            .then(() => {
-                if (commit) {
-                    return repo.checkoutCommit(commit);
-                } else if (this.resetToRemote) {
-                    return repo.resetHard(branch);
-                } else {
-                    return repo.pullOnlyFastForward(branch);
-                }
-            })
-            .then(() => this.handleNodeModules(repo))
-            .then(() => {
-                Global.isVerbose() && console.log('successfully updated', repoName);
-            });
+        if (!this.noFetch) {
+            await repo.fetch();
+        }
+
+        await this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
+        const status = await repo.status();
+        await this.checkRepoClean(repo, status);
+        await this.moveNodeModules(repo);
+        await repo.checkoutBranch(branch);
+        await repo.resetHard();
+
+        if (commit) {
+            await repo.checkoutCommit(commit);
+        } else if (this.resetToRemote) {
+            await repo.resetHard(branch);
+        } else {
+            await repo.pullOnlyFastForward(branch);
+        }
+
+        await this.handleNodeModules(repo);
+        Global.isVerbose() && console.log('successfully updated', repoName);
     }
 }
