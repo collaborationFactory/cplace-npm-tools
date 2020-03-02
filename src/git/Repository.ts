@@ -237,7 +237,7 @@ export class Repository {
                     Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} which is tracking ${tracking}`);
                     const i = tracking.indexOf('/');
                     if (i < 0) {
-                        return Promise.reject(`cannot determine remote and branch for ${tracking}`);
+                        throw new Error(`cannot determine remote and branch for ${tracking}`);
                     }
 
                     const remote = tracking.substring(0, i);
@@ -256,7 +256,7 @@ export class Repository {
                 } else {
                     const errorMessage: string = `Not possible because cannot find tracking branch for branch ${branch} in repository ${this.repoName}`;
                     Global.isVerbose() && console.error(errorMessage);
-                    return Promise.reject(errorMessage);
+                    throw new Error(errorMessage);
                 }
             });
     }

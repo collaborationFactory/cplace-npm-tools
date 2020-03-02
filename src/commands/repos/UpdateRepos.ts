@@ -7,6 +7,7 @@ import {Repository} from '../../git';
 import {Global} from '../../Global';
 import * as path from 'path';
 import * as fs from 'fs';
+import {GradleBuild} from '../../helpers/GradleBuild';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
@@ -96,7 +97,10 @@ export class UpdateRepos extends AbstractReposCommand {
         const branch = repoProperties.branch;
         Global.isVerbose() && console.log('branch', branch);
 
-        const repo = new Repository(`../${repoName}`);
+        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
+
+        const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
             await repo.fetch();
         }
@@ -117,6 +121,14 @@ export class UpdateRepos extends AbstractReposCommand {
         }
 
         await this.handleNodeModules(repo);
+
+        const isGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
+        if (isGradleBuild !== wasGradleBuild) {
+            const toFrom = wasGradleBuild ? 'away from' : 'back to';
+            console.warn(`WARNING: Repository ${repoName} has changed ${toFrom} a Gradle build!`);
+            console.warn(`         This might cause issues in IntelliJ - be aware.`);
+        }
+
         Global.isVerbose() && console.log('successfully updated', repoName);
     }
 }

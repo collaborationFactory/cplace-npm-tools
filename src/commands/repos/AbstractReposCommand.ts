@@ -1,7 +1,6 @@
 /**
  * Abstract base class for all repo commands
  */
-import * as Promise from 'bluebird';
 import {Global} from '../../Global';
 import * as fs from 'fs';
 import {ICommand, ICommandParameters} from '../models';
@@ -57,7 +56,7 @@ export abstract class AbstractReposCommand implements ICommand {
         }
     }
 
-    protected checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
+    protected async checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&
@@ -69,9 +68,9 @@ export abstract class AbstractReposCommand implements ICommand {
             if (!isRepoClean) {
                 console.warn(`working copy of repo ${repo.repoName} is not clean; continue due to force flag`);
             }
-            return Promise.resolve(status);
+            return status;
         } else {
-            return Promise.reject(`working copy of repo ${repo.repoName} is not clean`);
+            throw new Error(`working copy of repo ${repo.repoName} is not clean`);
         }
     }
 
