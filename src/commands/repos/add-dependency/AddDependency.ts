@@ -1,7 +1,6 @@
 import {AbstractReposCommand} from '../AbstractReposCommand';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as Promise from 'bluebird';
 import {Global} from '../../../Global';
 import {ICommandParameters} from '../../models';
 import {Repos} from '../Repos';
@@ -31,8 +30,10 @@ export class AddDependency extends AbstractReposCommand {
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         const potentialGradleBuild = new GradleBuild(process.cwd());
         if (potentialGradleBuild.containsGradleBuild()) {
+            Global.isVerbose() && console.log('Detected Gradle-based build...');
             this.dependencyManagement = new GradleDependencyManagement(process.cwd(), this.parentRepos);
         } else {
+            Global.isVerbose() && console.log('Detected IDEA-based build...');
             this.dependencyManagement = new IdeaDependencyManagement(process.cwd(), this.parentRepos);
         }
 
@@ -45,10 +46,12 @@ export class AddDependency extends AbstractReposCommand {
         return !!this.pluginOrRepoToAdd;
     }
 
-    private addNewParentRepo(repoName: string, addAllFromRepo: boolean): Promise<void> {
-        return this.dependencyManagement.getReposDescriptorWithNewRepo(repoName)
-            .then((newParentRepos) => this.writeNewParentRepos(newParentRepos))
-            .then(() => !addAllFromRepo ? Promise.resolve() : this.addAllPlugins(repoName));
+    private async addNewParentRepo(repoName: string, addAllFromRepo: boolean): Promise<void> {
+        const newParentRepos = await this.dependencyManagement.getReposDescriptorWithNewRepo(repoName);
+        await this.writeNewParentRepos(newParentRepos);
+        if (addAllFromRepo) {
+            await this.addAllPlugins(repoName);
+        }
     }
 
     private addAllPlugins(repoName: string): Promise<void> {

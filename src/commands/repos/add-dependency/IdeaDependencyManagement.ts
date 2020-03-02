@@ -119,18 +119,22 @@ export class IdeaDependencyManagement extends DependencyManagement {
                 modules: modules.filter((m: IModulesXmlModule) => m.filepath.endsWith(`${plugin}.iml`))
             })))
             .then((repoAndFilteredModules) => repoAndFilteredModules.filter(({modules}) => modules.length === 1))
-            .then((repoAndModules) => repoAndModules.length === 1
-                ? Promise.resolve({repoName: repoAndModules[0].repoName, moduleEntry: repoAndModules[0].modules[0]})
-                : Promise.reject('Did not find plugin - is the repo itself already added?')
+            .then((repoAndModules) => {
+                      if (repoAndModules.length === 1) {
+                          return {repoName: repoAndModules[0].repoName, moduleEntry: repoAndModules[0].modules[0]};
+                      } else {
+                          throw new Error('Did not find plugin - is the repo itself already added?');
+                      }
+                  }
             );
     }
 
-    private addDependenciesIfRequired(moduleEntry: IModulesXmlModule, includeTransitive: boolean): Promise<IModulesXmlModule[]> {
+    private async addDependenciesIfRequired(moduleEntry: IModulesXmlModule, includeTransitive: boolean): Promise<IModulesXmlModule[]> {
         if (includeTransitive) {
-            return this.findDependencies(moduleEntry)
-                .then((entries) => entries.concat(moduleEntry));
+            const entries = await this.findDependencies(moduleEntry);
+            return entries.concat(moduleEntry);
         } else {
-            return Promise.resolve([moduleEntry]);
+            return [moduleEntry];
         }
     }
 
@@ -144,7 +148,7 @@ export class IdeaDependencyManagement extends DependencyManagement {
             );
         } catch (e) {
             console.log(e);
-            return Promise.reject(e);
+            throw e;
         }
     }
 }

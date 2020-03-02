@@ -51,7 +51,7 @@ test('Adding an existing repository dependency fails', async () => {
             }
         );
     } catch (e) {
-        expect(e).toBe('Repository test is already a dependency.');
+        expect(e).toBeTruthy();
     }
 });
 

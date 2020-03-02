@@ -65,6 +65,11 @@ export class GradleDependencyManagement extends DependencyManagement {
 
     protected isValidRepository(repositoryPath: string): boolean {
         const gradleBuild = new GradleBuild(repositoryPath);
-        return gradleBuild.containsGradleBuild();
+        if (!gradleBuild.containsGradleBuild()) {
+            console.warn(`Repository ${repositoryPath} does not contain a gradle build.`);
+            return false;
+        } else {
+            return true;
+        }
     }
 }

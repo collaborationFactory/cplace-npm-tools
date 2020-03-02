@@ -15,15 +15,18 @@ export abstract class DependencyManagement {
 
     public getReposDescriptorWithNewRepo(repositoryName: string): Promise<IReposDescriptor> {
         if (Object.keys(this.parentRepos).indexOf(repositoryName) >= 0) {
-            return Promise.reject(`Repository ${repositoryName} is already a dependency.`);
+            throw new Error(`Repository ${repositoryName} is already a dependency.`);
         }
 
         const repoPath = path.resolve(this.repositoryDir, '..', repositoryName);
         return fs.statAsync(repoPath)
-            .then((stats) => (!stats.isDirectory() || !this.isValidRepository(repoPath))
-                ? Promise.reject(`expected a repository directory named: ${repositoryName}`)
-                : Promise.resolve()
-            )
+            .then((stats) => {
+                if (!stats.isDirectory()) {
+                    throw new Error(`expected a repository directory named: ${repositoryName}`);
+                } else if (!this.isValidRepository(repoPath)) {
+                    throw new Error(`repository ${repositoryName} is not valid!`);
+                }
+            })
             .then(() => new Repository(repoPath))
             .then((repo) => repo.status()
                 .then((status: IGitStatus) => ({repo, status}))
