@@ -7,7 +7,7 @@ import {CloneRepos} from './CloneRepos';
 import {UpdateRepos} from './UpdateRepos';
 import {WriteRepos} from './WriteRepos';
 import {BranchRepos} from './BranchRepos';
-import {AddDependency} from './AddDependency';
+import {AddDependency} from './add-dependency/AddDependency';
 
 export class Repos implements ICommand {
     public static readonly PARAMETER_BRANCH: string = 'branch';

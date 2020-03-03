@@ -27,11 +27,11 @@ export interface IModulesXmlComponent {
 export interface IModulesXmlModules {
     /* tslint:disable */
     // module is a keyword, but we need it here
-    module: Array<IXmlAttribues<IModulesXmlModule>>;
+    module: Array<IXmlAttributes<IModulesXmlModule>>;
     /* tslint:enable */
 }
 
-export interface IXmlAttribues<T> {
+export interface IXmlAttributes<T> {
     $: T;
 }
 
@@ -47,7 +47,7 @@ export interface IIml {
 
 export interface IImlComponent {
     /* tslint:disable */
-    orderEntry: Array<IXmlAttribues<ITypeAttribute>>;
+    orderEntry: Array<IXmlAttributes<ITypeAttribute>>;
     /* tslint:enable */
     $: INameAttribute;
 }

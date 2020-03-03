@@ -157,14 +157,7 @@ if (!cli.input.length) {
             },
             (e) => {
                 console.error('Could not execute given command:');
-                console.error('\t', e);
-                process.exit(1);
-            }
-        )
-        .catch(
-            (e) => {
-                console.error('Could not execute given command:');
-                console.error('\t', e);
+                console.error('\t', e.message);
                 Global.isVerbose() && console.error(e.stack);
                 process.exit(1);
             }
