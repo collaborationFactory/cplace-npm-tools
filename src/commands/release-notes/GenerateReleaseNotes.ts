@@ -1,7 +1,6 @@
 /**
  * Command for generating release notes
  */
-import * as Promise from 'bluebird';
 import {IGitLogEntry, IGitLogSummary, Repository} from '../../git';
 import {Global} from '../../Global';
 import {fs} from '../../p/fs';
@@ -56,100 +55,98 @@ export class GenerateReleaseNotes implements ICommand {
         return true;
     }
 
-    public execute(): Promise<void> {
+    public async execute(): Promise<void> {
         Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash);
 
         const repo = new Repository();
-        return repo
-            .commitExists(this.fromHash)
-            .then((hash) => {
-                this.fromHash = hash;
-                Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
-            })
-            .catch(commitNotFound(this.fromHash))
-            .then(() => {
-                return repo.commitExists(this.toHash).catch(commitNotFound(this.toHash));
-            })
-            .then((hash) => {
-                this.toHash = hash;
-                Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
-            })
-            .then(() => repo.log(this.fromHash, this.toHash))
-            .then((log: IGitLogSummary) => this.parseLog(log));
+        try {
+            this.fromHash = await repo.commitExists(this.fromHash);
+            Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
+        } catch {
+            throw new Error(`Commit does not exist: ${this.fromHash}`);
+        }
 
-        function commitNotFound(hash: string): () => Promise<void> {
-            return () => Promise.reject(`Commit does not exist: ${hash}`);
+        try {
+            this.toHash = await repo.commitExists(this.toHash);
+            Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
+        } catch {
+            throw new Error(`Commit does not exist: ${this.toHash}`);
+        }
+
+        const log = await repo.log(this.fromHash, this.toHash);
+        return await this.parseLog(log);
+    }
+
+    private async parseLog(log: IGitLogSummary): Promise<void> {
+        const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
+        try {
+            await fs.statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
+        } catch {
+            try {
+                await fs.mkdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
+            } catch {
+                throw new Error(`Failed to create directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}`);
+            }
+        }
+
+        const file = await this.updateMessagesFile(relevant);
+        const files = await this.readExplicits(file);
+        await this.generateChangelog(files.messages, files.explicits, log.all);
+    }
+
+    private async updateMessagesFile(relevant: IGitLogEntry[]): Promise<ReleaseNotesMessagesFile> {
+        const file = new ReleaseNotesMessagesFile(this.messagesFile);
+        await file.parse();
+
+        const missing = file.update(relevant);
+        if (missing !== 0) {
+            console.log(`Update revealed ${missing} new entries - ${file.getNumErrors()} are now commented out or in conflict`);
+            try {
+                await file.write();
+                return file;
+            } catch {
+                throw new Error(`Could not write messages file to ${this.messagesFile}`);
+            }
+        }
+
+        if (file.getNumErrors()) {
+            if (this.force) {
+                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
+                return file;
+            }
+            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in messages');
+        } else {
+            return file;
         }
     }
 
-    private parseLog(log: IGitLogSummary): Promise<void> {
-        const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
-        return fs
-            .statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)
-            .catch(() => fs.mkdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES))
-            .catch(() => Promise.reject(`Failed to create directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}`))
-            .then(() => this.updateMessagesFile(relevant))
-            .then((file) => this.readExplicits(file))
-            .then((files) => this.generateChangelog(files.messages, files.explicits, log.all));
-    }
+    private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile }> {
+        await fs.statAsync(this.explicitsFile);
 
-    private updateMessagesFile(relevant: IGitLogEntry[]): Promise<ReleaseNotesMessagesFile> {
-        const file = new ReleaseNotesMessagesFile(this.messagesFile);
-        return file
-            .parse()
-            .then(() => {
-                const missing = file.update(relevant);
-                if (missing !== 0) {
-                    console.log(`Update revealed ${missing} new entries - ${file.getNumErrors()} are now commented out or in conflict`);
-                    return file
-                        .write()
-                        .catch(() => Promise.reject(`Could not write messages file to ${this.messagesFile}`));
-                }
-            })
-            .then(() => {
-                if (file.getNumErrors()) {
-                    if (this.force) {
-                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
-                        return Promise.resolve(file);
-                    }
-                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict in messages');
-                } else {
-                    return Promise.resolve(file);
-                }
-            });
-    }
+        const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
+        try {
+            await explicits.parse();
+        } catch {
+            return {messages, explicits: null};
+        }
 
-    private readExplicits(messages: ReleaseNotesMessagesFile): Promise<{messages: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile}> {
-        return fs
-            .statAsync(this.explicitsFile)
-            .then(() => {
-                const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
-                return explicits
-                    .parse()
-                    .then(() => explicits);
-            })
-            .catch(() => {
-                return null;
-            })
-            .then((explicits) => {
-                const result = {
-                    messages,
-                    explicits
-                };
+        const result = {
+            messages,
+            explicits
+        };
 
-                if (explicits && explicits.getNumErrors()) {
-                    if (this.force) {
-                        Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
-                        return result;
-                    }
-                    return Promise.reject('Cannot generate release notes - some commits are still commented out or in conflict in explicits');
-                }
-
+        if (explicits && explicits.getNumErrors()) {
+            if (this.force) {
+                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
                 return result;
-            });
+            }
+            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in explicits');
+        }
+
+        return result;
     }
 
-    private generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
+    private async generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
         const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
 
         changelog.push('');
@@ -163,10 +160,7 @@ export class GenerateReleaseNotes implements ICommand {
             }
         }
 
-        return fs
-            .writeFileAsync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, changelog.join('\n'), 'utf8')
-            .then(() => {
-                console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
-            });
+        await fs.writeFileAsync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, changelog.join('\n'), 'utf8');
+        console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
     }
 }
