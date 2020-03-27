@@ -44,6 +44,14 @@ export abstract class DependencyManagement {
     }
 
     /**
+     * Called after a new repository dependency has been added.
+     * @param repositoryName Name of the repository that was added
+     */
+    public async afterNewRepoDependencyAdded(repositoryName: string): Promise<void> {
+        // no default behavior
+    }
+
+    /**
      * This adds all cplace plugins present in the given repository `repositoryName`
      * as dependencies to the current repository so that they will be shown in the IDE.
      * @param repositoryName Name of the repository to scan

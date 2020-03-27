@@ -52,6 +52,7 @@ export class AddDependency extends AbstractReposCommand {
         if (addAllFromRepo) {
             await this.addAllPlugins(repoName);
         }
+        await this.dependencyManagement.afterNewRepoDependencyAdded(repoName);
     }
 
     private addAllPlugins(repoName: string): Promise<void> {

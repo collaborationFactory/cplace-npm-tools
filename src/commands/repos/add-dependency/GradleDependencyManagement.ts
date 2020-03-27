@@ -17,22 +17,15 @@ export class GradleDependencyManagement extends DependencyManagement {
         }
     }
 
+    public async afterNewRepoDependencyAdded(repositoryName: string): Promise<void> {
+        console.log(`Your parent-repos.json has been updated.`);
+        console.warn(`ATTENTION: You have to update your build files manually!`);
+        console.warn(`        >> build.gradle:      Update the cplaceRepositories block and add this repository`);
+        console.warn(`        >> settings.gradle:   Add an includeBuild("../${repositoryName}")`);
+    }
+
     public async addAllPluginsFromRepository(repositoryName: string): Promise<void> {
-        const relativePath = `../${repositoryName}`;
-        if (await this.gradleBuild.hasCompositeRepoReference(relativePath)) {
-            console.log(`Plugins from ${repositoryName} are already included as composite build`);
-            return;
-        }
-
-        const pathToRepo = path.join(this.repositoryDir, '..', repositoryName);
-        const repoGradleBuild = new GradleBuild(pathToRepo);
-
-        if (!repoGradleBuild.containsGradleBuild()) {
-            throw new Error(`Repository ${repositoryName} does not contain a gradle build`);
-        }
-
-        await this.gradleBuild.addNewCompositeRepo(relativePath);
-        console.log(`Please note: plugins are available automatically from the ${repositoryName}'s settings.gradle file`);
+        console.log(`The plugins from ${repositoryName} will automatically be available`);
     }
 
     public async addSinglePlugin(pluginName: string, includeTransitive: boolean): Promise<void> {
