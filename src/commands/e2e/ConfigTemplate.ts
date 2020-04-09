@@ -23,7 +23,8 @@ export class ConfigTemplate {
                 'goog:chromeOptions': {
                     args: [
                         '--headless',
-                        '--disable-gpu'
+                        '--disable-gpu',
+                        '--disable-dev-shm-usage'
                     ]
                 }
             }]`;
