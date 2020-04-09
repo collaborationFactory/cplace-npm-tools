@@ -172,6 +172,11 @@ export class E2E implements ICommand {
             this.allureOutputPath = E2E.DEFAULT_ALLUREOUTPUTPATH;
         }
 
+        if (!this.isAllureReporterInstalled() && this.allureOutputPath) {
+            console.warn(`WARN: Allure Reporter was enabled but main repository does not have @wdio/allure-reporter package installed, disabling Allure...`);
+            this.allureOutputPath = undefined;
+        }
+
         const screenshot = params[E2E.PARAMETER_SCREENSHOT];
         if (typeof screenshot === 'string' && screenshot.length > 0) {
             this.screenshotPath = screenshot;
@@ -227,6 +232,29 @@ export class E2E implements ICommand {
         console.log('Starting test runner...');
 
         return this.testRunner.runTests();
+    }
+
+    public isAllureReporterInstalled(): boolean {
+        const pathToPackageJson = path.join(this.mainRepoDir, 'package.json');
+
+        // tslint:disable-next-line:no-any
+        let packageJson: Record<string, any>;
+        try {
+            packageJson = JSON.parse(fs.readFileSync(pathToPackageJson, 'utf8'));
+        } catch (e) {
+            console.error(`Failed to read package.json from: ${pathToPackageJson} - assuming Allure Reporter is not installed`);
+            return false;
+        }
+
+        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies['@wdio/allure-reporter'] === 'string') {
+            return true;
+        }
+        // noinspection RedundantIfStatementJS
+        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies['@wdio/allure-reporter'] === 'string') {
+            return true;
+        }
+
+        return false;
     }
 
     private hasE2EAssets(plugin: string): boolean {
