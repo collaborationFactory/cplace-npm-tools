@@ -27,6 +27,7 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_HEADLESS: string = 'headless';
     private static readonly PARAMETER_NO_INSTALL: string = 'noInstall';
     private static readonly PARAMETER_JUNIT: string = 'jUnit';
+    private static readonly PARAMETER_ALLURE: string = 'allure';
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
 
     // Default
@@ -35,6 +36,7 @@ export class E2E implements ICommand {
     private static readonly DEFAULT_BROWSER: string = 'chrome';
     private static readonly DEFAULT_TIMEOUT: number = 30000;
     private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
+    private static readonly DEFAULT_ALLUREOUTPUTPATH: string = './allure-output';
     private static readonly DEFAULT_SCREEENSHOTPATH: string = './e2eScreenshots';
 
     private workingDir: string;
@@ -52,6 +54,7 @@ export class E2E implements ICommand {
     private headless: boolean;
     private noInstall: boolean;
     private jUnitReportPath: string;
+    private allureOutputPath: string;
     private screenshotPath: string;
 
     private testRunner: TestRunner | null = null;
@@ -162,6 +165,13 @@ export class E2E implements ICommand {
             this.jUnitReportPath = E2E.DEFAULT_JUNITREPORTPATH;
         }
 
+        const allure = params[E2E.PARAMETER_ALLURE] || params[E2E.PARAMETER_ALLURE.toLowerCase()];
+        if (typeof allure === 'string' && allure.length > 0) {
+            this.allureOutputPath = allure;
+        } else if (typeof allure === 'boolean') {
+            this.allureOutputPath = E2E.DEFAULT_ALLUREOUTPUTPATH;
+        }
+
         const screenshot = params[E2E.PARAMETER_SCREENSHOT];
         if (typeof screenshot === 'string' && screenshot.length > 0) {
             this.screenshotPath = screenshot;
@@ -205,7 +215,10 @@ export class E2E implements ICommand {
         const wdioGenerator = new WdioConfigGenerator(
             this.workingDir, this.mainRepoDir,
             this.pluginsToBeTested, this.specs, this.browser, context,
-            this.timeout, this.headless, this.noInstall, this.jUnitReportPath, this.screenshotPath
+            this.timeout, this.headless, this.noInstall,
+            this.jUnitReportPath,
+            this.allureOutputPath,
+            this.screenshotPath
         );
 
         console.log('Generating WDIO configuration files...');
