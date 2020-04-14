@@ -165,7 +165,7 @@ export class E2E implements ICommand {
             this.jUnitReportPath = E2E.DEFAULT_JUNITREPORTPATH;
         }
 
-        const allure = params[E2E.PARAMETER_ALLURE] || params[E2E.PARAMETER_ALLURE.toLowerCase()];
+        const allure = params[E2E.PARAMETER_ALLURE];
         if (typeof allure === 'string' && allure.length > 0) {
             this.allureOutputPath = allure;
         } else if (typeof allure === 'boolean') {
