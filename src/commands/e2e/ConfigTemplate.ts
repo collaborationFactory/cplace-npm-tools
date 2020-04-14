@@ -10,7 +10,11 @@ export class ConfigTemplate {
     // tslint:disable-next-line:max-func-body-length
     constructor(mainRepoDir: string, e2eFolder: string,
                 specs: string, browser: string, baseUrl: string, context: IE2EContext,
-                timeout: number, headless: boolean, noInstall: boolean, jUnitReportPath: string, screenShotPath: string, e2eToken: string) {
+                timeout: number, headless: boolean, noInstall: boolean,
+                jUnitReportPath: string,
+                allureOutputPath: string,
+                screenShotPath: string,
+                e2eToken: string) {
         let capabilities: string;
         const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
         if (context.context.length === 0 && context.tenantId.length === 0) {
@@ -68,6 +72,7 @@ export class ConfigTemplate {
                 }
             },`;
         }
+
         let junitConfig = '';
         if (jUnitReportPath) {
             junitConfig = `, ['junit', {
@@ -76,6 +81,13 @@ export class ConfigTemplate {
                     function(opts) {
                         return \`e2e.xunit.\${opts.capabilities.browserName}.\${new Date().toISOString().replace(/[:]/g, '-')}.xml\`;
                     }
+                }]`;
+        }
+
+        let allureConfig = '';
+        if (allureOutputPath) {
+            allureConfig = `, ['allure', {
+                    outputDir: '${WdioConfigGenerator.safePath(path.resolve(allureOutputPath))}'
                 }]`;
         }
 
@@ -167,6 +179,7 @@ exports.config = {
     ${ieDriver}
     reporters: ['spec'
     ${junitConfig}
+    ${allureConfig}
     ]
 };`;
     }
