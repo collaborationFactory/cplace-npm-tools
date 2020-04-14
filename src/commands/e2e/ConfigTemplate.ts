@@ -24,7 +24,8 @@ export class ConfigTemplate {
                     args: [
                         '--headless',
                         '--disable-gpu',
-                        '--disable-dev-shm-usage'
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
                     ]
                 }
             }]`;
@@ -150,7 +151,7 @@ exports.config = {
     waitforTimeout: 100000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
-    services: ['selenium-standalone', 'intercept'],
+    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept'],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
     framework: 'mocha',
     mochaOpts: {
