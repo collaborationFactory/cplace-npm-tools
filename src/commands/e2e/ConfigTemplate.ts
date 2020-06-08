@@ -144,7 +144,7 @@ exports.config = {
                         failures: 1
                     });
                     process.exit(1);
-                }   else if (response.headers['content-type'] && response.headers['content-type'].indexOf("application/json") != -1) {
+                }   else if (response.headers['content-type'] && response.headers['content-type'].indexOf("application/json") !== -1) {
                     var listOfPlugins = [];
                     JSON.parse(body).forEach(function(plugin) {
                         listOfPlugins.push({
