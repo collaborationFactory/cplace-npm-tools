@@ -153,6 +153,40 @@ export class Repository {
         });
     }
 
+    // Note after checking out a Tag, git is in Detached Head state
+    // therefore it might be beneficial to create a branch for the specified git Tag
+    // ->  git checkout tags/<tag_name> -b <branch_name>
+    // Unfortunately this is not possible in simpleGit
+    public checkoutTag(tag: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`checkout ${this.repoName}, in tag ${tag}`);
+            this.git.checkout('tags/' + tag, (err) => {
+                if (err) {
+                    Global.isVerbose() && console.error(`failed to checkout ${this.repoName}/${tag}`, err);
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`repo ${this.repoName} is now at tag ${tag}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public createBranchForTag(tag: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`Creating branch ${tag} for tag ${tag}`);
+            this.git.checkoutLocalBranch(tag, (err) => {
+                if (err) {
+                    Global.isVerbose() && console.error(`failed to create branch ${tag} for tag ${tag}`, err);
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`Created branch ${tag} for tag ${tag}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
     public deleteBranch(branch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`deleting branch`, branch);

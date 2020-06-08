@@ -97,6 +97,9 @@ export class UpdateRepos extends AbstractReposCommand {
         const branch = repoProperties.branch;
         Global.isVerbose() && console.log('branch', branch);
 
+        const tag = repoProperties.tag;
+        Global.isVerbose() && console.log('tag', tag);
+
         const pathToRepo = path.join(process.cwd(), '..', repoName);
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
@@ -109,15 +112,19 @@ export class UpdateRepos extends AbstractReposCommand {
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
         await this.moveNodeModules(repo);
-        await repo.checkoutBranch(branch);
-        await repo.resetHard();
-
-        if (commit) {
-            await repo.checkoutCommit(commit);
-        } else if (this.resetToRemote) {
-            await repo.resetHard(branch);
-        } else {
-            await repo.pullOnlyFastForward(branch);
+        if (branch) {
+            await repo.checkoutBranch(branch);
+            await repo.resetHard();
+            if (commit) {
+                await repo.checkoutCommit(commit);
+            } else if (this.resetToRemote) {
+                await repo.resetHard(branch);
+            } else {
+                await repo.pullOnlyFastForward(branch);
+            }
+        } else if (tag) {
+            await repo.checkoutTag(tag);
+            await repo.createBranchForTag(tag);
         }
 
         await this.handleNodeModules(repo);

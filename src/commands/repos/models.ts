@@ -9,6 +9,7 @@ export interface IReposDescriptor {
 export interface IRepoStatus {
     url: string;
     branch: string;
+    tag?: string;
     commit?: string;
 }
 
