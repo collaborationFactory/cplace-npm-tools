@@ -52,7 +52,12 @@ const cli = meow(`
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
             --update|-u [--nofetch] [--reset-to-remote]:
-                Updates all parent repos.
+                Updates all parent repos. 
+                Tags instead of branches are supported in parent-repos.json by cplace-cli >0.17.0 e.g.:   
+                "main": {
+                  "url": "git@github.com:collaborationFactory/cplace.git",
+                  "tag": "testTag"
+                },
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
                     WARNING: Uncommitted changes WILL BE LOST.
                 If <resetToRemote> is set then the update will do a hard reset in order to make sure the local copy
