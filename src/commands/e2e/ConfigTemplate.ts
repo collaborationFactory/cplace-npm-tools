@@ -129,13 +129,22 @@ exports.config = {
         return new Promise(function(resolve) {
             return request('${baseUrl}${context.context}${tenant}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
                 if (error) {
-                    console.error('Cplace instance is not reachable:', error);
+                    console.error('No plugins could be detected in the cplace application under test: ', error);
                     process.send({
                         event: 'runner:end',
                         failures: 1
                     });
                     process.exit(1);
-                } else {
+                }   else if (!response.headers['content-type'] || response.headers['content-type'].indexOf("application/json") === -1) {
+                    console.error('No plugins could be detected in the cplace application under test because the response is no json.\\n' +
+                    'Most likely this is because cplace is not initialized completely but already responding.\\n' +
+                    'Content-type of response: ', response.headers['content-type']);
+                    process.send({
+                        event: 'runner:end',
+                        failures: 1
+                    });
+                    process.exit(1);
+                }   else if (response.headers['content-type'] && response.headers['content-type'].indexOf("application/json") !== -1) {
                     var listOfPlugins = [];
                     JSON.parse(body).forEach(function(plugin) {
                         listOfPlugins.push({
