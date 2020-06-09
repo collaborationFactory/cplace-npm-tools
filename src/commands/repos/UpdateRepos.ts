@@ -125,6 +125,8 @@ export class UpdateRepos extends AbstractReposCommand {
         } else if (tag) {
             await repo.checkoutTag(tag);
             await repo.createBranchForTag(tag);
+        } else {
+            console.error('No branch or tag given for repo: ', repoName);
         }
 
         await this.handleNodeModules(repo);
