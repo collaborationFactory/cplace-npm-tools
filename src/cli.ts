@@ -57,6 +57,7 @@ const cli = meow(`
                   "url": "git@github.com:collaborationFactory/cplace.git",
                   "tag": "yourTag"
                 },
+                Please note: When using tags branches are created locally to avoid detached-head state. Those are not removed automatically.
                 If <force> is set the update will take place even if the working copies of the parent repos are not clean.
                     WARNING: Uncommitted changes WILL BE LOST.
                 If <resetToRemote> is set then the update will do a hard reset in order to make sure the local copy
