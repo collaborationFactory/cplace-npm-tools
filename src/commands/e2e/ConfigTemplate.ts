@@ -103,7 +103,7 @@ export class ConfigTemplate {
 
             const filePath = path.join(
                 screenshotDir,
-                new Date().toISOString().replace(/[:]/g, '-') + '_' + test.fullTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+                new Date().toISOString().replace(/[:]/g, '-') + '_' + test.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
             );
 
             browser.saveScreenshot(filePath + '.png');
