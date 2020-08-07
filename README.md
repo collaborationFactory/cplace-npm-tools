@@ -4,24 +4,18 @@ This package provides some CLI tools for working with cplace code.
 
 ## Usage
 
-This package should be installed globally:
-```
-# Fetches the latest release from a repo
-$ npm install -g @cplace/cli
-
-# Or clone this repo, build it and install the latest development version:
-$ npm install && npm run prod
-$ npm install -g .
+To install `cplace-cli` run the following command:
+```bash
+npm install -g @cplace/cli
 ```
 
 After installation you can just execute:
-```
-$ cplace-cli --help
+```bash
+cplace-cli --help
 ```
 to get the available commands and help:
-```
-$ cplace-cli --help
-
+```text
+$  cplace-cli --help
   Usage:
       $ cplace-cli <command>
 
@@ -49,9 +43,18 @@ $ cplace-cli --help
     
       repos <subcommand> [--force]
           Handles repo specific actions where <subcommand> is one of the following:
-          --update|-u [--nofetch]:
-              Updates all parent repos.
+          --update|-u [--nofetch] [--reset-to-remote]: Updates all parent repos. 
+              Tags instead of branches are supported in parent-repos.json by cplace-cli >0.17.0 e.g.:   
+              "main": {
+                "url": "git@github.com:collaborationFactory/cplace.git",
+                "tag": "yourTag"
+              },
+              Please note: When using tags branches are created locally to avoid detached-head state. Those are not removed automatically.
               If <force> is set the update will take place even if the working copies of the parent repos are not clean.
+                  WARNING: Uncommitted changes WILL BE LOST.
+              If <resetToRemote> is set then the update will do a hard reset in order to make sure the local copy
+              matches the remote repository state.
+                  WARNING: Committed but not pushed changes WILL BE LOST.
           --write|-w [--freeze]:
               Write the states of the parent repos to parent-repos.json.
               If <freeze> is set the exact commit hashes of the currently checked out parent repos will be written regardless
@@ -98,51 +101,57 @@ $ cplace-cli --help
         
           --show-files
               List files to be merged
-              
-      flow --splitRepository --pathToTargetRepo <path-to-local-target-repo> [--directories <"space separated directory names">]
-          Iterates through the complete history of current branch and recreate the commits which only affects the mentioned directories.
-          It is highly suggested to use --verbose while running this option as it takes considerable time to finish and you can 
-          see how much time is left. 
-          At the end the script, it will create a branch with the same name in the target repo(except master,
-          for master it will create master_<current_date>).
-          
-          --pathToTargetRepo
-            Your local path to target repo eg. (/Users/shariqhaque/cplace-dev/repos/cplace-project-planning)
-           
-          --directories (OPTIONAL, required only if refactor is not for project planning related plugins)
-            Space separated names of directories to be split to new repository, remember to add double quotes before and at the end. 
-            If not provided it means the splitting is happening for project planning related plugins.
-          
             
       refactor <subcommand> --plugin|-p <plugin>
           Handles plugin specific refactorings where <subcommand> is one of the following:
           --test-sources
               Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like structure with
               'src/main/java' and 'src/test/java'
+    
+      e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>] [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] 
+          [--headless] [--noInstall] [--jUnit <?reportsPath>] [--screenshot <?screenshotPath>] [--allure <?allureOutputPath>]
+    
+          --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
+          --context to define in which context cplace is running (default: '/intern/tricia/')
+          --tenantId to define against which tenant the tests are run (default: '' single tenant mode)
+          --e2eToken to define the Test Setup Handler E2E token (default: '')
+          --browser to specify which browser to use (default: Chrome)
+          --plugins to specify a comma separated list of plugins to run tests for (default: all plugins in the current repository)
+          --specs to specify the pattern used to search for specification files inside plugins (default: '**/*.spec.ts')
+          --timeout to specify a global Timeout for Test Execution
+          --headless currently only possible in Chrome and Firefox
+          --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
+          --jUnit will create jUnit reports and allows you to specify the location where the reports are stored (default: './e2eJunitReports')
+          --screenshot will create Screenshots on each failed Test and store them in given path (default: './e2eScreenshots')
+          --allure will create Allure Reporter output files and store them in the given path (default: './allure-output')
+        
 
   Global options:
       --verbose
           Print verbose information to console
 ```
 
-## Building and Running 
+## Development
 
-Building is done via npm package commands, but dependencies must first be installed through npm:
+Typescript is compiled and linted by running:
+```bash
+npm run dev
 ```
-$ npm install
-$ npm run prod
+This will execute both tslint (`npm run dev:lint`) as well as run the Typescript compiler (`npm run dev:tsc`).
+
+To test your local changes with `cplace-cli` on the command line you have to `link` your local npm package by running:
+```bash
+npm link
 ```
-After building, the local version can be run using node:
-```
-$ node dist/cli.js
-```
-In order to just run the TypeScript compiler and tslint use:
-```
-$ npm run dev
+This will first recompile the Typescript sources and do the linting before setting up and linking the binary executable. When `npm link` is completed, you can just use `cplace-cli` as you are used to to test it out.
+
+> Remember to clean your local linked package after testing by running `npm r -g @cplace/cli` to remove it and do a regular install again (`npm i -g @cplace/cli`).
+
+To execute the available unit tests run:
+```bash
+npm run test
 ```
 
-You can also install your local development version and recompile with `npm run dev` afterwards:
-```
-$ npm link
-```
-When you `link`, make sure to clean the installation after publishing again (using `npm r -g @cplace/cli`).
+To publish a new version of `cplace-cli` use the great `np` tool. Install it globally with `npm install -g np` and then run `np --help` to see your options.
+
+> **You must have the appropriate right to publish to the NPM registry!**
