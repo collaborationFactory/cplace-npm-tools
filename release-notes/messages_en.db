@@ -1,13 +1,25 @@
+0561fa1d6e6e98601d5fcf4417fb3625bf58eefe:
 0679ab6ffc3b8e5144b689f1a30d9c0bbaeb6c78:Fix request.js inclusion error in project repos
+1c2919d3b0e6a95f65cdc67a889693e71d87c5f3:Add support for Allure reporter with --allure flag
 3736041967c8d61858ee96f87c28efa53e41e6a4:Improvement: add new freeze option to `repos -w` in order to force writing a commit hash
 49a187727363b4611206875437cb83f1b54a8553:Added screenshot capability [PFM-ISSUE-2929]
+539900455947445a9eb21611ed9bf6d9d5391d6d:cplace-cli Development: [PFM-ISSUE-4061]: Added Jest and ts-jest to enable writing unit tests [cplace-npm-tools#44]
+58f9ecbf17c8c66a5cc0b5c1c40a673913c7e018:Platform Development: [PFM-ISSUE-3903] Fix: added git tag support [PR cplace#53]
+5911cd2ee5374d5ddbb9b193651cf2952e125bde:cplace-cli: added filtering of plugins on criteria if tests are specified [PR cplace-npm-tools #41]
 5fc98b51279c473c8e0c41d1769912f35f574c22:Adds detection of activated plugins of system under test [PFM-ISSUE-2992, PR cplace-npm-tools#33]
 662d0ba4145814cf751955887c6c16bfc930a445:
 7130198bff280a04ea9ecd140c18dfed32d3a2d1:Exchange Jasmine by Mocha in wdio configuration [PFM-ISSUE-2994, PR cplace-npm-tools#32]
+7a4567c0a068b7fdb0bb97f5e062fb2a15f55295:cplace-cli: [PFM-ISSUE-4620] Shorten the name of e2e screenshot [PR cplace#56]
+a41f6413d06950682fd86d7f9c6af8e728eb3018:
 a4f9187731bef1e895e04c3c5e38b7ccbdad377b:Allow case insensitive flags
 a9e22099f1bafb4fe0af5bbca56b782c7562fa79:Improvmeent: add relevance pattern for user stories (US-xxx)
+a9e6f5ab98bf4eb837f64b7116df8b74ac4019e1:Failing E2E Test will produce exit code 1 [PFM-ISSUE-3201, PR cplace-npm-tools#39]
 aef3090b109e925334972d740e85152f26460fb8:Only check "Merge pull request" and "changelog:" as relevant markers
 b121ab602aac8e2047b80507eaf69fd782bedb04:Add Headless capabilities for Firefox [PR cplace-npm-tools#34]
+b4be4236c5b5127d75b61210eb7eec02e253fe17:Platform Development: [PFM-ISSUE-4641] Fix: improved error handling and message in e2e plugin detection [PR cplace#52]
+bb9dce689f0a10f8dcbf3cbded224f8c5e371708:[PFM-ISSUE-4024]: Added support to handle new gradle build structure
+db6bfc37f7cdac08b3b6ab5f3cec8c29b3818165:Enable listing of Plugins for Multitenancy in cplace-cli e2e functionality [PFM-ISSUE-3684, PR cplace#2953]
+de3c41f996ffcaab1258965c2b55cc3abd15b477:Allow detection of "cplace" as main repo for CI environments [PR cplace-npm-tools#38]
 de5a7188d68c3359ecf4e9facd211a97f30f1c70:
 e95f239b35cdb63a8c1c0e430be5836da4aa191b:Fix: do not clone using --single-branch
 f01ec7001da6d6dc672a0a138f7d89558fa7816a:Feature: add possibility to extract default release-notes message from commit message
