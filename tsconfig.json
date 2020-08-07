@@ -9,7 +9,8 @@
     "experimentalDecorators": true,
     "outDir": "dist",
     "noImplicitAny": false,
-    "rootDir": "src/"
+    "rootDir": "src/",
+    "lib": ["ES6"]
   },
   "include": [
     "src/**/*.ts"

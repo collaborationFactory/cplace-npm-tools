@@ -4,7 +4,7 @@
 import * as Promise from 'bluebird';
 
 export interface ICommandParameters {
-    [param: string]: number | boolean | string;
+    [param: string]: unknown;
 }
 
 export interface ICommand {
