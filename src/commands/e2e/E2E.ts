@@ -18,7 +18,8 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
     private static readonly PARAMETER_TENANTID: string = 'tenantId';
-    private static readonly PARAMETER_E2E_TOKEN: string = 'e2eToken';
+    // The normalization of meow transforms "e2eToken" into this...
+    private static readonly PARAMETER_E2E_TOKEN: string = 'e2EToken';
 
     private static readonly PARAMETER_PLUGINS: string = 'plugins';
     private static readonly PARAMETER_SPECS: string = 'specs';
