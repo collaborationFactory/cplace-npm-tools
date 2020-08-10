@@ -126,7 +126,7 @@ exports.config = {
             files: true,
             project: '${e2eFolder}/tsconfig.json'
         });
-        return new Promise(function(resolve) {
+        return new Promise(function(resolve, reject) {
             return request('${baseUrl}${context.context}${tenant}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
                 if (error) {
                     console.error('No plugins could be detected in the cplace application under test: ', error);
@@ -146,12 +146,18 @@ exports.config = {
                     process.exit(1);
                 }   else if (response.headers['content-type'] && response.headers['content-type'].indexOf("application/json") !== -1) {
                     var listOfPlugins = [];
-                    JSON.parse(body).forEach(function(plugin) {
-                        listOfPlugins.push({
-                            pluginName: plugin.pluginName,
-                            isActive: plugin.isActive
+                    try {
+                        JSON.parse(body).forEach(function(plugin) {
+                            listOfPlugins.push({
+                                pluginName: plugin.pluginName,
+                                isActive: plugin.isActive
+                            });
                         });
-                    });
+                    } catch (e) {
+                        console.error('Failed to parse plugins from body:');
+                        console.error(body);
+                        reject(e);
+                    }
                     console.log('Cplace has the following plugins ' + JSON.stringify(listOfPlugins));
                     browser.plugins = listOfPlugins;
                     resolve();
