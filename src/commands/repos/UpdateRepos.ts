@@ -8,6 +8,7 @@ import {Global} from '../../Global';
 import * as path from 'path';
 import * as fs from 'fs';
 import {GradleBuild} from '../../helpers/GradleBuild';
+import {promiseAllSettled} from '../../promiseAllSettled';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
@@ -17,25 +18,22 @@ export class UpdateRepos extends AbstractReposCommand {
     protected resetToRemote: boolean;
 
     public async execute(): Promise<void> {
-        if (this.sequential) {
-            Global.isVerbose() && console.log('update repos sequentially - prepare');
-            for (const repoName of Object.keys(this.parentRepos)) {
-                await this.prepareRepo(repoName);
-            }
-            Global.isVerbose() && console.log('update repos sequentially - handle');
-            for (const repoName of Object.keys(this.parentRepos)) {
-                await this.handleRepo(repoName);
-            }
-        } else {
-            Global.isVerbose() && console.log('update repos in parallel - prepare');
-            await Promise.all(
-                Object.keys(this.parentRepos).map((repoName) => this.prepareRepo(repoName))
-            );
-            Global.isVerbose() && console.log('update repos in parallel - handle');
-            await Promise.all(
-                Object.keys(this.parentRepos).map((repoName) => this.handleRepo(repoName))
-            );
-        }
+        Global.isVerbose() && console.log('update repos - prepare');
+        await promiseAllSettled(
+            {
+                keys: Object.keys(this.parentRepos),
+                promiseFactory: (repoName) => (this.prepareRepo(repoName)),
+                sequential: this.sequential
+            });
+
+        Global.isVerbose() && console.log('update repos - handle');
+        await promiseAllSettled(
+            {
+                keys: Object.keys(this.parentRepos),
+                promiseFactory: (repoName) => (this.handleRepo(repoName)),
+                sequential: this.sequential
+            });
+
         Global.isVerbose() && console.log('all repositories successfully updated');
     }
 
