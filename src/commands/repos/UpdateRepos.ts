@@ -17,9 +17,17 @@ export class UpdateRepos extends AbstractReposCommand {
     protected resetToRemote: boolean;
 
     public async execute(): Promise<void> {
-        await Promise.all(
-            Object.keys(this.parentRepos).map((repoName) => this.handleRepo(repoName))
-        );
+        if (this.sequential) {
+            Global.isVerbose() && console.log('update repos sequentially');
+            for (const repoName of Object.keys(this.parentRepos)) {
+                await this.handleRepo(repoName);
+            }
+        } else {
+            Global.isVerbose() && console.log('update repos in parallel');
+            await Promise.all(
+                Object.keys(this.parentRepos).map((repoName) => this.handleRepo(repoName))
+            );
+        }
         Global.isVerbose() && console.log('all repositories successfully updated');
     }
 
