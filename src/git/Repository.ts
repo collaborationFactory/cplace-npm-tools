@@ -99,6 +99,7 @@ export class Repository {
 
     public fetch(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`fetching repo ${this.repoName}`);
             this.git.fetch((err) => {
                 if (err) {
                     reject(err);
@@ -111,7 +112,7 @@ export class Repository {
     }
 
     public status(): Promise<IGitStatus> {
-        /* tslint:disable */
+        // tslint:disable-next-line:promise-must-complete
         return new Promise<IGitStatus>((resolve, reject) => {
             let numTries = 1;
             const gitStatus = () => this.git.status((err, status: IGitStatus) => {
@@ -135,7 +136,6 @@ export class Repository {
             });
             gitStatus();
         });
-        /* tslint:enable */
     }
 
     public checkoutBranch(branch: string | string[]): Promise<void> {
