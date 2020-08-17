@@ -23,13 +23,12 @@ export type Result = 'missing' | 'failed' | 'success';
 
 export function run(cmd: string, params: ICommandParameters): Promise<Result> {
     if (!REGISTERED_COMMANDS.hasOwnProperty(cmd)) {
-        console.error('UNKNOWN COMMAND:', cmd);
-        return Promise.reject('missing');
+        return Promise.reject('Unknown command: ' + cmd);
     }
 
     const command = REGISTERED_COMMANDS[cmd];
     if (!command.prepareAndMayExecute(params)) {
-        return Promise.reject('failed');
+        return Promise.reject('failed to prepare command');
     }
 
     return command

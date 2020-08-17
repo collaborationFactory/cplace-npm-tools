@@ -170,10 +170,15 @@ if (!cli.input.length) {
                 // completed
                 process.exit(0);
             },
-            (e: Error) => {
+            (e) => {
                 console.error('Could not execute given command "' + cli.input[0] + '":');
-                console.error('\t' + e.message);
-                Global.isVerbose() && console.error(e.stack);
+                if (e instanceof Error) {
+                    console.error('\t' + e.message);
+                    Global.isVerbose() && console.error(e.stack);
+                } else {
+                    // the promise can reject with a string
+                    console.error('\t' + e);
+                }
                 process.exit(1);
             }
         );

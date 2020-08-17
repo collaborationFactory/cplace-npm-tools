@@ -35,7 +35,7 @@ export class Repos implements ICommand {
         } else if (params[Repos.PARAMETER_ADD_DEPENDENCY] || params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT]) {
             this.cmd = new AddDependency();
         } else {
-            console.error('unknown repos command');
+            console.error('Error: Unknown or missing repos subcommand!');
             return false;
         }
         return this.cmd.prepareAndMayExecute(params);
