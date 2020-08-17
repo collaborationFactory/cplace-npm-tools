@@ -8,6 +8,7 @@ import {Global} from './Global';
 import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
+import hardRejection from 'hard-rejection';
 
 const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
 const packageJson = JSON.parse(packageJsonContent);
@@ -21,6 +22,14 @@ const notifier = updateNotifier({
                                     updateCheckInterval: 0
                                 });
 notifier.notify();
+
+// Register a handler for unhandled rejections, which gives an explanation to the user and kills the process.
+// This call takes precedence over the default registration from meow because we call first.
+hardRejection((stack) => {
+    console.error('Internal error: Unhandled promise rejection! Aborting.');
+    console.error(stack);
+    // System.exit(1) will be called by hardRejection
+});
 
 /* tslint:disable */
 const cli = meow(`
@@ -162,8 +171,8 @@ if (!cli.input.length) {
                 process.exit(0);
             },
             (e: Error) => {
-                console.error('Could not execute given command:');
-                console.error('\t', e.message);
+                console.error('Could not execute given command "' + cli.input[0] + '":');
+                console.error('\t' + e.message);
                 Global.isVerbose() && console.error(e.stack);
                 process.exit(1);
             }
