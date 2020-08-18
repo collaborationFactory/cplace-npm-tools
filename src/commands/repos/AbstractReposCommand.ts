@@ -13,11 +13,13 @@ import * as rimraf from 'rimraf';
 export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
     protected static readonly PARAMETER_FORCE: string = 'force';
+    protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
     protected static readonly NODE_MODULES: string = 'node_modules';
     protected static readonly __NODE_MODULES_COPY: string = '__node_modules';
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
+    protected sequential: boolean;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
@@ -25,6 +27,11 @@ export abstract class AbstractReposCommand implements ICommand {
         this.force = !!params[AbstractReposCommand.PARAMETER_FORCE];
         if (this.force) {
             Global.isVerbose() && console.log('running in force mode');
+        }
+
+        this.sequential = !!params[AbstractReposCommand.PARAMETER_SEQUENTIAL];
+        if (this.sequential) {
+            Global.isVerbose() && console.log('running in sequential mode');
         }
 
         if (!fs.existsSync(AbstractReposCommand.PARENT_REPOS_FILE_NAME)) {

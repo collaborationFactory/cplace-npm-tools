@@ -8,6 +8,7 @@ import {Global} from '../../Global';
 import * as path from 'path';
 import * as fs from 'fs';
 import {GradleBuild} from '../../helpers/GradleBuild';
+import {promiseAllSettled} from '../../promiseAllSettled';
 
 export class UpdateRepos extends AbstractReposCommand {
     private static readonly PARAMETER_NO_FETCH: string = 'nofetch';
@@ -17,9 +18,22 @@ export class UpdateRepos extends AbstractReposCommand {
     protected resetToRemote: boolean;
 
     public async execute(): Promise<void> {
-        await Promise.all(
-            Object.keys(this.parentRepos).map((repoName) => this.handleRepo(repoName))
-        );
+        Global.isVerbose() && console.log('update repos - prepare');
+        await promiseAllSettled(
+            {
+                keys: Object.keys(this.parentRepos),
+                promiseFactory: (repoName) => (this.prepareRepo(repoName)),
+                sequential: this.sequential
+            });
+
+        Global.isVerbose() && console.log('update repos - handle');
+        await promiseAllSettled(
+            {
+                keys: Object.keys(this.parentRepos),
+                promiseFactory: (repoName) => (this.handleRepo(repoName)),
+                sequential: this.sequential
+            });
+
         Global.isVerbose() && console.log('all repositories successfully updated');
     }
 
@@ -85,23 +99,17 @@ export class UpdateRepos extends AbstractReposCommand {
         }
     }
 
-    private async handleRepo(repoName: string): Promise<void> {
-        Global.isVerbose() && console.log('repo', repoName);
+    private async prepareRepo(repoName: string): Promise<void> {
+        Global.isVerbose() && console.log('prepare repo', repoName);
 
         const repoProperties = this.parentRepos[repoName];
         Global.isVerbose() && console.log('repoProperties', repoProperties);
 
-        const commit = repoProperties.commit;
-        Global.isVerbose() && console.log('commit', commit);
-
-        const branch = repoProperties.branch;
-        Global.isVerbose() && console.log('branch', branch);
-
-        const tag = repoProperties.tag;
-        Global.isVerbose() && console.log('tag', tag);
+        Global.isVerbose() && console.log('commit', repoProperties.commit);
+        Global.isVerbose() && console.log('branch', repoProperties.branch);
+        Global.isVerbose() && console.log('tag', repoProperties.tag);
 
         const pathToRepo = path.join(process.cwd(), '..', repoName);
-        const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
@@ -111,6 +119,23 @@ export class UpdateRepos extends AbstractReposCommand {
         await this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
+
+        Global.isVerbose() && console.log('prepare repo', repoName, 'OK');
+    }
+
+    private async handleRepo(repoName: string): Promise<void> {
+        Global.isVerbose() && console.log('update repo', repoName);
+
+        const repoProperties = this.parentRepos[repoName];
+        const commit = repoProperties.commit;
+        const branch = repoProperties.branch;
+        const tag = repoProperties.tag;
+
+        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
+
+        const repo = new Repository(pathToRepo);
+
         await this.moveNodeModules(repo);
         if (branch) {
             await repo.checkoutBranch(branch);
