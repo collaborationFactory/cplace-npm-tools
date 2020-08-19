@@ -142,7 +142,8 @@
     "object-literal-sort-keys": false,
     // turn object-literal-sort-keys off and sort keys in a meaningful manner
     "one-variable-per-declaration": true,
-    "prefer-array-literal": true,
+    // https://github.com/palantir/tslint/issues/2946#issuecomment-416038816
+    "prefer-array-literal": [true, { "allow-type-parameters": true }],
     "prefer-const": true,
     "typedef": [
       true,
