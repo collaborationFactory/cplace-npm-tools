@@ -9,6 +9,7 @@ import {IGitBranchDetails} from '../../git/models';
 import * as randomatic from 'randomatic';
 import {IBranchDetails} from './models';
 import {Global} from '../../Global';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -213,13 +214,11 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 Promise.resolve()))
-            .finally(() =>
-                this.repo.checkoutBranch(prevBranch).then(() =>
-                    Promise.all([...cleanup]
-                        .map((b) =>
-                            this.repo.deleteBranch(b)
-                        ))
-                )
+            .finally(() => this.repo
+                .checkoutBranch(prevBranch)
+                .then(() => promiseAllSettledParallel(
+                    [...cleanup].map((b) => this.repo.deleteBranch(b))
+                ))
             );
     }
 
@@ -274,9 +273,9 @@ export class Upmerge implements ICommand {
         const tempBranchName = this.tempBranchName(branch.name);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
             .then(() => cleanup.add(tempBranchName))
-            .then(() => this.repo.merge(tempSrcBranch, true, this.showFiles).catch((err) =>
-                Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)
-            ))
+            .then(() => this.repo
+                .merge(tempSrcBranch, true, this.showFiles)
+                .catch((err) => Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)))
             .then(() => {
                 const targetBranchName = branch.name.substr(this.remote.length + 1);
                 return this.push

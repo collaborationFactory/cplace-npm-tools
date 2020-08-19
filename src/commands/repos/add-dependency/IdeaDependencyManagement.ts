@@ -5,6 +5,7 @@ import {Global} from '../../../Global';
 import * as fs from 'fs';
 import * as xml2js from 'xml2js';
 import {ImlParser} from '../ImlParser';
+import {promiseAllSettledParallel} from '../../../promiseAllSettled';
 
 export class IdeaDependencyManagement extends DependencyManagement {
 
@@ -104,7 +105,7 @@ export class IdeaDependencyManagement extends DependencyManagement {
                          .then((moduleRoot: IModulesXmlRoot) => ({repoName, moduleRoot}))
             );
 
-        return Promise.all(readModules)
+        return promiseAllSettledParallel(readModules)
             .then((repoAndModuleRoots) => repoAndModuleRoots
                 .map(({repoName, moduleRoot}) => {
                     Global.isVerbose() && console.log(moduleRoot.project.component[0].modules[0]);
@@ -142,7 +143,7 @@ export class IdeaDependencyManagement extends DependencyManagement {
         try {
             const filepath = moduleEntry.filepath.replace('$PROJECT_DIR$/', '');
             const imlParser = new ImlParser(path.join(this.repositoryDir, filepath));
-            const result = await Promise.all(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName)));
+            const result = await promiseAllSettledParallel(imlParser.getReferencedModules().map((moduleName) => this.findPluginInRepos(moduleName)));
             return result.map(
                 (entry) => this.adjustPathsAndGroup(entry.repoName, entry.moduleEntry)
             );

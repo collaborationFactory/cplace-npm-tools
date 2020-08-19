@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {Global} from '../../Global';
 import * as rimraf from 'rimraf';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 /**
  * This command will refactor an "old" plugin structure using only `src/classes/...` or `src/java/...`
@@ -208,7 +209,7 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
             });
         });
 
-        await Promise.all([sourcePromise, buildPromise]);
+        await promiseAllSettledParallel([sourcePromise, buildPromise]);
     }
 
     private async moveDirectory(fromPath: string, toPath: string): Promise<void> {

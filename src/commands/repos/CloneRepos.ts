@@ -7,6 +7,7 @@ import {fs} from '../../p/fs';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 export class CloneRepos extends AbstractReposCommand {
 
@@ -21,8 +22,7 @@ export class CloneRepos extends AbstractReposCommand {
                 return Repository.clone(toPath, repoProperties.url, repoProperties.branch);
             });
 
-        return Promise
-            .all(promises)
+        return promiseAllSettledParallel(promises)
             .then(
                 () => {
                     // pass

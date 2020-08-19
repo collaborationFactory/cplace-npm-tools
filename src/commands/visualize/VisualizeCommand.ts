@@ -8,6 +8,7 @@ import {Repository} from '../../git';
 import * as os from 'os';
 import {fs} from '../../p/fs';
 import {exec} from 'child_process';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 export class VisualizeCommand implements ICommand {
 
@@ -77,7 +78,7 @@ export class VisualizeCommand implements ICommand {
                             }
                         });
                 });
-                return Promise.all(branchPromises).then(() => {
+                return promiseAllSettledParallel(branchPromises).then(() => {
                     console.log('Reducing dependencies...');
                     this.reduce();
                 }).then(() => {
