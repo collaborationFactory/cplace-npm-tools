@@ -9,6 +9,11 @@ import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from
 import {execSync} from 'child_process';
 
 export class Repository {
+
+    get baseDir(): string {
+        return this.git._baseDir;
+    }
+
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
@@ -25,10 +30,6 @@ export class Repository {
             });
         }
         this.repoName = path.basename(path.resolve(repoPath));
-    }
-
-    get baseDir(): string {
-        return this.git._baseDir;
     }
 
     public static clone(toPath: string, remoteUrl: string, branch: string): Promise<Repository> {
@@ -167,7 +168,7 @@ export class Repository {
     // Note after checking out a Tag, git is in Detached Head state
     // therefore it might be beneficial to create a branch for the specified git Tag
     // ->  git checkout tags/<tag_name> -b <branch_name>
-    // Unfortunately this is not possible in simpleGit
+    // Unfortunately this is not possible in simpleGit, so instead we call git.checkoutLocalBranch in createBranchForTag
     public checkoutTag(tag: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`checkout ${this.repoName}, in tag ${tag}`);
@@ -212,11 +213,13 @@ export class Repository {
         });
     }
 
-    public merge(otherBranch: string, noFF?: boolean, listFiles?: boolean): Promise<void> {
+    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, listFiles?: boolean }): Promise<void> {
+        opts = opts || {};
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
             const options = [otherBranch];
-            noFF && options.push('--no-ff');
+            opts.noFF && options.push('--no-ff');
+            opts.ffOnly && options.push('--ff-only');
             this.git.merge(options, (err, data) => {
                 if (err) {
                     reject(err);
@@ -227,7 +230,7 @@ export class Repository {
                     });
                 } else {
                     Global.isVerbose() && console.log(`merged ${otherBranch} into ${this.repoName}`);
-                    if (listFiles) {
+                    if (opts.listFiles) {
                         if (data.files.length > 0) {
                             console.log('The following files have been merged: ');
                             data.files.forEach((file) => console.log(file));

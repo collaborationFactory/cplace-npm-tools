@@ -274,7 +274,7 @@ export class Upmerge implements ICommand {
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
             .then(() => cleanup.add(tempBranchName))
             .then(() => this.repo
-                .merge(tempSrcBranch, true, this.showFiles)
+                .merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles})
                 .catch((err) => Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)))
             .then(() => {
                 const targetBranchName = branch.name.substr(this.remote.length + 1);
