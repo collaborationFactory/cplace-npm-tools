@@ -131,3 +131,16 @@ class PromiseAllSettled<K, T> {
 export function promiseAllSettled<K, T>(options: { keys: K[], promiseFactory: ((key: K) => Promise<T>), sequential: boolean }): Promise<T[]> {
     return new PromiseAllSettled(options.keys, options.promiseFactory, options.sequential).run();
 }
+
+/**
+ * Awaits all provided promises, as if by calling {@link #promiseAllSettled} with
+ * keys being the keys of the array,
+ * promiseFactory returning the promise for each key,
+ * and sequential being false.
+ * @param promises An array of promises.
+ * @return an array of results, if all promises resolved
+ * @throws an Error containing details about all rejected promises, if any promise was rejected
+ */
+export function promiseAllSettledParallel<T>(promises: Array<Promise<T>>): Promise<T[]> {
+    return promiseAllSettled({keys: [...promises.keys()], promiseFactory: (key) => promises[key], sequential: false});
+}

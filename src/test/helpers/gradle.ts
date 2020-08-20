@@ -1,6 +1,7 @@
 import {withTempDirectory} from './directories';
 import * as path from 'path';
 import {fs} from '../../p/fs';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 export function withTempGradleBuild(func: (directory: string) => Promise<void>,
                                     buildGradleContent?: () => string,
@@ -19,7 +20,7 @@ export async function createGradleBuild(gradleDirectory: string,
                                         settingsGradleContent?: () => string): Promise<void> {
     const buildGradle = path.join(gradleDirectory, 'build.gradle');
     const settingsGradle = path.join(gradleDirectory, 'settings.gradle');
-    await Promise.all(
+    await promiseAllSettledParallel(
         [
             fs.writeFileAsync(buildGradle, buildGradleContent ? buildGradleContent() : '', 'utf-8'),
             fs.writeFileAsync(settingsGradle, settingsGradleContent ? settingsGradleContent() : '', 'utf-8')
