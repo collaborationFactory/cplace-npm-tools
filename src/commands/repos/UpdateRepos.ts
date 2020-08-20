@@ -6,7 +6,6 @@ import {ICommandParameters} from '../models';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
 import * as path from 'path';
-import * as fs from 'fs';
 import {GradleBuild} from '../../helpers/GradleBuild';
 import {promiseAllSettled} from '../../promiseAllSettled';
 
@@ -49,54 +48,8 @@ export class UpdateRepos extends AbstractReposCommand {
         return true;
     }
 
-    private moveNodeModules(repo: Repository): void {
-        if (!fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES))) {
-            console.log(`[${repo.repoName.toUpperCase()}]: No ${AbstractReposCommand.NODE_MODULES} folder`);
-        } else {
-            if (fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY))) {
-                console.log(`[${repo.repoName.toUpperCase()}]: ${AbstractReposCommand.__NODE_MODULES_COPY} folder already exists`);
-                this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
-            }
-            console.log(`[${repo.repoName.toUpperCase()}]: Moving ${AbstractReposCommand.NODE_MODULES} to ${AbstractReposCommand.__NODE_MODULES_COPY}`);
-            fs.renameSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES),
-                          path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY));
-        }
-    }
-
-    private restoreNodeModules(repo: Repository): void {
-        if (!fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY))) {
-            console.log(`[${repo.repoName.toUpperCase()}]: No ${AbstractReposCommand.__NODE_MODULES_COPY} folder`);
-        } else {
-            if (fs.existsSync(path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES))) {
-                console.log(`[${repo.repoName.toUpperCase()}]: ${AbstractReposCommand.NODE_MODULES} folder already exists`);
-                this.removeFolderInRepo(repo, AbstractReposCommand.NODE_MODULES);
-            }
-            console.log(`[${repo.repoName.toUpperCase()}]: Restoring ${AbstractReposCommand.NODE_MODULES} from ${AbstractReposCommand.__NODE_MODULES_COPY}`);
-            fs.renameSync(path.join(repo.baseDir, AbstractReposCommand.__NODE_MODULES_COPY),
-                          path.join(repo.baseDir, AbstractReposCommand.NODE_MODULES));
-        }
-    }
-
-    private areNodeModulesCheckedIn(repo: Repository): boolean {
-        const packageJsonPath = path.join(repo.baseDir, 'package.json');
-        if (!fs.existsSync(packageJsonPath)) {
-            console.log(`[${repo.repoName.toUpperCase()}]: package.json is not provided`);
-            return false;
-        } else {
-            const packageJsonString = fs.readFileSync(packageJsonPath, 'utf8');
-            const packageJson = JSON.parse(packageJsonString);
-            console.log(`[${repo.repoName.toUpperCase()}]: package.json version is ${packageJson.version}`);
-            return packageJson.version === '1.0.0';
-        }
-    }
-
-    private handleNodeModules(repo: Repository): void {
-        if (this.areNodeModulesCheckedIn(repo)) {
-            console.log(`[${repo.repoName.toUpperCase()}]: No need to restore ${AbstractReposCommand.NODE_MODULES}`);
-            this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
-        } else {
-            this.restoreNodeModules(repo);
-        }
+    private removeNodeModules(repo: Repository): void {
+        this.removeFolderInRepo(repo, AbstractReposCommand.NODE_MODULES);
     }
 
     private async prepareRepo(repoName: string): Promise<void> {
@@ -109,6 +62,10 @@ export class UpdateRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log('branch', repoProperties.branch);
         Global.isVerbose() && console.log('tag', repoProperties.tag);
 
+        if (!repoProperties.branch && !repoProperties.tag) {
+            return Promise.reject('No branch or tag given in parent-repos.json for repo: ' + repoName);
+        }
+
         const pathToRepo = path.join(process.cwd(), '..', repoName);
 
         const repo = new Repository(pathToRepo);
@@ -116,7 +73,6 @@ export class UpdateRepos extends AbstractReposCommand {
             await repo.fetch();
         }
 
-        await this.removeFolderInRepo(repo, AbstractReposCommand.__NODE_MODULES_COPY);
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
 
@@ -131,31 +87,69 @@ export class UpdateRepos extends AbstractReposCommand {
         const branch = repoProperties.branch;
         const tag = repoProperties.tag;
 
+        if (!branch && !tag) {
+            throw new Error(`Internal error: handleRepo was called for ${repoName} despite rejection in prepareRepo!`);
+        }
+
         const pathToRepo = path.join(process.cwd(), '..', repoName);
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
-        const startingBranchhasNodeModules = repo.checkRepoHasNodeModules();
 
-        await this.moveNodeModules(repo);
+        let targetCommit: string;
         if (branch) {
-            await repo.checkoutBranch(branch);
+            if (commit) {
+                targetCommit = commit;
+            } else if (this.resetToRemote) {
+                targetCommit = `origin/${branch}`;
+            } else if (this.noFetch) {
+                let branchExists: boolean;
+                try {
+                    await repo.commitExists(branch);
+                    branchExists = true;
+                } catch (e) {
+                    branchExists = false;
+                }
+                targetCommit = branchExists ? branch : `origin/${branch}`;
+            } else {
+                // we did fetch, so the current remote branch is very likely the same as the one we may pull later
+                targetCommit = `origin/${branch}`;
+            }
+        } else {
+            targetCommit = tag;
+        }
+
+        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(repoName, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
+        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: targetCommit, pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(repoName, 'target branch ', targetCommit, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
+
+        if (!startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {
+            console.log(`[${repoName}]: Removing untracked ${AbstractReposCommand.NODE_MODULES} folder because it is checked in in the target branch.\n` +
+                            `  This may interfere with a running cplace-asc process!`);
+            await this.removeNodeModules(repo);
+        } else if (startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {
+            console.log(`[${repoName}]: Folder ${AbstractReposCommand.NODE_MODULES} is checked in in the current and the target branch.\n` +
+                            `  Switching branches may interfere with a running cplace-asc process!`);
+        }
+
+        if (branch) {
             await repo.resetHard();
+            await repo.checkoutBranch(branch);
             if (commit) {
                 await repo.checkoutCommit(commit);
             } else if (this.resetToRemote) {
                 await repo.resetHard(branch);
+            } else if (this.noFetch) {
+                // don't update to the remote branch, but stay at the current local branch
             } else {
                 await repo.pullOnlyFastForward(branch);
             }
-        } else if (tag) {
+        } else {
+            await repo.resetHard();
             await repo.checkoutTag(tag);
             await repo.createBranchForTag(tag);
-        } else {
-            console.error('No branch or tag given for repo: ', repoName);
         }
-
-        await this.handleNodeModules(repo);
 
         const isGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
         if (isGradleBuild !== wasGradleBuild) {

@@ -15,7 +15,6 @@ export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
     protected static readonly NODE_MODULES: string = 'node_modules';
-    protected static readonly __NODE_MODULES_COPY: string = '__node_modules';
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
@@ -58,7 +57,7 @@ export abstract class AbstractReposCommand implements ICommand {
 
     protected removeFolderInRepo(repo: Repository, folderName: string): void {
         if (fs.existsSync(path.join(repo.baseDir, folderName))) {
-            console.log(`[${repo.repoName.toUpperCase()}]: Removing ${folderName} folder`);
+            console.log(`[${repo.repoName}]: Removing ${folderName} folder`);
             rimraf.sync(path.join(repo.baseDir, folderName));
         }
     }

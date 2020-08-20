@@ -6,7 +6,8 @@ import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
-import {execSync} from 'child_process';
+import {exec} from 'child_process';
+import * as util from 'util';
 
 export class Repository {
 
@@ -57,14 +58,17 @@ export class Repository {
         }
     }
 
-    public checkRepoHasNodeModules(): boolean {
-        const result = execSync(
-            `git ls-tree --name-only HEAD`, {
+    public checkRepoHasPathInBranch(options: { branch: string, pathname: string }): Promise<boolean> {
+        const pathname = options.pathname;
+        const branch = options.branch;
+        Global.isVerbose() && console.log(`check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${branch}`);
+        return util.promisify(exec)(
+            `git ls-tree --name-only "${branch}" "${pathname}"`, {
                 cwd: path.join(this.baseDir)
             }
-        );
-        const dirs = String.fromCharCode.apply(null, result).split(/\r?\n/);
-        return dirs.some((name) => name.includes('node_modules'));
+        ).then(({stdout}) => {
+            return stdout.split(/\r?\n/).indexOf(pathname) >= 0;
+        });
     }
 
     public log(fromHash: string, toHash: string = 'HEAD'): Promise<IGitLogSummary> {
