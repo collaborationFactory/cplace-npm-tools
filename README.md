@@ -159,6 +159,11 @@ $  cplace-cli --help
 
 ## Development
 
+Before you can work with the repository, you need to install node modules once:
+```bash
+npm install
+```
+
 Typescript is compiled and linted by running:
 ```bash
 npm run dev
@@ -169,7 +174,9 @@ To test your local changes with `cplace-cli` on the command line you have to `li
 ```bash
 npm link
 ```
-This will first recompile the Typescript sources and do the linting before setting up and linking the binary executable. When `npm link` is completed, you can just use `cplace-cli` as you are used to to test it out.
+This will first recompile the Typescript sources and do the linting before setting up and linking the binary executable.
+When `npm link` is completed, you can just use `cplace-cli` as usual to test it out.
+When the installation failed because `cplace-cli` was already installed, you can either manually remove it, or run `npm link --force`.
 
 > Remember to clean your local linked package after testing by running `npm r -g @cplace/cli` to remove it and do a regular install again (`npm i -g @cplace/cli`).
 
