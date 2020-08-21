@@ -176,7 +176,7 @@ npm link
 ```
 This will first recompile the Typescript sources and do the linting before setting up and linking the binary executable.
 When `npm link` is completed, you can just use `cplace-cli` as usual to test it out.
-When the installation failed because `cplace-cli` was already installed, you can either manually remove it, or run `npm link --force`.
+When the installation failed because `cplace-cli` was already installed, you can either remove it by running `npm r -g @cplace/cli`, or run `npm link --force`.
 
 > Remember to clean your local linked package after testing by running `npm r -g @cplace/cli` to remove it and do a regular install again (`npm i -g @cplace/cli`).
 
