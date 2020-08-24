@@ -23,7 +23,7 @@ export class TestRunner {
         const launcherModule = require(this.getWdioCliExecutable());
         let hasFailedTest: boolean = false;
         for (const plugin of this.plugins) {
-            if (this.specsParameter && this.isSpecInPlugin(plugin) || !this.specsParameter) {
+            if (!this.specsParameter || (this.specsParameter && this.isSpecInPlugin(plugin))) {
                 const wdioConf = path.join(getPathToE2E(this.workingDir, plugin), WdioConfigGenerator.WDIO_CONF_NAME);
                 const launcher = new launcherModule.default(wdioConf, {args: ['']});
                 const testHasFailed: boolean = await launcher.run();
