@@ -75,6 +75,8 @@ export class UpdateRepos extends AbstractReposCommand {
 
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
+        // check existence of our target branch
+        await this.getTargetBranch(repo, repoProperties);
 
         Global.isVerbose() && console.log('prepare repo', repoName, 'OK');
     }
@@ -161,6 +163,11 @@ export class UpdateRepos extends AbstractReposCommand {
             }
         } else {
             targetBranch = tag;
+        }
+        try {
+            await repo.commitExists(targetBranch);
+        } catch (e) {
+            return Promise.reject(`Cannot update repo ${repo.repoName}: Missing branch/commit/tag ${targetBranch}!`);
         }
         return targetBranch;
     }
