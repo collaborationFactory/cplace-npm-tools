@@ -282,11 +282,11 @@ export class Repository {
         }
     }
 
-    public pullOnlyFastForward(branch: string | string[]): Promise<void> {
-        return this.status()
-            .then(({tracking}) => {
+    public pullOnlyFastForward(branch: string): Promise<void> {
+        return this.getUpstreamBranchOrOriginBranch()
+            .then((tracking) => {
                 if (tracking != null) {
-                    Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} which is tracking ${tracking}`);
+                    Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} from ${tracking}`);
                     const i = tracking.indexOf('/');
                     if (i < 0) {
                         throw new Error(`cannot determine remote and branch for ${tracking}`);
@@ -310,6 +310,29 @@ export class Repository {
                     Global.isVerbose() && console.error(errorMessage);
                     throw new Error(errorMessage);
                 }
+            });
+    }
+
+    /**
+     * Returns the upstream branch of the current branch if it is tracking a branch.
+     * Otherwise, returns the branch from the origin remote with the same name as the current branch, if it exists.
+     * Otherwise, returns null.
+     */
+    public getUpstreamBranchOrOriginBranch(): Promise<string> {
+        return this.status()
+            .then(({current, tracking}) => {
+                if (tracking != null) {
+                    return Promise.resolve(tracking);
+                }
+                const originBranch = 'origin/' + current;
+                return this.commitExists(originBranch)
+                    .then(
+                        () => {
+                            return Promise.resolve(originBranch);
+                        },
+                        () => {
+                            return Promise.resolve(null);
+                        });
             });
     }
 
