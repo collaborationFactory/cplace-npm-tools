@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import {IE2EContext} from './E2EEnvTemplate';
 import {getPathToMainRepo} from '../../util';
 import * as glob from 'glob';
+import {getPathToE2E, getPathToSpecFiles} from './util';
 
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
@@ -197,7 +198,7 @@ export class E2E implements ICommand {
             console.error(`! Headless disabled - only available for Chrome and Firefox execution`);
         }
 
-        this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir, this.mainRepoDir);
+        this.testRunner = new TestRunner(this.pluginsToBeTested, this.workingDir, this.mainRepoDir, this.specs);
         if (!this.testRunner.isWdioExecutableAvailable()) {
             console.error(`Failed to find wdio executable - make sure node_modules are installed in the main repository and you are on a branch based on 4.57 or higher`);
             return false;
@@ -259,7 +260,7 @@ export class E2E implements ICommand {
     }
 
     private hasE2EAssets(plugin: string): boolean {
-        const pathToE2EAssets = path.join(this.workingDir, plugin, 'assets', 'e2e');
+        const pathToE2EAssets = getPathToE2E(this.workingDir, plugin);
         if (!fs.existsSync(pathToE2EAssets)) {
             Global.isVerbose() && console.error(`Plugin ${plugin} does not have E2E assets - expected at: ${pathToE2EAssets}`);
             return false;
@@ -277,7 +278,7 @@ export class E2E implements ICommand {
     private filterPluginsByHasSpecifiedTests(): void {
         this.pluginsToBeTested = this.pluginsToBeTested
             .filter((plugin) => {
-                        const pathToSpecFiles = path.join(this.workingDir, plugin, 'assets', 'e2e', 'specs');
+                        const pathToSpecFiles = getPathToSpecFiles(this.workingDir, plugin);
                         if (fs.existsSync(pathToSpecFiles)) {
                             if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
                                 Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
