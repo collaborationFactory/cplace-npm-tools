@@ -75,6 +75,8 @@ export class UpdateRepos extends AbstractReposCommand {
 
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
+        // check existence of our target branch
+        await this.getTargetBranch(repo, repoProperties);
 
         Global.isVerbose() && console.log('prepare repo', repoName, 'OK');
     }
@@ -95,34 +97,12 @@ export class UpdateRepos extends AbstractReposCommand {
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
-
-        let targetCommit: string;
-        if (branch) {
-            if (commit) {
-                targetCommit = commit;
-            } else if (this.resetToRemote) {
-                targetCommit = `origin/${branch}`;
-            } else if (this.noFetch) {
-                let branchExists: boolean;
-                try {
-                    await repo.commitExists(branch);
-                    branchExists = true;
-                } catch (e) {
-                    branchExists = false;
-                }
-                targetCommit = branchExists ? branch : `origin/${branch}`;
-            } else {
-                // we did fetch, so the current remote branch is very likely the same as the one we may pull later
-                targetCommit = `origin/${branch}`;
-            }
-        } else {
-            targetCommit = tag;
-        }
+        const targetBranch = await this.getTargetBranch(repo, repoProperties);
 
         const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
         Global.isVerbose() && console.log(repoName, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
-        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: targetCommit, pathname: AbstractReposCommand.NODE_MODULES});
-        Global.isVerbose() && console.log(repoName, 'target branch ', targetCommit, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
+        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: targetBranch, pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(repoName, 'target branch ', targetBranch, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
 
         if (!startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {
             console.log(`[${repoName}]: Removing untracked ${AbstractReposCommand.NODE_MODULES} folder because it is checked in in the target branch.\n` +
@@ -159,5 +139,36 @@ export class UpdateRepos extends AbstractReposCommand {
         }
 
         Global.isVerbose() && console.log('successfully updated', repoName);
+    }
+
+    private async getTargetBranch(repo: Repository, {branch, commit, tag}: { branch: string, commit?: string, tag?: string }): Promise<string> {
+        let targetBranch: string;
+        if (branch) {
+            if (commit) {
+                targetBranch = commit;
+            } else if (this.resetToRemote) {
+                targetBranch = `origin/${branch}`;
+            } else if (this.noFetch) {
+                let branchExists: boolean;
+                try {
+                    await repo.commitExists(branch);
+                    branchExists = true;
+                } catch (e) {
+                    branchExists = false;
+                }
+                targetBranch = branchExists ? branch : `origin/${branch}`;
+            } else {
+                // we did fetch, so the current remote branch is very likely the same as the one we may pull later
+                targetBranch = `origin/${branch}`;
+            }
+        } else {
+            targetBranch = tag;
+        }
+        try {
+            await repo.commitExists(targetBranch);
+        } catch (e) {
+            return Promise.reject(`Cannot update repo ${repo.repoName}: Missing branch/commit/tag ${targetBranch}!`);
+        }
+        return targetBranch;
     }
 }
