@@ -1,17 +1,22 @@
 0561fa1d6e6e98601d5fcf4417fb3625bf58eefe:
 0679ab6ffc3b8e5144b689f1a30d9c0bbaeb6c78:Fix request.js inclusion error in project repos
+16d9ec69a9f7a6a687dbf70ec8843cf276972f43:Fix git locks left behind when repos -u aborts due to unclean working copy [Issue cplace-npm-tools#50, PR cplace-npm-tools#57]
 1c2919d3b0e6a95f65cdc67a889693e71d87c5f3:Add support for Allure reporter with --allure flag
 3736041967c8d61858ee96f87c28efa53e41e6a4:Improvement: add new freeze option to `repos -w` in order to force writing a commit hash
 49a187727363b4611206875437cb83f1b54a8553:Added screenshot capability [PFM-ISSUE-2929]
 539900455947445a9eb21611ed9bf6d9d5391d6d:cplace-cli Development: [PFM-ISSUE-4061]: Added Jest and ts-jest to enable writing unit tests [cplace-npm-tools#44]
+56b4e25ac9cc86ac9a5de536b029cee6598021f3:Improve handling of node_modules folder in repos -u command; the folder is deleted when switching from release 4.57+ to 4.56- and left untouched otherwise [Issue cplace-npm-tools#43, PR cplace-npm-tools#59]
 58f9ecbf17c8c66a5cc0b5c1c40a673913c7e018:Platform Development: [PFM-ISSUE-3903] Fix: added git tag support [PR cplace#53]
 5911cd2ee5374d5ddbb9b193651cf2952e125bde:cplace-cli: added filtering of plugins on criteria if tests are specified [PR cplace-npm-tools #41]
 5fc98b51279c473c8e0c41d1769912f35f574c22:Adds detection of activated plugins of system under test [PFM-ISSUE-2992, PR cplace-npm-tools#33]
 662d0ba4145814cf751955887c6c16bfc930a445:
 7130198bff280a04ea9ecd140c18dfed32d3a2d1:Exchange Jasmine by Mocha in wdio configuration [PFM-ISSUE-2994, PR cplace-npm-tools#32]
+783af2f0eae0422bb911857a2170d365a5027261:bugfix for wrong error code on specified specs parameter [Issue cplace-npm-tools#55, PR cplace-npm-tools#60]
 7a4567c0a068b7fdb0bb97f5e062fb2a15f55295:cplace-cli: [PFM-ISSUE-4620] Shorten the name of e2e screenshot [PR cplace#56]
+89f36d16c4b750527a6c71b92d52c9307c21db61:Command repos -u allows pulling from non-tracking branch [PR cplace-npm-tools#61]
 a41f6413d06950682fd86d7f9c6af8e728eb3018:
 a4f9187731bef1e895e04c3c5e38b7ccbdad377b:Allow case insensitive flags
+a7045a1981292363e9133e0217a6012f670e7278:Fix: Avoid aborting concurrent operations by settling all parallel promises instead of bailing out early when one is rejected [cplace-npm-tools#58]
 a9e22099f1bafb4fe0af5bbca56b782c7562fa79:Improvmeent: add relevance pattern for user stories (US-xxx)
 a9e6f5ab98bf4eb837f64b7116df8b74ac4019e1:Failing E2E Test will produce exit code 1 [PFM-ISSUE-3201, PR cplace-npm-tools#39]
 aef3090b109e925334972d740e85152f26460fb8:Only check "Merge pull request" and "changelog:" as relevant markers
