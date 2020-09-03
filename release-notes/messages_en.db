@@ -3,6 +3,7 @@
 16d9ec69a9f7a6a687dbf70ec8843cf276972f43:Fix git locks left behind when repos -u aborts due to unclean working copy [Issue cplace-npm-tools#50, PR cplace-npm-tools#57]
 1c2919d3b0e6a95f65cdc67a889693e71d87c5f3:Add support for Allure reporter with --allure flag
 3736041967c8d61858ee96f87c28efa53e41e6a4:Improvement: add new freeze option to `repos -w` in order to force writing a commit hash
+3becf0d66deacf00b6b15fe780431d1e37cd82f9:
 49a187727363b4611206875437cb83f1b54a8553:Added screenshot capability [PFM-ISSUE-2929]
 539900455947445a9eb21611ed9bf6d9d5391d6d:cplace-cli Development: [PFM-ISSUE-4061]: Added Jest and ts-jest to enable writing unit tests [cplace-npm-tools#44]
 56b4e25ac9cc86ac9a5de536b029cee6598021f3:Improve handling of node_modules folder in repos -u command; the folder is deleted when switching from release 4.57+ to 4.56- and left untouched otherwise [Issue cplace-npm-tools#43, PR cplace-npm-tools#59]
