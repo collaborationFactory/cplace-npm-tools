@@ -1,5 +1,7 @@
 # cplace CLI tools
 
+![](https://github.com/collaborationFactory/cplace-npm-tools/workflows/Continuous%20Integration/badge.svg)
+
 This package provides some CLI tools for working with cplace code.
 
 ## Usage
