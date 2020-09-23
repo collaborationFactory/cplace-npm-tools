@@ -1,7 +1,7 @@
-import {ConfigTemplate} from './ConfigTemplate';
-import * as path from 'path';
 import * as fs from 'fs';
-import {E2EEnvTemplate, IE2EContext} from './E2EEnvTemplate';
+import * as path from 'path';
+import { Wdio6ConfigTemplate } from './config/Wdio6ConfigTemplate';
+import { E2EEnvTemplate, IE2EContext } from './E2EEnvTemplate';
 
 export class WdioConfigGenerator {
     public static readonly WDIO_CONF_NAME: string = 'wdio.conf.js';
@@ -20,10 +20,12 @@ export class WdioConfigGenerator {
     private readonly allureOutputPath: string;
     private readonly screenshotPath: string;
 
-    constructor(workingDir: string, mainDir: string,
-                plugins: string[], specs: string, browser: string, context: IE2EContext,
-                timeout: number, headless: boolean, noInstall: boolean,
-                jUnitReportPath: string, allureOutputPath: string, screenshotPath: string) {
+    constructor(
+        workingDir: string, mainDir: string,
+        plugins: string[], specs: string, browser: string, context: IE2EContext,
+        timeout: number, headless: boolean, noInstall: boolean,
+        jUnitReportPath: string, allureOutputPath: string, screenshotPath: string
+    ) {
         this.workingDir = workingDir;
         this.mainDir = mainDir;
         this.browser = browser;
@@ -53,7 +55,7 @@ export class WdioConfigGenerator {
         fs.writeFileSync(
             path.join(e2eFolder, 'lib', 'config', WdioConfigGenerator.E2E_ENV_NAME),
             e2eEnv.getTemplate(),
-            {encoding: 'utf8'}
+            { encoding: 'utf8' }
         );
     }
 
@@ -61,7 +63,7 @@ export class WdioConfigGenerator {
         this.plugins.forEach((plugin) => {
             const e2eFolder = WdioConfigGenerator.pathToE2EFolder(plugin, this.workingDir);
             const mainDir = WdioConfigGenerator.safePath(this.mainDir);
-            const config = new ConfigTemplate(
+            const config = new Wdio6ConfigTemplate(
                 mainDir, e2eFolder,
                 this.specs, this.browser, this.context.baseUrl, this.context,
                 this.timeout, this.headless, this.noInstall,
@@ -70,7 +72,11 @@ export class WdioConfigGenerator {
                 this.screenshotPath,
                 this.context.e2eToken
             );
-            fs.writeFileSync(path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME), config.getTemplate(), {encoding: 'utf8'});
+            fs.writeFileSync(
+                path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME),
+                config.getTemplate(),
+                { encoding: 'utf8' }
+            );
         });
     }
 
