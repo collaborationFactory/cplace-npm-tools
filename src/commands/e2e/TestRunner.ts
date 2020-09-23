@@ -1,8 +1,8 @@
-import * as path from 'path';
 import * as fs from 'fs';
-import {WdioConfigGenerator} from './WdioConfigGenerator';
-import {getPathToE2E, getPathToSpecFiles} from './util';
 import * as glob from 'glob';
+import * as path from 'path';
+import { getPathToE2E, getPathToSpecFiles } from './util';
+import { WdioConfigGenerator } from './WdioConfigGenerator';
 
 export class TestRunner {
 
@@ -11,8 +11,12 @@ export class TestRunner {
     private readonly mainRepoDir: string;
     private readonly specsParameter: string;
 
-    constructor(plugins: string[],
-                workingDir: string, mainRepoDir: string, specsParameter: string) {
+    constructor(
+        plugins: string[],
+        workingDir: string,
+        mainRepoDir: string,
+        specsParameter: string
+    ) {
         this.workingDir = workingDir;
         this.plugins = plugins;
         this.mainRepoDir = mainRepoDir;
@@ -24,12 +28,25 @@ export class TestRunner {
         let hasFailedTest: boolean = false;
         for (const plugin of this.plugins) {
             if (!this.specsParameter || (this.specsParameter && this.isSpecInPlugin(plugin))) {
-                const wdioConf = path.join(getPathToE2E(this.workingDir, plugin), WdioConfigGenerator.WDIO_CONF_NAME);
-                const launcher = new launcherModule.default(wdioConf, {args: ['']});
-                const testHasFailed: boolean = await launcher.run();
-                if (testHasFailed) {
-                    console.warn(`One of the E2E Tests in plugin ${plugin} has failed`);
+                const e2eAssetPath = getPathToE2E(this.workingDir, plugin);
+                const wdioConf = path.join(e2eAssetPath, WdioConfigGenerator.WDIO_CONF_NAME);
+
+                const oldCwd = process.cwd();
+                process.chdir(e2eAssetPath);
+                const launcher = new launcherModule.default(wdioConf);
+                let testsFailed = false;
+                try {
+                    const exitCode = await launcher.run();
+                    testsFailed = exitCode !== 0;
+                } catch (e) {
+                    testsFailed = true;
+                } finally {
+                    process.chdir(oldCwd);
+                }
+
+                if (testsFailed) {
                     hasFailedTest = true;
+                    console.warn(`One of the E2E Tests in plugin ${plugin} has failed`);
                 }
             }
         }
@@ -48,7 +65,6 @@ export class TestRunner {
     }
 
     private getWdioCliExecutable(): string {
-
         if (!fs.existsSync(this.mainRepoDir)) {
             console.error(`Could not find main repository :( Expected it at: ${this.mainRepoDir}`);
             throw new Error();
