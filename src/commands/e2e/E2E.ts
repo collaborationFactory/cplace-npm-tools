@@ -314,7 +314,7 @@ export class E2E implements ICommand {
             return null;
         }
 
-        const webdriverioVersion: string = packageJson.devDependencies.webdriverio;
+        const webdriverioVersion: string = packageJson.devDependencies?.webdriverio;
         if (!webdriverioVersion) {
             console.warn('WebdriverIO seems not to be installed in main...');
             return null;
