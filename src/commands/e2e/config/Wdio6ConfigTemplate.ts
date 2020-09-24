@@ -22,7 +22,7 @@ export class Wdio6ConfigTemplate extends ConfigTemplate {
     }
 
     protected getMochaRequires(): string[] {
-        return ['ts-node/register'];
+        return ['ts-node/register', 'tsconfig-paths/register'];
     }
 
 }
