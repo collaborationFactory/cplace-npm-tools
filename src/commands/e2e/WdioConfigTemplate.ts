@@ -1,9 +1,9 @@
 import * as path from 'path';
-import { E2E } from '../E2E';
-import { IE2EContext } from '../E2EEnvTemplate';
-import { WdioConfigGenerator } from '../WdioConfigGenerator';
+import { E2E } from './E2E';
+import { IE2EContext } from './E2EEnvTemplate';
+import { WdioConfigGenerator } from './WdioConfigGenerator';
 
-export abstract class ConfigTemplate {
+export class WdioConfigTemplate {
     private readonly template: string;
     private listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
@@ -51,7 +51,6 @@ export abstract class ConfigTemplate {
         }
 
         const preConfigExport = this.getPreConfigExport();
-        const beforeHook = this.getBeforeHook();
         const mochaRequires = this.getMochaRequires();
 
         this.template =
@@ -63,7 +62,6 @@ ${preConfigExport}
 
 exports.config = {
     before: function () {
-        ${beforeHook}
         return new Promise(function(resolve, reject) {
             return request('${baseUrl}${context.context}${tenant}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
                 if (error) {
@@ -227,14 +225,11 @@ exports.config = {
     }
 
     protected getPreConfigExport(): string {
-        return '';
-    }
-
-    protected getBeforeHook(): string {
-        return '';
+        const tsconfigPath = path.join(this.e2eFolder, 'tsconfig.json');
+        return `process.env.TS_NODE_PROJECT = "${tsconfigPath}";`;
     }
 
     protected getMochaRequires(): string[] {
-        return [];
+        return ['ts-node/register', 'tsconfig-paths/register'];
     }
 }
