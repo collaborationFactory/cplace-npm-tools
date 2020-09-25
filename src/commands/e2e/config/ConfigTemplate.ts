@@ -50,6 +50,7 @@ export abstract class ConfigTemplate {
             screenshotConfig = this.getScreenshotConfig();
         }
 
+        const preConfigExport = this.getPreConfigExport();
         const beforeHook = this.getBeforeHook();
         const mochaRequires = this.getMochaRequires();
 
@@ -57,6 +58,8 @@ export abstract class ConfigTemplate {
             `const fs = require('fs');
 const path = require('path');
 const request = require('${mainRepoDir}/node_modules/request');
+
+${preConfigExport}
 
 exports.config = {
     before: function () {
@@ -221,6 +224,10 @@ exports.config = {
 
             browser.saveScreenshot(filePath + '.png');
         }`;
+    }
+
+    protected getPreConfigExport(): string {
+        return '';
     }
 
     protected getBeforeHook(): string {

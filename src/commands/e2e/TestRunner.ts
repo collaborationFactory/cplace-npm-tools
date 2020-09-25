@@ -31,8 +31,7 @@ export class TestRunner {
                 const e2eAssetPath = getPathToE2E(this.workingDir, plugin);
                 const wdioConf = path.join(e2eAssetPath, WdioConfigGenerator.WDIO_CONF_NAME);
 
-                const oldCwd = process.cwd();
-                process.chdir(e2eAssetPath);
+                process.chdir(this.mainRepoDir);
                 const launcher = new launcherModule.default(wdioConf);
                 let testsFailed = false;
                 try {
@@ -41,7 +40,7 @@ export class TestRunner {
                 } catch (e) {
                     testsFailed = true;
                 } finally {
-                    process.chdir(oldCwd);
+                    process.chdir(this.workingDir);
                 }
 
                 if (testsFailed) {

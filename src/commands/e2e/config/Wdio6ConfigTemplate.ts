@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { IE2EContext } from '../E2EEnvTemplate';
 import { ConfigTemplate } from './ConfigTemplate';
 
@@ -19,6 +20,11 @@ export class Wdio6ConfigTemplate extends ConfigTemplate {
             jUnitReportPath, allureOutputPath, screenShotPath,
             e2eToken
         );
+    }
+
+    protected getPreConfigExport(): string {
+        const tsconfigPath = path.join(this.e2eFolder, 'tsconfig.json');
+        return `process.env.TS_NODE_PROJECT = "${tsconfigPath}";`;
     }
 
     protected getMochaRequires(): string[] {
