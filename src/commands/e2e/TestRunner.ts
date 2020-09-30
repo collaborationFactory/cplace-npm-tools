@@ -32,7 +32,7 @@ export class TestRunner {
                 const wdioConf = path.join(e2eAssetPath, WdioConfigGenerator.WDIO_CONF_NAME);
 
                 process.chdir(this.mainRepoDir);
-                const launcher = new launcherModule.default(wdioConf);
+                const launcher = new launcherModule.default(wdioConf, { args: [''] });
                 let testsFailed = false;
                 try {
                     const exitCode = await launcher.run();
