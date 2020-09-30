@@ -56,7 +56,7 @@ export class WdioConfigTemplate {
         this.template =
             `const fs = require('fs');
 const path = require('path');
-const request = require('${mainRepoDir}/node_modules/request');
+const request = require('${WdioConfigGenerator.safePath(mainRepoDir)}/node_modules/request');
 
 ${preConfigExport}
 
@@ -225,7 +225,7 @@ exports.config = {
     }
 
     protected getPreConfigExport(): string {
-        const tsconfigPath = path.join(this.e2eFolder, 'tsconfig.json');
+        const tsconfigPath = WdioConfigGenerator.safePath(path.join(this.e2eFolder, 'tsconfig.json'));
         return `process.env.TS_NODE_PROJECT = "${tsconfigPath}";`;
     }
 
