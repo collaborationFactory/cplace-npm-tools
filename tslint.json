@@ -123,7 +123,7 @@
     ],
     "new-parens": true,
     "no-construct": true,
-    "no-parameter-properties": true,
+    "no-parameter-properties": false,
     "no-default-export": true,
     "no-empty-interface": true,
     "no-for-in": true,

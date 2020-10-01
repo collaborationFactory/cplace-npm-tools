@@ -1,16 +1,16 @@
 /**
  * Main E2E command
  */
-import {ICommand, ICommandParameters} from '../models';
-import {WdioConfigGenerator} from './WdioConfigGenerator';
-import {TestRunner} from './TestRunner';
-import {Global} from '../../Global';
-import * as path from 'path';
 import * as fs from 'fs';
-import {IE2EContext} from './E2EEnvTemplate';
-import {getPathToMainRepo} from '../../util';
 import * as glob from 'glob';
-import {getPathToE2E, getPathToSpecFiles} from './util';
+import * as path from 'path';
+import { Global } from '../../Global';
+import { getPathToMainRepo } from '../../util';
+import { ICommand, ICommandParameters } from '../models';
+import { IE2EContext } from './E2EEnvTemplate';
+import { TestRunner } from './TestRunner';
+import { getPathToE2E, getPathToSpecFiles } from './util';
+import { WdioConfigGenerator } from './WdioConfigGenerator';
 
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
@@ -61,6 +61,7 @@ export class E2E implements ICommand {
 
     private testRunner: TestRunner | null = null;
 
+    // tslint:disable-next-line: max-func-body-length
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.workingDir = process.cwd();
         this.mainRepoDir = getPathToMainRepo(this.workingDir);
@@ -220,9 +221,15 @@ export class E2E implements ICommand {
         };
 
         const wdioGenerator = new WdioConfigGenerator(
-            this.workingDir, this.mainRepoDir,
-            this.pluginsToBeTested, this.specs, this.browser, context,
-            this.timeout, this.headless, this.noInstall,
+            this.workingDir,
+            this.mainRepoDir,
+            this.pluginsToBeTested,
+            this.specs,
+            this.browser,
+            context,
+            this.timeout,
+            this.headless,
+            this.noInstall,
             this.jUnitReportPath,
             this.allureOutputPath,
             this.screenshotPath
@@ -237,14 +244,8 @@ export class E2E implements ICommand {
     }
 
     public isAllureReporterInstalled(): boolean {
-        const pathToPackageJson = path.join(this.mainRepoDir, 'package.json');
-
-        // tslint:disable-next-line:no-any
-        let packageJson: Record<string, any>;
-        try {
-            packageJson = JSON.parse(fs.readFileSync(pathToPackageJson, 'utf8'));
-        } catch (e) {
-            console.error(`Failed to read package.json from: ${pathToPackageJson} - assuming Allure Reporter is not installed`);
+        const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
+        if (!packageJson) {
             return false;
         }
 
@@ -278,17 +279,17 @@ export class E2E implements ICommand {
     private filterPluginsByHasSpecifiedTests(): void {
         this.pluginsToBeTested = this.pluginsToBeTested
             .filter((plugin) => {
-                        const pathToSpecFiles = getPathToSpecFiles(this.workingDir, plugin);
-                        if (fs.existsSync(pathToSpecFiles)) {
-                            if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
-                                Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
-                                return true;
-                            } else {
-                                console.log(`Plugin ${plugin} has an E2E specs folder but there are no Tests specified - please specify a Test first`);
-                            }
-                        }
-                        return false;
+                const pathToSpecFiles = getPathToSpecFiles(this.workingDir, plugin);
+                if (fs.existsSync(pathToSpecFiles)) {
+                    if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
+                        Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
+                        return true;
+                    } else {
+                        console.log(`Plugin ${plugin} has an E2E specs folder but there are no Tests specified - please specify a Test first`);
                     }
+                }
+                return false;
+            }
             );
     }
 
@@ -296,5 +297,16 @@ export class E2E implements ICommand {
         return fs.readdirSync(this.workingDir)
             .filter((name) => fs.statSync(path.join(this.workingDir, name)).isDirectory())
             .filter((name) => this.hasE2EAssets(name));
+    }
+
+    // tslint:disable-next-line: no-any
+    private getMainRepoPackageJson(mainRepoDir: string): Record<string, any> {
+        const pathToPackageJson = path.join(mainRepoDir, 'package.json');
+        try {
+            return JSON.parse(fs.readFileSync(pathToPackageJson, 'utf8'));
+        } catch (e) {
+            console.error(`Failed to read package.json from: ${pathToPackageJson} - assuming Allure Reporter is not installed`);
+            return null;
+        }
     }
 }
