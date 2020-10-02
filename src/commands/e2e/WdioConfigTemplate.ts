@@ -143,6 +143,7 @@ exports.config = {
                 maxInstances: 1,
                 browserName: '${this.browser}',
                 'goog:chromeOptions': {
+                    w3c: false,
                     args: [
                         '--headless',
                         '--disable-gpu',
@@ -157,6 +158,7 @@ exports.config = {
                 browserName: '${this.browser}',
                 'moz:firefoxOptions': {
                     'args': ['-headless']
+                    w3c: false,
                 }
             }]`;
         } else {
