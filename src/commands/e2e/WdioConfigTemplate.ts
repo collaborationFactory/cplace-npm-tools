@@ -1,9 +1,9 @@
 import * as path from 'path';
-import { E2E } from '../E2E';
-import { IE2EContext } from '../E2EEnvTemplate';
-import { WdioConfigGenerator } from '../WdioConfigGenerator';
+import { E2E } from './E2E';
+import { IE2EContext } from './E2EEnvTemplate';
+import { WdioConfigGenerator } from './WdioConfigGenerator';
 
-export abstract class ConfigTemplate {
+export class WdioConfigTemplate {
     private readonly template: string;
     private listPluginsURL: string = 'application/administrationDashboard/listPlugins';
 
@@ -50,17 +50,18 @@ export abstract class ConfigTemplate {
             screenshotConfig = this.getScreenshotConfig();
         }
 
-        const beforeHook = this.getBeforeHook();
+        const preConfigExport = this.getPreConfigExport();
         const mochaRequires = this.getMochaRequires();
 
         this.template =
             `const fs = require('fs');
 const path = require('path');
-const request = require('${mainRepoDir}/node_modules/request');
+const request = require('${WdioConfigGenerator.safePath(mainRepoDir)}/node_modules/request');
+
+${preConfigExport}
 
 exports.config = {
     before: function () {
-        ${beforeHook}
         return new Promise(function(resolve, reject) {
             return request('${baseUrl}${context.context}${tenant}${this.listPluginsURL}?testSetupHandlerE2EToken=${e2eToken}', function(error, response, body) {
                 if (error) {
@@ -223,11 +224,12 @@ exports.config = {
         }`;
     }
 
-    protected getBeforeHook(): string {
-        return '';
+    protected getPreConfigExport(): string {
+        const tsconfigPath = WdioConfigGenerator.safePath(path.join(this.e2eFolder, 'tsconfig.json'));
+        return `process.env.TS_NODE_PROJECT = "${tsconfigPath}";`;
     }
 
     protected getMochaRequires(): string[] {
-        return [];
+        return ['ts-node/register', 'tsconfig-paths/register'];
     }
 }

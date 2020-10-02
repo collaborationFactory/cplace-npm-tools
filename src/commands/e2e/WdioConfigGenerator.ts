@@ -1,18 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ConfigTemplate } from './config/ConfigTemplate';
-import { Wdio5ConfigTemplate } from './config/Wdio5ConfigTemplate';
-import { Wdio6ConfigTemplate } from './config/Wdio6ConfigTemplate';
 import { E2EEnvTemplate, IE2EContext } from './E2EEnvTemplate';
-
-export type WdioVersion = 'v5' | 'v6';
+import { WdioConfigTemplate } from './WdioConfigTemplate';
 
 export class WdioConfigGenerator {
     public static readonly WDIO_CONF_NAME: string = 'wdio.conf.js';
     public static readonly E2E_ENV_NAME: string = 'e2e.ts';
 
     constructor(
-        private readonly wdioVersion: WdioVersion,
         private readonly workingDir: string,
         private readonly mainDir: string,
         private readonly plugins: string[],
@@ -59,32 +54,16 @@ export class WdioConfigGenerator {
         });
     }
 
-    private getWdioTemplate(mainDir: string, e2eFolder: string): ConfigTemplate {
-        switch (this.wdioVersion) {
-            case 'v5':
-                return new Wdio5ConfigTemplate(
-                    mainDir, e2eFolder,
-                    this.specs, this.browser, this.context.baseUrl, this.context,
-                    this.timeout, this.headless, this.noInstall,
-                    this.jUnitReportPath,
-                    this.allureOutputPath,
-                    this.screenshotPath,
-                    this.context.e2eToken
-                );
-            case 'v6':
-                return new Wdio6ConfigTemplate(
-                    mainDir, e2eFolder,
-                    this.specs, this.browser, this.context.baseUrl, this.context,
-                    this.timeout, this.headless, this.noInstall,
-                    this.jUnitReportPath,
-                    this.allureOutputPath,
-                    this.screenshotPath,
-                    this.context.e2eToken
-                );
-            default:
-                throw new Error('unknown wdio version: ' + this.wdioVersion);
-        }
-
+    private getWdioTemplate(mainDir: string, e2eFolder: string): WdioConfigTemplate {
+        return new WdioConfigTemplate(
+            mainDir, e2eFolder,
+            this.specs, this.browser, this.context.baseUrl, this.context,
+            this.timeout, this.headless, this.noInstall,
+            this.jUnitReportPath,
+            this.allureOutputPath,
+            this.screenshotPath,
+            this.context.e2eToken
+        );
     }
 
 }

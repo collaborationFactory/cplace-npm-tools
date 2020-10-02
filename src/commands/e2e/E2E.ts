@@ -10,7 +10,7 @@ import { ICommand, ICommandParameters } from '../models';
 import { IE2EContext } from './E2EEnvTemplate';
 import { TestRunner } from './TestRunner';
 import { getPathToE2E, getPathToSpecFiles } from './util';
-import { WdioConfigGenerator, WdioVersion } from './WdioConfigGenerator';
+import { WdioConfigGenerator } from './WdioConfigGenerator';
 
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
@@ -43,7 +43,6 @@ export class E2E implements ICommand {
 
     private workingDir: string;
     private mainRepoDir: string;
-    private wdioVersion: WdioVersion;
 
     private baseUrl: string;
     private context: string;
@@ -70,13 +69,6 @@ export class E2E implements ICommand {
             console.error(`Could not determine path to main repo!`);
             return false;
         }
-
-        this.wdioVersion = this.getWdioVersion(this.mainRepoDir);
-        if (!this.wdioVersion) {
-            console.error('Failed to determin WebdriverIO version.');
-            return false;
-        }
-        console.log(`Detected WebdriverIO version: ${this.wdioVersion}`);
 
         const plugins = params[E2E.PARAMETER_PLUGINS];
         if (typeof plugins === 'string' && plugins.length > 0) {
@@ -229,7 +221,6 @@ export class E2E implements ICommand {
         };
 
         const wdioGenerator = new WdioConfigGenerator(
-            this.wdioVersion,
             this.workingDir,
             this.mainRepoDir,
             this.pluginsToBeTested,
@@ -306,29 +297,6 @@ export class E2E implements ICommand {
         return fs.readdirSync(this.workingDir)
             .filter((name) => fs.statSync(path.join(this.workingDir, name)).isDirectory())
             .filter((name) => this.hasE2EAssets(name));
-    }
-
-    private getWdioVersion(mainRepoDir: string): WdioVersion {
-        const packageJson = this.getMainRepoPackageJson(mainRepoDir);
-        if (!packageJson) {
-            return null;
-        }
-
-        const webdriverioVersion: string = packageJson.devDependencies?.webdriverio;
-        if (!webdriverioVersion) {
-            console.warn('WebdriverIO seems not to be installed in main...');
-            return null;
-        }
-
-        if (webdriverioVersion.match(/^.?5(\..+)?/)) {
-            return 'v5';
-        } else if (webdriverioVersion.match(/^.?6(\..+)?/)) {
-            return 'v6';
-        } else {
-            console.warn('Could not determine WebdriverIO version:', webdriverioVersion);
-            return null;
-        }
-
     }
 
     // tslint:disable-next-line: no-any
