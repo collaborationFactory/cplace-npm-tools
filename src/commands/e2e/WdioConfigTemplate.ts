@@ -1,7 +1,7 @@
 import * as path from 'path';
-import { E2E } from './E2E';
-import { IE2EContext } from './E2EEnvTemplate';
-import { WdioConfigGenerator } from './WdioConfigGenerator';
+import {E2E} from './E2E';
+import {IE2EContext} from './E2EEnvTemplate';
+import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class WdioConfigTemplate {
     private readonly template: string;
@@ -138,11 +138,13 @@ exports.config = {
     }
 
     protected getCapabilities(): string {
-        if (this.headless && this.browser.toLowerCase() === 'chrome') {
-            return `[{
+        if (this.browser.toLowerCase() === 'chrome') {
+            if (this.headless) {
+                return `[{
                 maxInstances: 1,
                 browserName: '${this.browser}',
                 'goog:chromeOptions': {
+                    w3c: false,
                     args: [
                         '--headless',
                         '--disable-gpu',
@@ -151,6 +153,15 @@ exports.config = {
                     ]
                 }
             }]`;
+            } else {
+                return `[{
+                maxInstances: 1,
+                browserName: '${this.browser}',
+                'goog:chromeOptions': {
+                    w3c: false
+                }
+            }]`;
+            }
         } else if (this.headless && this.browser.toLowerCase() === 'firefox') {
             return `[{
                 maxInstances: 1,
