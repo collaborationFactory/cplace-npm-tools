@@ -114,7 +114,7 @@ exports.config = {
     waitforTimeout: 100000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
-    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept', 'devtools', 'image-comparison'],
+    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept'],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
     framework: 'mocha',
     mochaOpts: {
