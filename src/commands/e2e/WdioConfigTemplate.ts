@@ -111,7 +111,7 @@ exports.config = {
     logLevel: 'info',
     bail: 0,
     baseUrl: '${baseUrl}',
-    waitforTimeout: 100000,
+    waitforTimeout: 59000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
     services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept'],
