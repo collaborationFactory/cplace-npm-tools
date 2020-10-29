@@ -215,7 +215,7 @@ export class E2E implements ICommand {
         const logLevel = params[E2E.PARAMETER_LOGLEVEL] || params[E2E.PARAMETER_LOGLEVEL.toLowerCase()];
         if (typeof logLevel === 'string' && logLevel.length > 0) {
             if (logLevel.toLowerCase() === 'trace' || 'debug' || 'info' || 'warn' || 'error' || 'silent') {
-                this.logLevel = logLevel;
+                this.logLevel = logLevel.toLowerCase();
             } else {
                 console.warn(`The provided logLevel does not match the any of the allowed values 'trace | debug | info | warn | error | silent'. Default logLevel is used.`);
             }
