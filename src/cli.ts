@@ -172,8 +172,6 @@ const cli = meow(
               (default: './allure-output')
             --logLevel will adjust the logLevel in wdio configuraiton
               (default: 'error', supported options: 'trace | debug | info | warn | error | silent')
-            --devTools will enable Devtools-service (default: 'true')
-            --imageComparison enables wdio-image-comparison-service (default: 'true')
 
     Global options:
         --verbose

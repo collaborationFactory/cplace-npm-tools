@@ -35,8 +35,6 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_ALLURE: string = 'allure';
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
     private static readonly PARAMETER_LOGLEVEL: string = 'logLevel';
-    private static readonly PARAMETER_DEVTOOLS: string = 'devTools';
-    private static readonly PARAMETER_IMAGECOMPARISON: string = 'imageComparison';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
@@ -223,19 +221,9 @@ export class E2E implements ICommand {
             }
         }
 
-        const devTools = params[E2E.PARAMETER_DEVTOOLS];
-        if (typeof devTools === 'boolean') {
-            this.devTools = devTools;
-        }
-
         if (!this.isServiceInstalled(E2E.DEV_TOOLS_PACKAGE_NAME) && this.devTools) {
             console.warn(`WARN: DevTools Service was enabled but main repository does not have @wdio/devtools-service package installed, disabling Devtools...`);
             this.devTools = false;
-        }
-
-        const imageComparison = params[E2E.PARAMETER_IMAGECOMPARISON];
-        if (typeof imageComparison === 'boolean') {
-            this.imageComparison = imageComparison;
         }
 
         if (!this.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME) && this.imageComparison) {
