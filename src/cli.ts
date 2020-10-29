@@ -170,6 +170,8 @@ const cli = meow(
               (default: './e2eScreenshots')
             --allure will create Allure Reporter output files and store them in the given path
               (default: './allure-output')
+            --logLevel will adjust the logLevel in wdio configuraiton
+              (default: 'error', supported options: 'trace | debug | info | warn | error | silent')
 
     Global options:
         --verbose

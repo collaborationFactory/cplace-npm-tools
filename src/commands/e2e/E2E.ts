@@ -4,17 +4,20 @@
 import * as fs from 'fs';
 import * as glob from 'glob';
 import * as path from 'path';
-import { Global } from '../../Global';
-import { getPathToMainRepo } from '../../util';
-import { ICommand, ICommandParameters } from '../models';
-import { IE2EContext } from './E2EEnvTemplate';
-import { TestRunner } from './TestRunner';
-import { getPathToE2E, getPathToSpecFiles } from './util';
-import { WdioConfigGenerator } from './WdioConfigGenerator';
+import {Global} from '../../Global';
+import {getPathToMainRepo} from '../../util';
+import {ICommand, ICommandParameters} from '../models';
+import {IE2EContext} from './E2EEnvTemplate';
+import {TestRunner} from './TestRunner';
+import {getPathToE2E, getPathToSpecFiles} from './util';
+import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
     public static readonly EDGE: string = 'MicrosoftEdge';
+    public static readonly ALLURE_PACKAGE_NAME: string = '@wdio/allure-reporter';
+    public static readonly IMAGE_COMPARISON_PACKAGE_NAME: string = 'wdio-image-comparison-service';
+    public static readonly DEV_TOOLS_PACKAGE_NAME: string = '@wdio/devtools-service';
 
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
@@ -31,6 +34,7 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_JUNIT: string = 'jUnit';
     private static readonly PARAMETER_ALLURE: string = 'allure';
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
+    private static readonly PARAMETER_LOGLEVEL: string = 'logLevel';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
@@ -58,6 +62,9 @@ export class E2E implements ICommand {
     private jUnitReportPath: string;
     private allureOutputPath: string;
     private screenshotPath: string;
+    private logLevel: string = 'error';
+    private devTools: boolean = true;
+    private imageComparison: boolean = true;
 
     private testRunner: TestRunner | null = null;
 
@@ -175,7 +182,7 @@ export class E2E implements ICommand {
             this.allureOutputPath = E2E.DEFAULT_ALLUREOUTPUTPATH;
         }
 
-        if (!this.isAllureReporterInstalled() && this.allureOutputPath) {
+        if (!this.isServiceInstalled(E2E.ALLURE_PACKAGE_NAME) && this.allureOutputPath) {
             console.warn(`WARN: Allure Reporter was enabled but main repository does not have @wdio/allure-reporter package installed, disabling Allure...`);
             this.allureOutputPath = undefined;
         }
@@ -205,6 +212,25 @@ export class E2E implements ICommand {
             return false;
         }
 
+        const logLevel = params[E2E.PARAMETER_LOGLEVEL] || params[E2E.PARAMETER_LOGLEVEL.toLowerCase()];
+        if (typeof logLevel === 'string' && logLevel.length > 0) {
+            if (logLevel.toLowerCase() === 'trace' || 'debug' || 'info' || 'warn' || 'error' || 'silent') {
+                this.logLevel = logLevel.toLowerCase();
+            } else {
+                console.warn(`The provided logLevel does not match the any of the allowed values 'trace | debug | info | warn | error | silent'. Default logLevel is used.`);
+            }
+        }
+
+        if (!this.isServiceInstalled(E2E.DEV_TOOLS_PACKAGE_NAME) && this.devTools) {
+            console.warn(`WARN: DevTools Service was enabled but main repository does not have @wdio/devtools-service package installed, disabling Devtools...`);
+            this.devTools = false;
+        }
+
+        if (!this.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME) && this.imageComparison) {
+            console.warn(`WARN: image comparison is enabled but main repository does not have wdio-image-comparison-service package installed, disabling wdio-image-comparison-service...`);
+            this.imageComparison = false;
+        }
+
         return true;
     }
 
@@ -232,7 +258,10 @@ export class E2E implements ICommand {
             this.noInstall,
             this.jUnitReportPath,
             this.allureOutputPath,
-            this.screenshotPath
+            this.screenshotPath,
+            this.logLevel,
+            this.devTools,
+            this.imageComparison
         );
 
         console.log('Generating WDIO configuration files...');
@@ -243,17 +272,17 @@ export class E2E implements ICommand {
         return this.testRunner.runTests();
     }
 
-    public isAllureReporterInstalled(): boolean {
+    public isServiceInstalled(service: string): boolean {
         const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
         if (!packageJson) {
             return false;
         }
 
-        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies['@wdio/allure-reporter'] === 'string') {
+        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies[service] === 'string') {
             return true;
         }
         // noinspection RedundantIfStatementJS
-        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies['@wdio/allure-reporter'] === 'string') {
+        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies[service] === 'string') {
             return true;
         }
 
@@ -279,17 +308,17 @@ export class E2E implements ICommand {
     private filterPluginsByHasSpecifiedTests(): void {
         this.pluginsToBeTested = this.pluginsToBeTested
             .filter((plugin) => {
-                const pathToSpecFiles = getPathToSpecFiles(this.workingDir, plugin);
-                if (fs.existsSync(pathToSpecFiles)) {
-                    if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
-                        Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
-                        return true;
-                    } else {
-                        console.log(`Plugin ${plugin} has an E2E specs folder but there are no Tests specified - please specify a Test first`);
+                        const pathToSpecFiles = getPathToSpecFiles(this.workingDir, plugin);
+                        if (fs.existsSync(pathToSpecFiles)) {
+                            if (glob.sync(path.join(pathToSpecFiles, '**', '*.spec.ts')).length > 0) {
+                                Global.isVerbose() && console.warn(`Plugin ${plugin} has specified .spec.ts test`);
+                                return true;
+                            } else {
+                                console.log(`Plugin ${plugin} has an E2E specs folder but there are no Tests specified - please specify a Test first`);
+                            }
+                        }
+                        return false;
                     }
-                }
-                return false;
-            }
             );
     }
 
