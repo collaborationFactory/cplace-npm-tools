@@ -61,7 +61,7 @@ export class E2E implements ICommand {
     private jUnitReportPath: string;
     private allureOutputPath: string;
     private screenshotPath: string;
-    private logLevel: string = 'warn';
+    private logLevel: string = 'error';
     private devTools: boolean = true;
     private imageComparison: boolean = true;
 
