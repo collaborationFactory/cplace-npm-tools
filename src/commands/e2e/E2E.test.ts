@@ -24,7 +24,7 @@ test('E2E detects Allure Reporter in Dev Dependencies', async () => {
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isAllureReporterInstalled()).toBe(true);
+        expect(e2eCommand.isServiceInstalled(E2E.ALLURE_PACKAGE_NAME)).toBe(true);
     });
 });
 
@@ -48,7 +48,7 @@ test('E2E detects Allure Reporter in Dependencies', async () => {
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isAllureReporterInstalled()).toBe(true);
+        expect(e2eCommand.isServiceInstalled(E2E.ALLURE_PACKAGE_NAME)).toBe(true);
     });
 });
 
@@ -69,7 +69,7 @@ test('E2E detects missing Allure Reporter', async () => {
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isAllureReporterInstalled()).toBe(false);
+        expect(e2eCommand.isServiceInstalled(E2E.ALLURE_PACKAGE_NAME)).toBe(false);
     });
 });
 
@@ -90,7 +90,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dev Dependencies', async () =
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isImageComparisonInstalled()).toBe(true);
+        expect(e2eCommand.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME)).toBe(true);
     });
 });
 
@@ -114,7 +114,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dependencies', async () => {
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isImageComparisonInstalled()).toBe(true);
+        expect(e2eCommand.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME)).toBe(true);
     });
 });
 
@@ -135,6 +135,6 @@ test('E2E detects missing WDIO Image-Comparison-Service', async () => {
 
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.isImageComparisonInstalled()).toBe(false);
+        expect(e2eCommand.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME)).toBe(false);
     });
 });

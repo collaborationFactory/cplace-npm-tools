@@ -15,6 +15,9 @@ import {WdioConfigGenerator} from './WdioConfigGenerator';
 export class E2E implements ICommand {
     public static readonly IE: string = 'internet explorer';
     public static readonly EDGE: string = 'MicrosoftEdge';
+    public static readonly ALLURE_PACKAGE_NAME: string = '@wdio/allure-reporter';
+    public static readonly IMAGE_COMPARISON_PACKAGE_NAME: string = 'wdio-image-comparison-service';
+    public static readonly DEV_TOOLS_PACKAGE_NAME: string = '@wdio/devtools-service';
 
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
@@ -181,7 +184,7 @@ export class E2E implements ICommand {
             this.allureOutputPath = E2E.DEFAULT_ALLUREOUTPUTPATH;
         }
 
-        if (!this.isAllureReporterInstalled() && this.allureOutputPath) {
+        if (!this.isServiceInstalled(E2E.ALLURE_PACKAGE_NAME) && this.allureOutputPath) {
             console.warn(`WARN: Allure Reporter was enabled but main repository does not have @wdio/allure-reporter package installed, disabling Allure...`);
             this.allureOutputPath = undefined;
         }
@@ -225,7 +228,7 @@ export class E2E implements ICommand {
             this.devTools = devTools;
         }
 
-        if (!this.isDevToolsServiceInstalled() && this.devTools) {
+        if (!this.isServiceInstalled(E2E.DEV_TOOLS_PACKAGE_NAME) && this.devTools) {
             console.warn(`WARN: DevTools Service was enabled but main repository does not have @wdio/devtools-service package installed, disabling Devtools...`);
             this.devTools = false;
         }
@@ -235,7 +238,7 @@ export class E2E implements ICommand {
             this.imageComparison = imageComparison;
         }
 
-        if (!this.isImageComparisonInstalled() && this.imageComparison) {
+        if (!this.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME) && this.imageComparison) {
             console.warn(`WARN: image comparison is enabled but main repository does not have wdio-image-comparison-service package installed, disabling wdio-image-comparison-service...`);
             this.imageComparison = false;
         }
@@ -281,51 +284,17 @@ export class E2E implements ICommand {
         return this.testRunner.runTests();
     }
 
-    public isAllureReporterInstalled(): boolean {
+    public isServiceInstalled(service: string): boolean {
         const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
         if (!packageJson) {
             return false;
         }
 
-        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies['@wdio/allure-reporter'] === 'string') {
+        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies[service] === 'string') {
             return true;
         }
         // noinspection RedundantIfStatementJS
-        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies['@wdio/allure-reporter'] === 'string') {
-            return true;
-        }
-
-        return false;
-    }
-
-    public isDevToolsServiceInstalled(): boolean {
-        const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
-        if (!packageJson) {
-            return false;
-        }
-
-        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies['@wdio/devtools-service'] === 'string') {
-            return true;
-        }
-        // noinspection RedundantIfStatementJS
-        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies['@wdio/devtools-service'] === 'string') {
-            return true;
-        }
-
-        return false;
-    }
-
-    public isImageComparisonInstalled(): boolean {
-        const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
-        if (!packageJson) {
-            return false;
-        }
-
-        if (packageJson.devDependencies !== undefined && typeof packageJson.devDependencies['wdio-image-comparison-service'] === 'string') {
-            return true;
-        }
-        // noinspection RedundantIfStatementJS
-        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies['wdio-image-comparison-service'] === 'string') {
+        if (packageJson.dependencies !== undefined && typeof packageJson.dependencies[service] === 'string') {
             return true;
         }
 
