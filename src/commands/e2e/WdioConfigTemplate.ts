@@ -21,7 +21,10 @@ export class WdioConfigTemplate {
         protected readonly jUnitReportPath: string,
         protected readonly allureOutputPath: string,
         protected readonly screenShotPath: string,
-        protected readonly e2eToken: string
+        protected readonly e2eToken: string,
+        protected readonly logLevel: string,
+        protected readonly devTools: boolean,
+        protected readonly imageComparison: boolean
     ) {
         const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
         if (context.context.length === 0 && context.tenantId.length === 0) {
@@ -48,6 +51,11 @@ export class WdioConfigTemplate {
         let screenshotConfig = '';
         if (screenShotPath) {
             screenshotConfig = this.getScreenshotConfig();
+        }
+
+        let wdioImageCoimparisonConfig = '';
+        if (imageComparison) {
+            wdioImageCoimparisonConfig = ', ' + this.getImageComparisonConfig();
         }
 
         const preConfigExport = this.getPreConfigExport();
@@ -108,13 +116,13 @@ exports.config = {
     exclude: [],
     maxInstances: 1,
     capabilities: ${capabilities},
-    logLevel: 'info',
+    logLevel: '${logLevel}',
     bail: 0,
     baseUrl: '${baseUrl}',
     waitforTimeout: 59000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
-    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept'],
+    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
     framework: 'mocha',
     mochaOpts: {
@@ -242,5 +250,18 @@ exports.config = {
 
     protected getMochaRequires(): string[] {
         return ['ts-node/register', 'tsconfig-paths/register'];
+    }
+
+    protected getImageComparisonConfig(): string {
+        return ` ['image-comparison',{
+            baselineFolder: path.join(process.cwd(), './baselineImage/'),
+            formatImageName: '{tag}-{logName}-{width}x{height}',
+            screenshotPath: path.join(process.cwd(), './ActualImage/'),
+            savePerInstance: true,
+            autoSaveBaseline: true,
+            blockOutStatusBar: true,
+            blockOutToolBar: true,
+        }],`;
+
     }
 }

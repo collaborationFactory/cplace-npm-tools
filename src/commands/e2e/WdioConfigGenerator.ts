@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { E2EEnvTemplate, IE2EContext } from './E2EEnvTemplate';
-import { WdioConfigTemplate } from './WdioConfigTemplate';
+import {E2EEnvTemplate, IE2EContext} from './E2EEnvTemplate';
+import {WdioConfigTemplate} from './WdioConfigTemplate';
 
 export class WdioConfigGenerator {
     public static readonly WDIO_CONF_NAME: string = 'wdio.conf.js';
@@ -19,8 +19,12 @@ export class WdioConfigGenerator {
         private readonly noInstall: boolean,
         private readonly jUnitReportPath: string,
         private readonly allureOutputPath: string,
-        private readonly screenshotPath: string
-    ) { }
+        private readonly screenshotPath: string,
+        private readonly logLevel: string,
+        private readonly devTools: boolean,
+        private readonly imageComparison: boolean
+    ) {
+    }
 
     public static safePath(filePath: string): string {
         return filePath.replace(/\\/g, '/');  // For Windows
@@ -37,7 +41,7 @@ export class WdioConfigGenerator {
         fs.writeFileSync(
             path.join(e2eFolder, 'lib', 'config', WdioConfigGenerator.E2E_ENV_NAME),
             e2eEnv.getTemplate(),
-            { encoding: 'utf8' }
+            {encoding: 'utf8'}
         );
     }
 
@@ -49,7 +53,7 @@ export class WdioConfigGenerator {
             fs.writeFileSync(
                 path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME),
                 config.getTemplate(),
-                { encoding: 'utf8' }
+                {encoding: 'utf8'}
             );
         });
     }
@@ -62,7 +66,10 @@ export class WdioConfigGenerator {
             this.jUnitReportPath,
             this.allureOutputPath,
             this.screenshotPath,
-            this.context.e2eToken
+            this.context.e2eToken,
+            this.logLevel,
+            this.devTools,
+            this.imageComparison
         );
     }
 
