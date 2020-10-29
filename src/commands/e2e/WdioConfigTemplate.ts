@@ -254,9 +254,9 @@ exports.config = {
 
     protected getImageComparisonConfig(): string {
         return ` ['image-comparison',{
-            baselineFolder: path.join(process.cwd(), './e2eBaselineImages/'),
+            baselineFolder: path.join(process.cwd(), './e2eImageComparisonBaseline/'),
             formatImageName: '{tag}-{logName}-{width}x{height}',
-            screenshotPath: path.join(process.cwd(), './e2eActualImages/'),
+            screenshotPath: path.join(process.cwd(), './e2eImageComparisonTemp/'),
             savePerInstance: true,
             autoSaveBaseline: true,
             blockOutStatusBar: true,
