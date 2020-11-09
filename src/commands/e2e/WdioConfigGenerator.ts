@@ -48,8 +48,7 @@ export class WdioConfigGenerator {
     public generateWdioConfig(): void {
         this.plugins.forEach((plugin) => {
             const e2eFolder = WdioConfigGenerator.pathToE2EFolder(plugin, this.workingDir);
-            const mainDir = WdioConfigGenerator.safePath(this.mainDir);
-            const config = this.getWdioTemplate(mainDir, e2eFolder);
+            const config = this.getWdioTemplate(e2eFolder);
             fs.writeFileSync(
                 path.join(e2eFolder, WdioConfigGenerator.WDIO_CONF_NAME),
                 config.getTemplate(),
@@ -58,9 +57,9 @@ export class WdioConfigGenerator {
         });
     }
 
-    private getWdioTemplate(mainDir: string, e2eFolder: string): WdioConfigTemplate {
+    private getWdioTemplate(e2eFolder: string): WdioConfigTemplate {
         return new WdioConfigTemplate(
-            mainDir, e2eFolder,
+            WdioConfigGenerator.safePath(this.mainDir), WdioConfigGenerator.safePath(this.workingDir), e2eFolder,
             this.specs, this.browser, this.context.baseUrl, this.context,
             this.timeout, this.headless, this.noInstall,
             this.jUnitReportPath,

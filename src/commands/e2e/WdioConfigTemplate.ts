@@ -10,6 +10,7 @@ export class WdioConfigTemplate {
     // tslint:disable-next-line:max-func-body-length
     constructor(
         protected readonly mainRepoDir: string,
+        protected readonly workingDir: string,
         protected readonly e2eFolder: string,
         protected readonly specs: string,
         protected readonly browser: string,
@@ -227,7 +228,7 @@ exports.config = {
 
     protected getScreenshotConfig(): string {
         return `if (!test.passed) {
-            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.screenShotPath))}';
+            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.workingDir, this.screenShotPath))}';
             screenshotDir = path.join(screenshotDir, test.parent.replace(/[^a-z0-9]/gi, '_').toLowerCase())
 
             if (!fs.existsSync(screenshotDir)) {
