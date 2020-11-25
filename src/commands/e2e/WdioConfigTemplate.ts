@@ -25,7 +25,8 @@ export class WdioConfigTemplate {
         protected readonly e2eToken: string,
         protected readonly logLevel: string,
         protected readonly devTools: boolean,
-        protected readonly imageComparison: boolean
+        protected readonly imageComparison: boolean,
+        protected readonly chromeDriverVersion: string
     ) {
         const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
         if (context.context.length === 0 && context.tenantId.length === 0) {
@@ -123,7 +124,7 @@ exports.config = {
     waitforTimeout: 59000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
-    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
+    services: [${this.getSeleniumStandalone()} 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
     framework: 'mocha',
     mochaOpts: {
@@ -263,6 +264,24 @@ exports.config = {
             blockOutStatusBar: true,
             blockOutToolBar: true,
         }],`;
+    }
 
+    protected getSeleniumStandalone(): string {
+        return `['selenium-standalone', {
+    logPath: './seleniumLogs',
+    installArgs: {
+        drivers: {
+            chrome: {
+                version: '${this.chromeDriverVersion}' }
+        }
+    },
+    args: {
+        drivers: {
+            chrome: {
+                version: '${this.chromeDriverVersion}'
+            }
+        }
+    } ,
+}],`;
     }
 }

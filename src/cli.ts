@@ -9,6 +9,7 @@ import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 import hardRejection from 'hard-rejection';
+import {E2E} from './commands/e2e';
 
 const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
 const packageJson = JSON.parse(packageJsonContent);
@@ -172,6 +173,8 @@ const cli = meow(
               (default: './allure-output')
             --logLevel will adjust the logLevel in wdio configuraiton
               (default: 'error', supported options: 'trace | debug | info | warn | error | silent')
+            --chromeDriverVersion will adjust the version of the Chrome driver
+              (default: '${E2E.DEFAULT_CHROMEDRIVERVERSION}')
 
     Global options:
         --verbose

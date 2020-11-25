@@ -22,7 +22,8 @@ export class WdioConfigGenerator {
         private readonly screenshotPath: string,
         private readonly logLevel: string,
         private readonly devTools: boolean,
-        private readonly imageComparison: boolean
+        private readonly imageComparison: boolean,
+        private readonly chromeDriverVersion: string
     ) {
     }
 
@@ -68,7 +69,8 @@ export class WdioConfigGenerator {
             this.context.e2eToken,
             this.logLevel,
             this.devTools,
-            this.imageComparison
+            this.imageComparison,
+            this.chromeDriverVersion
         );
     }
 
