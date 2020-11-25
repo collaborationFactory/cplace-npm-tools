@@ -18,6 +18,7 @@ export class E2E implements ICommand {
     public static readonly ALLURE_PACKAGE_NAME: string = '@wdio/allure-reporter';
     public static readonly IMAGE_COMPARISON_PACKAGE_NAME: string = 'wdio-image-comparison-service';
     public static readonly DEV_TOOLS_PACKAGE_NAME: string = '@wdio/devtools-service';
+    public static readonly DEFAULT_CHROMEDRIVERVERSION: string = '87.0.4280.20';
 
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
@@ -36,6 +37,7 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
     private static readonly PARAMETER_LOGLEVEL: string = 'logLevel';
     private static readonly PARAMETER_SPECFILERETRIES: string = 'specFileRetries';
+    private static readonly PARAMETER_CHROMEDRIVERVERSION: string = 'chromeDriverVersion';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
@@ -67,6 +69,7 @@ export class E2E implements ICommand {
     private devTools: boolean = true;
     private imageComparison: boolean = true;
     private specFileRetries: number = 0;
+    private chromeDriverVersion: string = E2E.DEFAULT_CHROMEDRIVERVERSION;
 
     private testRunner: TestRunner | null = null;
 
@@ -203,6 +206,11 @@ export class E2E implements ICommand {
             this.noInstall = false;
         }
 
+        const chromeDriverVersion = params[E2E.PARAMETER_CHROMEDRIVERVERSION] || params[E2E.PARAMETER_CHROMEDRIVERVERSION.toLowerCase()];
+        if (typeof chromeDriverVersion === 'string' && chromeDriverVersion.length > 0) {
+            this.chromeDriverVersion = chromeDriverVersion;
+        }
+
         if ((((this.browser.toLowerCase() !== 'firefox') && this.browser.toLowerCase() !== 'chrome') && this.headless)) {
             this.headless = false;
             console.error(`! Headless disabled - only available for Chrome and Firefox execution`);
@@ -269,7 +277,8 @@ export class E2E implements ICommand {
             this.logLevel,
             this.devTools,
             this.imageComparison,
-            this.specFileRetries
+            this.specFileRetries,
+            this.chromeDriverVersion
         );
 
         console.log('Generating WDIO configuration files...');

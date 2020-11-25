@@ -23,7 +23,8 @@ export class WdioConfigGenerator {
         private readonly logLevel: string,
         private readonly devTools: boolean,
         private readonly imageComparison: boolean,
-        private readonly specFileRetries: number
+        private readonly specFileRetries: number,
+        private readonly chromeDriverVersion: string
     ) {
     }
 
@@ -70,7 +71,8 @@ export class WdioConfigGenerator {
             this.logLevel,
             this.devTools,
             this.imageComparison,
-            this.specFileRetries
+            this.specFileRetries,
+            this.chromeDriverVersion
         );
     }
 
