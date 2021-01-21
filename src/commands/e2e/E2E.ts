@@ -40,7 +40,7 @@ export class E2E implements ICommand {
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
     private static readonly DEFAULT_CONTEXT: string = '/intern/tricia/';
     private static readonly DEFAULT_BROWSER: string = 'chrome';
-    private static readonly DEFAULT_TIMEOUT: number = 60000;
+    private static readonly DEFAULT_TIMEOUT: number = 30000;
     private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
     private static readonly DEFAULT_ALLUREOUTPUTPATH: string = './allure-output';
     private static readonly DEFAULT_SCREEENSHOTPATH: string = './e2eScreenshots';
