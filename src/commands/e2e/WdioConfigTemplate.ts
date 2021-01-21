@@ -120,7 +120,7 @@ exports.config = {
     logLevel: '${logLevel}',
     bail: 0,
     baseUrl: '${baseUrl}',
-    waitforTimeout: 59000,
+    waitforTimeout: 25000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
     services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
