@@ -35,6 +35,7 @@ export class E2E implements ICommand {
     private static readonly PARAMETER_ALLURE: string = 'allure';
     private static readonly PARAMETER_SCREENSHOT: string = 'screenshot';
     private static readonly PARAMETER_LOGLEVEL: string = 'logLevel';
+    private static readonly PARAMETER_SPECFILERETRIES: string = 'specFileRetries';
 
     // Default
     private static readonly DEFAULT_BASE_URL: string = 'http://localhost:8083';
@@ -65,6 +66,7 @@ export class E2E implements ICommand {
     private logLevel: string = 'error';
     private devTools: boolean = true;
     private imageComparison: boolean = true;
+    private specFileRetries: number = 1;
 
     private testRunner: TestRunner | null = null;
 
@@ -221,6 +223,11 @@ export class E2E implements ICommand {
             }
         }
 
+        const specFileRetries = params[E2E.PARAMETER_SPECFILERETRIES];
+        if (typeof specFileRetries === 'number') {
+            this.specFileRetries = specFileRetries;
+        }
+
         if (!this.isServiceInstalled(E2E.DEV_TOOLS_PACKAGE_NAME) && this.devTools) {
             console.warn(`WARN: DevTools Service was enabled but main repository does not have @wdio/devtools-service package installed, disabling Devtools...`);
             this.devTools = false;
@@ -261,7 +268,8 @@ export class E2E implements ICommand {
             this.screenshotPath,
             this.logLevel,
             this.devTools,
-            this.imageComparison
+            this.imageComparison,
+            this.specFileRetries
         );
 
         console.log('Generating WDIO configuration files...');
