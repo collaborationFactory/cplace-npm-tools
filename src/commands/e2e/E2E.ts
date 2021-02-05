@@ -66,7 +66,7 @@ export class E2E implements ICommand {
     private logLevel: string = 'error';
     private devTools: boolean = true;
     private imageComparison: boolean = true;
-    private specFileRetries: number = 1;
+    private specFileRetries: number = 0;
 
     private testRunner: TestRunner | null = null;
 
