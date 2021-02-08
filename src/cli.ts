@@ -173,7 +173,7 @@ const cli = meow(
             --logLevel will adjust the logLevel in wdio configuraiton
               (default: 'error', supported options: 'trace | debug | info | warn | error | silent')
             --specFileRetries The number of times to retry the entire specfile when it fails as a whole
-              (default: 1)
+              (default: 0)
 
     Global options:
         --verbose
