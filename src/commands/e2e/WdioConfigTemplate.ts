@@ -25,7 +25,8 @@ export class WdioConfigTemplate {
         protected readonly e2eToken: string,
         protected readonly logLevel: string,
         protected readonly devTools: boolean,
-        protected readonly imageComparison: boolean
+        protected readonly imageComparison: boolean,
+        protected readonly specFileRetries: number
     ) {
         const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
         if (context.context.length === 0 && context.tenantId.length === 0) {
@@ -131,6 +132,9 @@ exports.config = {
         timeout: ${timeout},
         require: ${JSON.stringify(mochaRequires)}
      },
+    specFileRetries: ${specFileRetries},
+    specFileRetriesDelay: 0,
+    specFileRetriesDeferred: false,
     plugins: {
         webdriverajax: {}
     },
