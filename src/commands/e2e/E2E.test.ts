@@ -16,6 +16,7 @@ test('E2E detects Allure Reporter in Dev Dependencies', async () => {
             name: 'cplace',
             private: true,
             devDependencies: {
+                'webdriverio': '^5.13.0',
                 '@wdio/allure-reporter': '^5.22.4'
             }
         };
@@ -40,6 +41,7 @@ test('E2E detects Allure Reporter in Dependencies', async () => {
                 '@wdio/allure-reporter': '^5.22.4'
             },
             devDependencies: {
+                'webdriverio': '^5.13.0',
                 'allure-commandline': '1.0.0'
             }
         };
@@ -62,6 +64,9 @@ test('E2E detects missing Allure Reporter', async () => {
             private: true,
             dependencies: {
                 '@wdio/nothing-allure': '0.0.0'
+            },
+            devDependencies: {
+                'webdriverio': '^5.13.0'
             }
         };
 
@@ -82,6 +87,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dev Dependencies', async () =
             name: 'cplace',
             private: true,
             devDependencies: {
+                'webdriverio': '^5.13.0',
                 'wdio-image-comparison-service': '^1.14.0'
             }
         };
@@ -106,6 +112,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dependencies', async () => {
                 'wdio-image-comparison-service': '^1.14.0'
             },
             devDependencies: {
+                'webdriverio': '^5.13.0',
                 'allure-commandline': '1.0.0'
             }
         };
@@ -128,6 +135,9 @@ test('E2E detects missing WDIO Image-Comparison-Service', async () => {
             private: true,
             dependencies: {
                 'wdio-intercept-service': '0.0.0'
+            },
+            devDependencies: {
+                'webdriverio': '^5.13.0'
             }
         };
 
