@@ -80,7 +80,7 @@ export class E2E implements ICommand {
             return false;
         }
 
-        this.wdioVersion = this.getWdioVersion(this.mainRepoDir);
+        this.wdioVersion = this.getWdioVersion();
         if (!this.wdioVersion) {
             console.error('Failed to determin WebdriverIO version.');
             return false;
@@ -306,6 +306,28 @@ export class E2E implements ICommand {
         return false;
     }
 
+    public getWdioVersion(): WdioVersion {
+        const packageJson = this.getMainRepoPackageJson(this.mainRepoDir);
+        if (!packageJson) {
+            return null;
+        }
+
+        const webdriverioVersion: string = packageJson.devDependencies.webdriverio;
+        if (!webdriverioVersion) {
+            console.warn('WebdriverIO seems not to be installed in main...');
+            return null;
+        }
+
+        if (webdriverioVersion.match(/^.?5(\..+)?/)) {
+            return WdioVersion.V5;
+        } else if (webdriverioVersion.match(/^.?6(\..+)?/)) {
+            return WdioVersion.V6;
+        } else {
+            console.warn('Could not determine WebdriverIO version:', webdriverioVersion);
+            return null;
+        }
+    }
+
     private hasE2EAssets(plugin: string): boolean {
         const pathToE2EAssets = getPathToE2E(this.workingDir, plugin);
         if (!fs.existsSync(pathToE2EAssets)) {
@@ -354,29 +376,6 @@ export class E2E implements ICommand {
             console.error(`Failed to read package.json from: ${pathToPackageJson} - assuming Allure Reporter is not installed`);
             return null;
         }
-    }
-
-    private getWdioVersion(mainRepoDir: string): WdioVersion {
-        const packageJson = this.getMainRepoPackageJson(mainRepoDir);
-        if (!packageJson) {
-            return null;
-        }
-
-        const webdriverioVersion: string = packageJson.devDependencies.webdriverio;
-        if (!webdriverioVersion) {
-            console.warn('WebdriverIO seems not to be installed in main...');
-            return null;
-        }
-
-        if (webdriverioVersion.match(/^.?5(\..+)?/)) {
-            return WdioVersion.V5;
-        } else if (webdriverioVersion.match(/^.?6(\..+)?/)) {
-            return WdioVersion.V6;
-        } else {
-            console.warn('Could not determine WebdriverIO version:', webdriverioVersion);
-            return null;
-        }
-
     }
 
 }

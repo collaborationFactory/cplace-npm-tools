@@ -4,6 +4,7 @@ import * as util from '../../util';
 import {mocked} from 'ts-jest/utils';
 import * as path from 'path';
 import {fs} from '../../p/fs';
+import {WdioVersion} from './WdioConfigGenerator';
 
 jest.mock('../../util');
 
@@ -136,5 +137,47 @@ test('E2E detects missing WDIO Image-Comparison-Service', async () => {
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
         expect(e2eCommand.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME)).toBe(false);
+    });
+});
+
+test('E2E detects WDIO Version 5 in Dev Dependencies', async () => {
+    await withTempDirectory('e2e-allure', async (dir) => {
+        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+
+        const packageJson = {
+            name: 'cplace',
+            private: true,
+            devDependencies: {
+                'webdriverio': '^5.13.0'
+            }
+        };
+
+        const packageJsonPath = path.join(dir, 'package.json');
+        await fs.writeFileAsync(packageJsonPath, JSON.stringify(packageJson), 'utf8');
+
+        const e2eCommand = new E2E();
+        e2eCommand.prepareAndMayExecute({});
+        expect(e2eCommand.getWdioVersion()).toBe(WdioVersion.V5);
+    });
+});
+
+test('E2E detects WDIO Version 6 in Dev Dependencies', async () => {
+    await withTempDirectory('e2e-allure', async (dir) => {
+        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+
+        const packageJson = {
+            name: 'cplace',
+            private: true,
+            devDependencies: {
+                'webdriverio': '^6.10.11'
+            }
+        };
+
+        const packageJsonPath = path.join(dir, 'package.json');
+        await fs.writeFileAsync(packageJsonPath, JSON.stringify(packageJson), 'utf8');
+
+        const e2eCommand = new E2E();
+        e2eCommand.prepareAndMayExecute({});
+        expect(e2eCommand.getWdioVersion()).toBe(WdioVersion.V6);
     });
 });
