@@ -3,17 +3,11 @@ import * as path from 'path';
 import {E2EEnvTemplate, IE2EContext} from './E2EEnvTemplate';
 import {WdioConfigTemplate} from './WdioConfigTemplate';
 
-export enum WdioVersion {
-    V5 = 'V5',
-    V6 = 'V6'
-}
-
 export class WdioConfigGenerator {
     public static readonly WDIO_CONF_NAME: string = 'wdio.conf.js';
     public static readonly E2E_ENV_NAME: string = 'e2e.ts';
 
     constructor(
-        private readonly wdioVersion: WdioVersion,
         private readonly workingDir: string,
         private readonly mainDir: string,
         private readonly plugins: string[],
@@ -66,7 +60,6 @@ export class WdioConfigGenerator {
 
     private getWdioTemplate(e2eFolder: string): WdioConfigTemplate {
         return new WdioConfigTemplate(
-            this.wdioVersion,
             WdioConfigGenerator.safePath(this.mainDir), WdioConfigGenerator.safePath(this.workingDir), e2eFolder,
             this.specs, this.browser, this.context.baseUrl, this.context,
             this.timeout, this.headless, this.noInstall,

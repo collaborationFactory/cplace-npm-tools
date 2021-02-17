@@ -4,7 +4,6 @@ import * as util from '../../util';
 import {mocked} from 'ts-jest/utils';
 import * as path from 'path';
 import {fs} from '../../p/fs';
-import {WdioVersion} from './WdioConfigGenerator';
 
 jest.mock('../../util');
 
@@ -16,7 +15,6 @@ test('E2E detects Allure Reporter in Dev Dependencies', async () => {
             name: 'cplace',
             private: true,
             devDependencies: {
-                'webdriverio': '^5.13.0',
                 '@wdio/allure-reporter': '^5.22.4'
             }
         };
@@ -41,7 +39,6 @@ test('E2E detects Allure Reporter in Dependencies', async () => {
                 '@wdio/allure-reporter': '^5.22.4'
             },
             devDependencies: {
-                'webdriverio': '^5.13.0',
                 'allure-commandline': '1.0.0'
             }
         };
@@ -64,9 +61,6 @@ test('E2E detects missing Allure Reporter', async () => {
             private: true,
             dependencies: {
                 '@wdio/nothing-allure': '0.0.0'
-            },
-            devDependencies: {
-                'webdriverio': '^5.13.0'
             }
         };
 
@@ -87,7 +81,6 @@ test('E2E detects WDIO Image-Comparison-Service in Dev Dependencies', async () =
             name: 'cplace',
             private: true,
             devDependencies: {
-                'webdriverio': '^5.13.0',
                 'wdio-image-comparison-service': '^1.14.0'
             }
         };
@@ -112,7 +105,6 @@ test('E2E detects WDIO Image-Comparison-Service in Dependencies', async () => {
                 'wdio-image-comparison-service': '^1.14.0'
             },
             devDependencies: {
-                'webdriverio': '^5.13.0',
                 'allure-commandline': '1.0.0'
             }
         };
@@ -135,9 +127,6 @@ test('E2E detects missing WDIO Image-Comparison-Service', async () => {
             private: true,
             dependencies: {
                 'wdio-intercept-service': '0.0.0'
-            },
-            devDependencies: {
-                'webdriverio': '^5.13.0'
             }
         };
 
@@ -147,47 +136,5 @@ test('E2E detects missing WDIO Image-Comparison-Service', async () => {
         const e2eCommand = new E2E();
         e2eCommand.prepareAndMayExecute({});
         expect(e2eCommand.isServiceInstalled(E2E.IMAGE_COMPARISON_PACKAGE_NAME)).toBe(false);
-    });
-});
-
-test('E2E detects WDIO Version 5 in Dev Dependencies', async () => {
-    await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
-
-        const packageJson = {
-            name: 'cplace',
-            private: true,
-            devDependencies: {
-                'webdriverio': '^5.13.0'
-            }
-        };
-
-        const packageJsonPath = path.join(dir, 'package.json');
-        await fs.writeFileAsync(packageJsonPath, JSON.stringify(packageJson), 'utf8');
-
-        const e2eCommand = new E2E();
-        e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.getWdioVersion()).toBe(WdioVersion.V5);
-    });
-});
-
-test('E2E detects WDIO Version 6 in Dev Dependencies', async () => {
-    await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
-
-        const packageJson = {
-            name: 'cplace',
-            private: true,
-            devDependencies: {
-                'webdriverio': '^6.10.11'
-            }
-        };
-
-        const packageJsonPath = path.join(dir, 'package.json');
-        await fs.writeFileAsync(packageJsonPath, JSON.stringify(packageJson), 'utf8');
-
-        const e2eCommand = new E2E();
-        e2eCommand.prepareAndMayExecute({});
-        expect(e2eCommand.getWdioVersion()).toBe(WdioVersion.V6);
     });
 });

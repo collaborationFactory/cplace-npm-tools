@@ -1,7 +1,7 @@
 import * as path from 'path';
 import {E2E} from './E2E';
 import {IE2EContext} from './E2EEnvTemplate';
-import {WdioConfigGenerator, WdioVersion} from './WdioConfigGenerator';
+import {WdioConfigGenerator} from './WdioConfigGenerator';
 
 export class WdioConfigTemplate {
     private readonly template: string;
@@ -9,7 +9,6 @@ export class WdioConfigTemplate {
 
     // tslint:disable-next-line:max-func-body-length
     constructor(
-        private readonly wdioVersion: WdioVersion,
         protected readonly mainRepoDir: string,
         protected readonly workingDir: string,
         protected readonly e2eFolder: string,
@@ -139,7 +138,9 @@ exports.config = {
     plugins: {
         webdriverajax: {}
     },
+    afterTest: function(test, context, params) {
     ${screenshotConfig}
+    },
     ${ieDriver}
     reporters: ['spec' ${junitConfig} ${allureConfig} ]
 };`;
@@ -230,29 +231,27 @@ exports.config = {
     }
 
     protected getScreenshotConfig(): string {
-        const commonScreenshotConfig = `
+        return `    let passed;
+          if (typeof test.passed !== 'undefined') {
+            passed = test.passed;
+          } else {
+            passed = params.passed;
+          }
+          if (!passed) {
+            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.workingDir, this.screenShotPath))}';
             screenshotDir = path.join(screenshotDir, test.parent.replace(/[^a-z0-9]/gi, '_').toLowerCase())
+
             if (!fs.existsSync(screenshotDir)) {
                 fs.mkdirSync(screenshotDir, { recursive: true });
             }
+
             const filePath = path.join(
                 screenshotDir,
                 new Date().toISOString().replace(/[:]/g, '-') + '_' + test.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
             );
-            browser.saveScreenshot(filePath + '.png');`;
-        if (this.wdioVersion === WdioVersion.V5) {
-            return `afterTest: function(test) {
-            if (!test.passed) {
-            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.workingDir, this.screenShotPath))}';
-            ${commonScreenshotConfig}
-        }},`;
-        } else if (this.wdioVersion === WdioVersion.V6) {
-            return `afterTest: function(test, context, { error, result, duration, passed, retries }) {
-            if (error) {
-            let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.workingDir, this.screenShotPath))}';
-            ${commonScreenshotConfig}
-        }},`;
-        }
+
+            browser.saveScreenshot(filePath + '.png');
+        }`;
     }
 
     protected getPreConfigExport(): string {
