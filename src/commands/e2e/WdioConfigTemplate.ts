@@ -138,7 +138,7 @@ exports.config = {
     plugins: {
         webdriverajax: {}
     },
-    afterTest: function(test) {
+    afterTest: function(test, context, params) {
     ${screenshotConfig}
     },
     ${ieDriver}
@@ -231,7 +231,13 @@ exports.config = {
     }
 
     protected getScreenshotConfig(): string {
-        return `if (!test.passed) {
+        return `    let passed;
+          if (typeof test.passed !== 'undefined') {
+            passed = test.passed;
+          } else {
+            passed = params.passed;
+          }
+          if (!passed) {
             let screenshotDir = '${WdioConfigGenerator.safePath(path.join(this.workingDir, this.screenShotPath))}';
             screenshotDir = path.join(screenshotDir, test.parent.replace(/[^a-z0-9]/gi, '_').toLowerCase())
 
