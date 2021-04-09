@@ -1,12 +1,13 @@
 # Document Control / Repository Information
-Item | Value 
+
+Item | Value
 --- | ---
-Owner |	Christian Kaltenbach, Philip Stöhrer, Stefan Stadler
-Team |	none yet
-Project  | none
-Parent |	none
-Developed by |	collaboration Factory AG
-Description |	Unser Kommandozeilen-Werkzeug um mit cplace Code zu arbeiten.
+Owner | Christian Kaltenbach, Philip Stöhrer, Stefan Stadler
+Team | none yet
+Project | none
+Parent | none
+Developed by | collaboration Factory AG
+Description | Our commandline utility to work with cplace code
 
 # cplace CLI tools
 
@@ -17,15 +18,19 @@ This package provides some CLI tools for working with cplace code.
 ## Usage
 
 To install `cplace-cli` run the following command:
+
 ```bash
 npm install -g @cplace/cli
 ```
 
 After installation you can just execute:
+
 ```bash
 cplace-cli --help
 ```
+
 to get the available commands and help:
+
 ```text
 $  cplace-cli --help
 
@@ -172,20 +177,25 @@ $  cplace-cli --help
 ## Development
 
 Before you can work with the repository, you need to install node modules once:
+
 ```bash
 npm install
 ```
 
 Typescript is compiled and linted by running:
+
 ```bash
 npm run dev
 ```
+
 This will execute both tslint (`npm run dev:lint`) as well as run the Typescript compiler (`npm run dev:tsc`).
 
 To test your local changes with `cplace-cli` on the command line you have to `link` your local npm package by running:
+
 ```bash
 npm link
 ```
+
 This will first recompile the Typescript sources and do the linting before setting up and linking the binary executable.
 When `npm link` is completed, you can just use `cplace-cli` as usual to test it out.
 When the installation failed because `cplace-cli` was already installed, you can either remove it by running `npm r -g @cplace/cli`, or run `npm link --force`.
@@ -193,6 +203,7 @@ When the installation failed because `cplace-cli` was already installed, you can
 > Remember to clean your local linked package after testing by running `npm r -g @cplace/cli` to remove it and do a regular install again (`npm i -g @cplace/cli`).
 
 To execute the available unit tests run:
+
 ```bash
 npm run test
 ```
