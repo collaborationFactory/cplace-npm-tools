@@ -53,7 +53,8 @@ export class WriteRepos extends AbstractReposCommand {
                 const current = this.parentRepos[repo.repoName];
                 const result: IRepoStatus = {
                     url: current.url,
-                    branch: status.current
+                    branch: status.current,
+                    description: current.description ? current.description : repo.repoName
                 };
                 if (this.freeze || current.commit) {
                     result.commit = commit;
