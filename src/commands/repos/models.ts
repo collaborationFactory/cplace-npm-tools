@@ -11,6 +11,7 @@ export interface IRepoStatus {
     branch: string;
     tag?: string;
     commit?: string;
+    description?: string;
 }
 
 export interface IModulesXmlRoot {
