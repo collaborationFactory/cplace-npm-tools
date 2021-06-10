@@ -277,21 +277,23 @@ exports.config = {
     }
 
     protected getSeleniumStandalone(): string {
-        return `['selenium-standalone', {
-    logPath: './seleniumLogs',
-    installArgs: {
-        drivers: {
-            chrome: {
-                version: '${this.chromeDriverVersion}' }
+        // tslint:disable-next-line:no-any
+        const seleniumConfig: { [k: string]: any } = {};
+        seleniumConfig.logPath = './seleniumLogs';
+
+        if (this.chromeDriverVersion) {
+            const args = {
+                drivers: {
+                    chrome: {
+                        version: this.chromeDriverVersion
+                    }
+                }
+            };
+            seleniumConfig.installArgs = args;
+            seleniumConfig.args = args;
         }
-    },
-    args: {
-        drivers: {
-            chrome: {
-                version: '${this.chromeDriverVersion}'
-            }
-        }
-    } ,
-}],`;
+
+        const seleniumConfigStr = JSON.stringify(seleniumConfig, null, 4);
+        return `['selenium-standalone', ${seleniumConfigStr}],`;
     }
 }

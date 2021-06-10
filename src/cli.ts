@@ -176,7 +176,7 @@ const cli = meow(
             --specFileRetries The number of times to retry the entire specfile when it fails as a whole
               (default: 0)
             --chromeDriverVersion will adjust the version of the Chrome driver
-              (default: '${E2E.DEFAULT_CHROMEDRIVERVERSION}')
+              (default: latest version)
 
     Global options:
         --verbose

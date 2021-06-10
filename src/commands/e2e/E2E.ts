@@ -18,7 +18,6 @@ export class E2E implements ICommand {
     public static readonly ALLURE_PACKAGE_NAME: string = '@wdio/allure-reporter';
     public static readonly IMAGE_COMPARISON_PACKAGE_NAME: string = 'wdio-image-comparison-service';
     public static readonly DEV_TOOLS_PACKAGE_NAME: string = '@wdio/devtools-service';
-    public static readonly DEFAULT_CHROMEDRIVERVERSION: string = '87.0.4280.20';
 
     private static readonly PARAMETER_BASE_URL: string = 'baseUrl';
     private static readonly PARAMETER_CONTEXT: string = 'context';
@@ -69,7 +68,7 @@ export class E2E implements ICommand {
     private devTools: boolean = true;
     private imageComparison: boolean = true;
     private specFileRetries: number = 0;
-    private chromeDriverVersion: string = E2E.DEFAULT_CHROMEDRIVERVERSION;
+    private chromeDriverVersion: string = null;
 
     private testRunner: TestRunner | null = null;
 
