@@ -26,7 +26,8 @@ export class WdioConfigTemplate {
         protected readonly logLevel: string,
         protected readonly devTools: boolean,
         protected readonly imageComparison: boolean,
-        protected readonly specFileRetries: number
+        protected readonly specFileRetries: number,
+        protected readonly chromeDriverVersion: string
     ) {
         const tenant: string = context.tenantId.length > 0 ? context.tenantId + '/' : '';
         if (context.context.length === 0 && context.tenantId.length === 0) {
@@ -124,7 +125,7 @@ exports.config = {
     waitforTimeout: 25000,
     connectionRetryTimeout: 90000,
     connectionRetryCount: 3,
-    services: [['selenium-standalone', { logPath: './seleniumLogs' }], 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
+    services: [${this.getSeleniumStandalone()} 'intercept' ${devTools ? ', \'devtools\'' : ''} ${wdioImageCoimparisonConfig}],
     skipSeleniumInstall: ${noInstall ? 'true' : 'false'},
     framework: 'mocha',
     mochaOpts: {
@@ -273,6 +274,26 @@ exports.config = {
             blockOutStatusBar: true,
             blockOutToolBar: true,
         }],`;
+    }
 
+    protected getSeleniumStandalone(): string {
+        // tslint:disable-next-line:no-any
+        const seleniumConfig: { [k: string]: any } = {};
+        seleniumConfig.logPath = './seleniumLogs';
+
+        if (this.chromeDriverVersion) {
+            const args = {
+                drivers: {
+                    chrome: {
+                        version: this.chromeDriverVersion
+                    }
+                }
+            };
+            seleniumConfig.installArgs = args;
+            seleniumConfig.args = args;
+        }
+
+        const seleniumConfigStr = JSON.stringify(seleniumConfig, null, 4);
+        return `['selenium-standalone', ${seleniumConfigStr}],`;
     }
 }
