@@ -158,7 +158,6 @@ exports.config = {
                 maxInstances: 1,
                 browserName: '${this.browser}',
                 'goog:chromeOptions': {
-                    w3c: false,
                     args: [
                         '--headless',
                         '--disable-gpu',
