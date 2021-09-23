@@ -88,9 +88,10 @@ $  cplace-cli --help
               If --force is set, then the update will take place even if the working copies of the parent repos
               are not clean.
 
-          --clone|-c:
-              Clones all parent repos if missing.
-              The --force setting has no effect for this command.
+            --clone|-c [--depth <depth>] :
+                Clones all parent repos if missing.
+                If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created. 
+                The --force setting has no effect for this command.
 
           --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
               Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will
