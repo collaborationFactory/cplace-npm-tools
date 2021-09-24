@@ -19,7 +19,7 @@ export class CloneRepos extends AbstractReposCommand {
                 Global.isVerbose() && console.log('cloning repository', repoName);
                 const repoProperties = this.parentRepos[repoName];
                 const toPath = path.resolve('..', repoName);
-                return Repository.clone(toPath, repoProperties.url, repoProperties.branch);
+                return Repository.clone(toPath, repoProperties.url, repoProperties.branch, this.depth);
             });
 
         return promiseAllSettledParallel(promises)

@@ -33,10 +33,14 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(toPath: string, remoteUrl: string, branch: string): Promise<Repository> {
+    public static clone(toPath: string, remoteUrl: string, branch: string, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             Global.isVerbose() && console.log('cloning branch', branch, 'from', remoteUrl, 'to', toPath);
-            simpleGit().clone(remoteUrl, toPath, ['--branch', branch], (err) => {
+            const options = ['--branch', branch];
+            if (depth > 0) {
+                options.push('--depth', depth.toString(10));
+            }
+            simpleGit().clone(remoteUrl, toPath, options, (err) => {
                 if (err) {
                     reject(err);
                 } else {

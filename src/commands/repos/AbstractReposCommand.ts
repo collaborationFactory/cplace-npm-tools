@@ -14,11 +14,13 @@ export abstract class AbstractReposCommand implements ICommand {
     protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
+    protected static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
     protected static readonly NODE_MODULES: string = 'node_modules';
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
     protected sequential: boolean;
+    protected depth: number;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
@@ -31,6 +33,18 @@ export abstract class AbstractReposCommand implements ICommand {
         this.sequential = !!params[AbstractReposCommand.PARAMETER_SEQUENTIAL];
         if (this.sequential) {
             Global.isVerbose() && console.log('running in sequential mode');
+        }
+
+        this.depth = parseInt(params[AbstractReposCommand.PARAMETER_CLONE_DEPTH] as string, 10);
+
+        const depth = params[AbstractReposCommand.PARAMETER_CLONE_DEPTH];
+        if (typeof depth === 'number' && !isNaN(depth)) {
+            this.depth = depth;
+        } else {
+            this.depth = -1;
+        }
+        if (this.depth > 0) {
+            Global.isVerbose() && console.log('running with depth for cloning = ' + this.depth);
         }
 
         if (!fs.existsSync(AbstractReposCommand.PARENT_REPOS_FILE_NAME)) {
