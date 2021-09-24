@@ -38,7 +38,7 @@ export abstract class AbstractReposCommand implements ICommand {
         this.depth = parseInt(params[AbstractReposCommand.PARAMETER_CLONE_DEPTH] as string, 10);
 
         const depth = params[AbstractReposCommand.PARAMETER_CLONE_DEPTH];
-        if (typeof depth === 'number') {
+        if (typeof depth === 'number' && !isNaN(depth)) {
             this.depth = depth;
         } else {
             this.depth = -1;
