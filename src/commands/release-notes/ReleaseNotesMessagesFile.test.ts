@@ -8,12 +8,13 @@ test('path to messages file is computed correctly', () => {
     expect(enPath).toBe('release-notes/messages_en.db');
 });
 
-test('message that contains correct changelog is parsed correctly', () => {
+test('update method adds missing entries to missingEntries Map', () => {
     const relaseNotesMessageFile: ReleaseNotesMessagesFile = new ReleaseNotesMessagesFile('');
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'changelog: a very important fix', date: '', author_email: '', author_name: ''};
-    relaseNotesMessageFile.update([entry]);
+    let size = relaseNotesMessageFile.update([entry]);
     let result = relaseNotesMessageFile.getMessage('hashForTest');
     expect(result).toBe('a very important fix');
+    expect(size).toBe(1);
 
     entry = {
         hash: 'hashForTest_1', message: 'Merge pull request #5335 from collaborationFactory/fix/ISSUE-1467-order-index-mirror-children\n' +
@@ -22,13 +23,13 @@ test('message that contains correct changelog is parsed correctly', () => {
             '\n' +
             '        changelog: Mirror: [ISSUE-1467] Fix: Copy order index from source to mirror for hierarchical children. [PR cplace#5335]', date: '', author_email: '', author_name: ''
     };
-    relaseNotesMessageFile.update([entry]);
+    size = relaseNotesMessageFile.update([entry]);
     result = relaseNotesMessageFile.getMessage('hashForTest_1');
     expect(result).toBe('Mirror: [ISSUE-1467] Fix: Copy order index from source to mirror for hierarchical children. [PR cplace#5335]');
-
+    expect(size).toBe(2);
 });
 
-test('message with incorrect changelog is negative/filtered', () => {
+test('message with incorrect changelog is negative/sorted out', () => {
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'a very important changelog for a fix', date: '', author_email: '', author_name: ''};
     let result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(undefined);
@@ -36,10 +37,9 @@ test('message with incorrect changelog is negative/filtered', () => {
     entry = {hash: 'hashForTest', message: 'a very important changelog: for a fix', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(undefined);
-
 });
 
-test('message with regular changelog is positive', () => {
+test('message with regular changelog is positive / not sorted out', () => {
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'changelog: for a fix', date: '', author_email: '', author_name: ''};
     let result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(true);
@@ -73,5 +73,4 @@ test('message with regular changelog is positive', () => {
     };
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(true);
-
 });
