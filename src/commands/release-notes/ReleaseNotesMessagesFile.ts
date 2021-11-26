@@ -19,7 +19,7 @@ export class ReleaseNotesMessagesFile {
     public static readonly DIRECTORY_RELEASE_NOTES: string = 'release-notes';
 
     private static readonly MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
-    private static readonly CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n)\s*changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/, 'i');
+    private static readonly CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n{2})\s*changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/, 'i');
     private static readonly RELEVANCE_PATTERNS: RegExp[] = [
         new RegExp(/merge pull request #\d+/, 'i'), // GitHub Pull Request
         ReleaseNotesMessagesFile.CHANGELOG_DEFAULT_MESSAGE_PATTERN // Explicit changelog marker
