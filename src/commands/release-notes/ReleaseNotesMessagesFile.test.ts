@@ -37,6 +37,11 @@ test('message with incorrect changelog is negative/sorted out', () => {
     entry = {hash: 'hashForTest', message: 'a very important changelog: for a fix', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(undefined);
+
+    entry = {hash: 'hashForTest', message: 'Short commit message\n' +
+            'changelog: same paragraph, so not reported', date: '', author_email: '', author_name: ''};
+    result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
+    expect(result).toBe(undefined);
 });
 
 test('message with regular changelog is positive / not sorted out', () => {
@@ -53,6 +58,11 @@ test('message with regular changelog is positive / not sorted out', () => {
     expect(result).toBe(true);
 
     entry = {hash: 'hashForTest', message: '\n \n   changelog: for a fix', date: '', author_email: '', author_name: ''};
+    result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
+    expect(result).toBe(true);
+
+    entry = {hash: 'hashForTest', message: '\n' +
+            'changelog: on second line, should be reported', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(true);
 
