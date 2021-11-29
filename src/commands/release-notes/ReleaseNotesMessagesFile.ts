@@ -48,8 +48,7 @@ export class ReleaseNotesMessagesFile {
             return false;
         }
         for (const p of ReleaseNotesMessagesFile.RELEVANCE_PATTERNS) {
-            const regExp = new RegExp(p);
-            if (regExp.test(entry.message)) {
+            if (p.test(entry.message)) {
                 return true;
             }
         }
