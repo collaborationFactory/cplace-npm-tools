@@ -22,7 +22,7 @@ export class Repository {
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
 
-    constructor(repoPath: string = './') {
+    constructor(repoPath: string = process.cwd()) {
         this.git = simpleGit(repoPath);
         if (Global.isVerbose()) {
             this.git.outputHandler((command, stdout, stderr) => {
@@ -593,7 +593,7 @@ export class Repository {
         });
     }
 
-    private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
+    public extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
         if (!match || match.length < 2 || !match[1]) {
             return {
@@ -623,7 +623,7 @@ export class Repository {
         };
     }
 
-    private getBranchNameIfRemote(name: string): string | null {
+    public getBranchNameIfRemote(name: string): string | null {
         const match = Repository.REMOTE_BRANCH_PATTERN.exec(name);
         if (!match || match.length < 2) {
             return null;
