@@ -27,14 +27,14 @@ function removeTestFolder() {
 function commitFile(fileName) {
     const fileNameRelease = fileName.replace('/', '-') + '.txt';
     fs.writeFileSync(fileNameRelease, 'this is a file in ' + fileName);
-    console.log(execSync(`git add ${fileNameRelease} && git commit -m "this is ${fileName}"`).toString());
+    console.log(execSync(`git add ${fileNameRelease} && git commit -m "this is a commit for ${fileName}"`).toString());
 }
 
 // tslint:disable-next-line:typedef
 function createBranchAndCommitFile(release) {
     console.log(execSync(`git checkout -b ${release}`).toString());
     commitFile(release);
-};
+}
 
 beforeEach(() => {
                jest.setTimeout(60000);
@@ -43,7 +43,7 @@ beforeEach(() => {
                process.chdir(mainRepoPath);
                console.log(execSync('git init').toString());
                simpleGitClient = simpleGit(process.cwd());
-               commitFile('master-initial-content');
+               commitFile('initial-content');
                createBranchAndCommitFile(release17);
                createBranchAndCommitFile(release18);
                createBranchAndCommitFile(release19);
@@ -60,9 +60,9 @@ test('a fix can be upmerged', async () => {
         return {tracking: 'tracking', ahead: 0, behind: 0, gone: false};
     });
     jest.spyOn(Repository.prototype, 'getBranchNameIfRemote')
-        .mockImplementationOnce(() => 'origin/release/5.17')
-        .mockImplementationOnce(() => 'origin/release/5.18')
-        .mockImplementationOnce(() => 'origin/release/5.19');
+        .mockImplementationOnce(() => 'release/5.17')
+        .mockImplementationOnce(() => 'release/5.18')
+        .mockImplementationOnce(() => 'release/5.19');
 
     console.log(execSync(`git checkout ${release17}`).toString());
     const upmerge: Upmerge = new Upmerge();
@@ -74,4 +74,5 @@ test('a fix can be upmerged', async () => {
             remote: ''
         });
     await upmerge.execute();
+    console.log('tested');
 });
