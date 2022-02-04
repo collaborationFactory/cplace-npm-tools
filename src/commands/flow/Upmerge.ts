@@ -10,6 +10,9 @@ import * as randomatic from 'randomatic';
 import {IBranchDetails} from './models';
 import {Global} from '../../Global';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import {execSync} from 'child_process';
+import {readFileSync, writeFileSync} from 'fs';
+import * as path from 'path';
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -214,6 +217,9 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 Promise.resolve()))
+            .catch((e) => {
+                console.log(e);
+            })
             .finally(() => this.repo
                 .checkoutBranch(prevBranch)
                 .then(() => promiseAllSettledParallel(
@@ -272,11 +278,27 @@ export class Upmerge implements ICommand {
         }
         const tempBranchName = this.tempBranchName(branch.name);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
-            .then(() => cleanup.add(tempBranchName))
-            .then(() => this.repo
-                .merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles})
-                .catch((err) => Promise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)))
             .then(() => {
+                      cleanup.add(tempBranchName);
+                      try {
+                          console.log(execSync(`git merge ${tempSrcBranch}`).toString());
+                      } catch (e) {
+                          console.log(e);
+                      }
+                      return Promise.resolve();
+                  }
+            )
+            .then(() => {
+                return this.repo.status();
+            })
+            .then(
+                (status) => {
+                    console.log(status);
+                    return this.attemptConflictResolution(status.conflicted, tempSrcBranch, tempBranchName);
+                }
+            )
+            .then(() => {
+                // upmerge branch is checked out and pushed to corresponding origin/release branch
                 const targetBranchName = branch.name.substr(this.remote.length + 1);
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
@@ -284,4 +306,26 @@ export class Upmerge implements ICommand {
             });
     }
 
+    private attemptConflictResolution(conflicted: string[], baseBranch: string, targetBranch: string): Promise<void> {
+        conflicted.forEach((conflict) => {
+            if (conflict.includes('CHANGELOG.md')) {
+                console.log('CHANGELOG merge conflicts found, attempting to resolve them');
+                const changeLogPath = path.resolve(conflict);
+                const fileContent = readFileSync(changeLogPath, {encoding: 'utf-8'});
+                const conflictPattern = new RegExp(`(<<<<<<< HEAD)+|(=======)+|(>>>>>>> ${baseBranch.replace('/', '\\/')}) *\n+`, 'gmi');
+                const newFileContent = fileContent.replace(conflictPattern, '');
+                writeFileSync(changeLogPath, newFileContent, {encoding: 'utf-8'});
+                console.log('Resolved conflicts for', conflict);
+            }
+        });
+        console.log('Committing resolved merge conflicts for CHANGELOG.md');
+        execSync('git add .');
+        execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+        return Promise.resolve();
+    }
+
+    private removeUpmergeModifierFromBranchName(branch: string): string {
+        const index = branch.indexOf('/');
+        return branch.substring(index + 1);
+    }
 }
