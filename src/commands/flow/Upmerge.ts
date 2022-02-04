@@ -218,7 +218,7 @@ export class Upmerge implements ICommand {
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 Promise.resolve()))
             .catch((e) => {
-                console.log(e);
+                console.error(e);
             })
             .finally(() => this.repo
                 .checkoutBranch(prevBranch)
@@ -301,20 +301,24 @@ export class Upmerge implements ICommand {
     }
 
     private attemptConflictResolution(conflicted: string[], baseBranch: string, targetBranch: string): Promise<void> {
-        conflicted.forEach((conflict) => {
-            if (conflict.includes('CHANGELOG.md')) {
-                console.log('CHANGELOG merge conflicts found, attempting to resolve them');
-                const changeLogPath = path.resolve(conflict);
-                const fileContent = readFileSync(changeLogPath, {encoding: 'utf-8'});
-                const conflictPattern = new RegExp(`(<<<<<<< HEAD)+|(=======)+|(>>>>>>> ${baseBranch.replace('/', '\\/')}) *\n+`, 'gmi');
-                const newFileContent = fileContent.replace(conflictPattern, '');
-                writeFileSync(changeLogPath, newFileContent, {encoding: 'utf-8'});
-                console.log('Resolved conflicts for', conflict);
-            }
-        });
-        console.log('Committing resolved merge conflicts for CHANGELOG.md');
-        execSync('git add .');
-        execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+        try {
+            conflicted.forEach((conflict) => {
+                if (conflict.includes('CHANGELOG.md')) {
+                    console.log('CHANGELOG merge conflicts found, attempting to resolve them');
+                    const changeLogPath = path.resolve(conflict);
+                    const fileContent = readFileSync(changeLogPath, {encoding: 'utf-8'});
+                    const conflictPattern = new RegExp(`(<<<<<<< HEAD)+|(=======)+|(>>>>>>> ${baseBranch.replace('/', '\\/')}) *\n+`, 'gmi');
+                    const newFileContent = fileContent.replace(conflictPattern, '');
+                    writeFileSync(changeLogPath, newFileContent, {encoding: 'utf-8'});
+                    console.log('Resolved conflicts for', conflict);
+                }
+            });
+            console.log('Committing resolved merge conflicts for CHANGELOG.md');
+            execSync('git add .');
+            execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+        } catch (e) {
+            return Promise.reject(e);
+        }
         return Promise.resolve();
     }
 
