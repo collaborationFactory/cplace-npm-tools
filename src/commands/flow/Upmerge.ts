@@ -278,16 +278,10 @@ export class Upmerge implements ICommand {
         }
         const tempBranchName = this.tempBranchName(branch.name);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
-            .then(() => {
-                      cleanup.add(tempBranchName);
-                      try {
-                          console.log(execSync(`git merge ${tempSrcBranch}`).toString());
-                      } catch (e) {
-                          console.log(e);
-                      }
-                      return Promise.resolve();
-                  }
-            )
+            .then(() => cleanup.add(tempBranchName))
+            .then(() => this.repo
+                .merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles})
+                .catch((err) => console.log(`There was a problem when trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)))
             .then(() => {
                 return this.repo.status();
             })
