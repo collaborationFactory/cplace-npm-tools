@@ -301,6 +301,7 @@ export class Upmerge implements ICommand {
     }
 
     private attemptConflictResolution(conflicted: string[], baseBranch: string, targetBranch: string): Promise<void> {
+        let hasChangelogConflict = false;
         try {
             conflicted.forEach((conflict) => {
                 if (conflict.includes('CHANGELOG.md')) {
@@ -311,11 +312,16 @@ export class Upmerge implements ICommand {
                     const newFileContent = fileContent.replace(conflictPattern, '');
                     writeFileSync(changeLogPath, newFileContent, {encoding: 'utf-8'});
                     console.log('Resolved conflicts for', conflict);
+                    hasChangelogConflict = true;
+                } else {
+                    return Promise.reject('There is a conflict other than in CHANGELOG.MD');
                 }
             });
-            console.log('Committing resolved merge conflicts for CHANGELOG.md');
-            execSync('git add .');
-            execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+            if (hasChangelogConflict) {
+                console.log('Committing resolved merge conflicts for CHANGELOG.md');
+                execSync('git add .');
+                execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+            }
         } catch (e) {
             return Promise.reject(e);
         }
