@@ -288,7 +288,9 @@ export class Upmerge implements ICommand {
             .then(
                 (status) => {
                     console.log(status);
-                    return this.attemptConflictResolution(status.conflicted, tempSrcBranch, tempBranchName);
+                    if (status.conflicted && status.conflicted.length > 0) {
+                        return this.attemptConflictResolution(status.conflicted, tempSrcBranch, tempBranchName);
+                    }
                 }
             )
             .then(() => {
