@@ -321,8 +321,10 @@ export class Upmerge implements ICommand {
             });
             if (hasChangelogConflict) {
                 console.log('Committing resolved merge conflicts for CHANGELOG.md');
-                execSync('git add .');
-                execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`);
+                console.log(execSync('git add .').toString());
+                console.log(
+                    execSync(`git commit -m "Merge branch '${this.removeUpmergeModifierFromBranchName(baseBranch)}' into ${this.removeUpmergeModifierFromBranchName(targetBranch)}"`)
+                        .toString());
             }
         } catch (e) {
             return Promise.reject(e);
