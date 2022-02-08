@@ -72,7 +72,7 @@ test('a fix can be upmerged', async () => {
 
     // Add a fix in 5.17
     console.log(execSync(`git checkout ${release17}`).toString());
-    createFileAndCommit('fix.txt', 'a fix in release 5.17');
+    createFileAndCommit('fixInRelease5-17.txt', 'a fix in release 5.17');
     console.log(execSync(`git push origin ${release17}`).toString());
 
     // Upmerge
@@ -86,19 +86,24 @@ test('a fix can be upmerged', async () => {
         });
     await upmerge.execute();
 
-    const upmerge1819Pattern = new RegExp(`upmerge-[A-Za-z0-9]*\\/release\\/5.18' into upmerge-[A-Za-z0-9]*\\/release\\/5.19`, 'gmi');
+    console.log(execSync(`git checkout ${release17}`).toString());
+    console.log(execSync(`git pull origin ${release17}`).toString());
+    const log17 = execSync(`git log ${release17}`).toString();
+    expect(log17.includes('this is a commit for fixInRelease5-17.txt')).toBe(true);
+
     const upmerge1718Pattern = new RegExp(`upmerge-[A-Za-z0-9]*\\/release\\/5.17' into upmerge-[A-Za-z0-9]*\\/release\\/5.18`, 'gmi');
+    const upmerge1819Pattern = new RegExp(`upmerge-[A-Za-z0-9]*\\/release\\/5.18' into upmerge-[A-Za-z0-9]*\\/release\\/5.19`, 'gmi');
 
-    console.log(execSync(`git log origin/${release17}`).toString());
-    const log = simpleGitClient.log((err) => {
-        if (err) {
-            console.log(err);
-        } else {
-            console.log(err);
-        }
-    });
-//     Merge branch 'upmerge-yMQHvE/release/5.18' into upmerge-yMQHvE/release/5.19
-//     Merge branch 'upmerge-yMQHvE/release/5.17' into upmerge-yMQHvE/release/5.18
+    console.log(execSync(`git checkout ${release18}`).toString());
+    console.log(execSync(`git pull origin ${release18}`).toString());
+    const log18 = execSync(`git log ${release18}`).toString();
+    expect(log18.match(upmerge1718Pattern).length).toBe(1);
+    expect(log18.match(upmerge1819Pattern)).toBe(null);
 
-    console.log(log);
+    console.log(execSync(`git checkout ${release19}`).toString());
+    console.log(execSync(`git pull origin ${release19}`).toString());
+    const log19 = execSync(`git log ${release19}`).toString();
+    expect(log19.match(upmerge1718Pattern).length).toBe(1);
+    expect(log19.match(upmerge1819Pattern).length).toBe(1);
+
 });
