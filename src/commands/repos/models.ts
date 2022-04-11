@@ -10,6 +10,7 @@ export interface IRepoStatus {
     url: string;
     branch: string;
     tag?: string;
+    tagMarker?: string;
     commit?: string;
     description?: string;
 }

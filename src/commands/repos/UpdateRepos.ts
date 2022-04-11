@@ -111,7 +111,11 @@ export class UpdateRepos extends AbstractReposCommand {
                             `  Switching branches may interfere with a running cplace-asc process!`);
         }
 
-        if (branch) {
+        if (tag) {
+            await repo.resetHard();
+            await repo.checkoutTag(tag);
+            await repo.createBranchForTag(tag);
+        } else {
             await repo.resetHard();
             await repo.checkoutBranch(branch);
             if (commit) {
@@ -123,10 +127,6 @@ export class UpdateRepos extends AbstractReposCommand {
             } else {
                 await repo.pullOnlyFastForward(branch);
             }
-        } else {
-            await repo.resetHard();
-            await repo.checkoutTag(tag);
-            await repo.createBranchForTag(tag);
         }
 
         const isGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
