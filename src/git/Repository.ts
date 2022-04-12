@@ -197,7 +197,7 @@ export class Repository {
             const branchName = tag.startsWith('version/') ? `release-${tag}` : tag;
 
             Global.isVerbose() && console.log(`Creating branch ${branchName} for tag ${tag}`);
-            this.git.checkoutLocalBranch(branchName, (err) => {
+            this.git.checkout(['-B', branchName], (err) => {
                 if (err) {
                     Global.isVerbose() && console.error(`failed to create branch ${branchName} for tag ${tag}`, err);
                     reject(err);
