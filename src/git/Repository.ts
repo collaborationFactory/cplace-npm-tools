@@ -194,13 +194,15 @@ export class Repository {
 
     public createBranchForTag(tag: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`Creating branch ${tag} for tag ${tag}`);
-            this.git.checkoutLocalBranch(tag, (err) => {
+            const branchName = tag.startsWith('version/') ? `release-${tag}` : tag;
+
+            Global.isVerbose() && console.log(`Creating branch ${branchName} for tag ${tag}`);
+            this.git.checkout(['-B', branchName], (err) => {
                 if (err) {
-                    Global.isVerbose() && console.error(`failed to create branch ${tag} for tag ${tag}`, err);
+                    Global.isVerbose() && console.error(`failed to create branch ${branchName} for tag ${tag}`, err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`Created branch ${tag} for tag ${tag}`);
+                    Global.isVerbose() && console.log(`Created branch ${branchName} for tag ${tag}`);
                     resolve();
                 }
             });
