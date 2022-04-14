@@ -120,7 +120,7 @@ export class Repository {
     public fetch(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`fetching repo ${this.repoName}`);
-            this.git.fetch((err) => {
+            this.git.fetch(['--all', '--tags'], (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -218,6 +218,18 @@ export class Repository {
                 } else {
                     Global.isVerbose() && console.log(`deleted branch`, branch);
                     resolve();
+                }
+            });
+        });
+    }
+
+    public getLatestTagOnBranch(tagPattern: string, branch: string): Promise<string> {
+        return new Promise<string[]>((resolve, reject) => {
+            this.git.raw(['describe', '--abbrev=0', `--match=${tagPattern}`, branch], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(result.trim());
                 }
             });
         });

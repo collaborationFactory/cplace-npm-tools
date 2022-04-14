@@ -111,23 +111,7 @@ export class UpdateRepos extends AbstractReposCommand {
                             `  Switching branches may interfere with a running cplace-asc process!`);
         }
 
-        if (tag) {
-            await repo.resetHard();
-            await repo.checkoutTag(tag);
-            await repo.createBranchForTag(tag);
-        } else {
-            await repo.resetHard();
-            await repo.checkoutBranch(branch);
-            if (commit) {
-                await repo.checkoutCommit(commit);
-            } else if (this.resetToRemote) {
-                await repo.resetHard(branch);
-            } else if (this.noFetch) {
-                // don't update to the remote branch, but stay at the current local branch
-            } else {
-                await repo.pullOnlyFastForward(branch);
-            }
-        }
+        await this.checkoutTagOrBranch(repo, repoName, commit, branch, tag);
 
         const isGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
         if (isGradleBuild !== wasGradleBuild) {
@@ -137,6 +121,44 @@ export class UpdateRepos extends AbstractReposCommand {
         }
 
         Global.isVerbose() && console.log('successfully updated', repoName);
+    }
+
+    private async checkoutTagOrBranch(repo: Repository, repoName: string, commit: string, branch: string, tag: string): Promise<void> {
+        let tagToCheckout: string = tag;
+        if (branch.startsWith('release/')) {
+            const currentReleaseVersion: string = branch.substring('release/'.length);
+            Global.isVerbose() && console.log(repoName, `release version: ${currentReleaseVersion}`);
+            if (!tagToCheckout) {
+                try {
+                    tagToCheckout = await repo.getLatestTagOnBranch(`version/${currentReleaseVersion}*`, branch);
+                    Global.isVerbose() && console.log(repoName, `latest tag for release ${currentReleaseVersion}: ${tagToCheckout}`);
+                } catch (e) {
+                    Global.isVerbose() && console.log(repoName, 'no matching tags for release', currentReleaseVersion);
+                }
+            }
+        }
+
+        if (commit) {
+            Global.isVerbose() && console.log(repoName, 'checking out commit', commit);
+            await repo.checkoutCommit(commit);
+        } else {
+            if (tagToCheckout) {
+                await repo.resetHard();
+                await repo.checkoutTag(tagToCheckout);
+                await repo.createBranchForTag(tagToCheckout);
+            } else {
+                // checkout branch
+                await repo.resetHard();
+                await repo.checkoutBranch(branch);
+                if (this.resetToRemote) {
+                    await repo.resetHard(branch);
+                } else if (this.noFetch) {
+                    // don't update to the remote branch, but stay at the current local branch
+                } else {
+                    await repo.pullOnlyFastForward(branch);
+                }
+            }
+        }
     }
 
     private async getTargetBranch(repo: Repository, {branch, commit, tag}: { branch: string, commit?: string, tag?: string }): Promise<string> {
