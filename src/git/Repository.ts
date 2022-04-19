@@ -36,7 +36,10 @@ export class Repository {
     public static clone(toPath: string, remoteUrl: string, branch: string, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             Global.isVerbose() && console.log('cloning branch', branch, 'from', remoteUrl, 'to', toPath);
-            const options = ['--branch', branch];
+            const options = [];
+            if (branch) {
+                options.push('--branch', branch);
+            }
             if (depth > 0) {
                 options.push('--depth', depth.toString(10));
             }
@@ -120,7 +123,7 @@ export class Repository {
     public fetch(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`fetching repo ${this.repoName}`);
-            this.git.fetch(['--all', '--tags'], (err) => {
+            this.git.fetch((err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -167,6 +170,21 @@ export class Repository {
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`repo ${this.repoName} is now in branch ${branch}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
+    public fetchTag(tag: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`fetching tag ${tag} in repo ${this.repoName}`);
+            this.git.fetch(['origin', 'tag', tag, '--no-tags', '--force'], (err) => {
+                if (err) {
+                    Global.isVerbose() && console.error(`failed to fetch tag ${tag} in repo ${this.repoName}`, err);
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`tag ${tag} in repo ${this.repoName} is fetched`);
                     resolve();
                 }
             });
@@ -225,11 +243,15 @@ export class Repository {
 
     public getLatestTagOnBranch(tagPattern: string, branch: string): Promise<string> {
         return new Promise<string[]>((resolve, reject) => {
-            this.git.raw(['describe', '--abbrev=0', `--match=${tagPattern}`, branch], (err, result: string) => {
+            this.git.listRemote(['--tags', '--refs', '--sort=version:refname', `https://github.com/collaborationFactory/${this.repoName}`, tagPattern], (err, result: string) => {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(result.trim());
+                    Global.isVerbose() && console.log('result of git ls-remote:\n', result);
+                    const lines: string[] = result.match(/[^\r\n]+/g);
+                    const lastLine = lines.slice(-1)[0];
+                    const tag: string = lastLine.substring(lastLine.indexOf('version/'));
+                    resolve(tag);
                 }
             });
         });

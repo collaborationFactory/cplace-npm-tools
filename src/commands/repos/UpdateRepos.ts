@@ -144,6 +144,7 @@ export class UpdateRepos extends AbstractReposCommand {
         } else {
             if (tagToCheckout) {
                 await repo.resetHard();
+                await repo.fetchTag(tagToCheckout);
                 await repo.checkoutTag(tagToCheckout);
                 await repo.createBranchForTag(tagToCheckout);
             } else {
