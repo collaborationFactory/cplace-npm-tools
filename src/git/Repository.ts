@@ -8,6 +8,7 @@ import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
 import {exec} from 'child_process';
 import * as util from 'util';
+import {IReposDescriptor, IRepoStatus} from '../commands/repos/models';
 
 export class Repository {
 
@@ -33,21 +34,62 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(toPath: string, remoteUrl: string, branch: string, depth: number): Promise<Repository> {
+    public static clone(toPath: string, repoProperties: IRepoStatus, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
-            Global.isVerbose() && console.log('cloning branch', branch, 'from', remoteUrl, 'to', toPath);
             const options = [];
-            if (branch) {
-                options.push('--branch', branch);
+
+            const refToCheckout = repoProperties.tag || repoProperties.latestTagForRelease || repoProperties.branch;
+            if (refToCheckout) {
+                Global.isVerbose() && console.log('cloning tag or branch', refToCheckout, 'from', repoProperties.url, 'to', toPath);
+                options.push('--branch', refToCheckout);
+            } else {
+                Global.isVerbose() && console.log('cloning default branch from', repoProperties.url, 'to', toPath);
             }
             if (depth > 0) {
                 options.push('--depth', depth.toString(10));
             }
-            simpleGit().clone(remoteUrl, toPath, options, (err) => {
+            simpleGit().clone(repoProperties.url, toPath, options, (err) => {
+
                 if (err) {
                     reject(err);
                 } else {
                     resolve(new Repository(toPath));
+                }
+            });
+        });
+    }
+
+    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            if (repoProperties.branch.startsWith('release/')) {
+                const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
+                Global.isVerbose() && console.log(repoName, `release version: ${currentReleaseVersion}`);
+
+                this.getLatestTagOfPattern(repoName, `version/${currentReleaseVersion}.*`)
+                    .then((latestTag) => {
+                        Global.isVerbose() && console.log(repoName, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
+                        resolve(latestTag);
+                    })
+                    .catch((error) => reject(error));
+            } else {
+                resolve(null);
+            }
+        });
+    }
+
+    public static getLatestTagOfPattern(repoName: string, tagPattern: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            Global.isVerbose() && console.log(`Getting the last tag with pattern ${tagPattern}:\n`);
+            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', `https://github.com/collaborationFactory/${repoName}`, tagPattern], (err, result: string) => {
+                if (err) {
+                    Global.isVerbose() && console.log(repoName, 'ls-remote failed', err);
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log('result of git ls-remote:\n', result);
+                    const lines: string[] = result.match(/[^\r\n]+/g);
+                    const lastLine = lines.slice(-1)[0];
+                    const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
+                    resolve(tagMatch ? tagMatch[0] : null);
                 }
             });
         });
@@ -120,10 +162,16 @@ export class Repository {
         });
     }
 
-    public fetch(): Promise<void> {
+    public fetch({tag, branch}: {tag?: string, branch?: string}): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`fetching repo ${this.repoName}`);
-            this.git.fetch((err) => {
+            const options = [];
+            if (branch || tag) {
+                options.push('--no-tags', '--force', 'origin');
+                tag ? options.push('tag', tag) : options.push(branch);
+            }
+
+            this.git.fetch(options, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -176,21 +224,6 @@ export class Repository {
         });
     }
 
-    public fetchTag(tag: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`fetching tag ${tag} in repo ${this.repoName}`);
-            this.git.fetch(['origin', 'tag', tag, '--no-tags', '--force'], (err) => {
-                if (err) {
-                    Global.isVerbose() && console.error(`failed to fetch tag ${tag} in repo ${this.repoName}`, err);
-                    reject(err);
-                } else {
-                    Global.isVerbose() && console.log(`tag ${tag} in repo ${this.repoName} is fetched`);
-                    resolve();
-                }
-            });
-        });
-    }
-
     // Note after checking out a Tag, git is in Detached Head state
     // therefore it might be beneficial to create a branch for the specified git Tag
     // ->  git checkout tags/<tag_name> -b <branch_name>
@@ -236,22 +269,6 @@ export class Repository {
                 } else {
                     Global.isVerbose() && console.log(`deleted branch`, branch);
                     resolve();
-                }
-            });
-        });
-    }
-
-    public getLatestTagOnBranch(tagPattern: string, branch: string): Promise<string> {
-        return new Promise<string[]>((resolve, reject) => {
-            this.git.listRemote(['--tags', '--refs', '--sort=version:refname', `https://github.com/collaborationFactory/${this.repoName}`, tagPattern], (err, result: string) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    Global.isVerbose() && console.log('result of git ls-remote:\n', result);
-                    const lines: string[] = result.match(/[^\r\n]+/g);
-                    const lastLine = lines.slice(-1)[0];
-                    const tag: string = lastLine.substring(lastLine.indexOf('version/'));
-                    resolve(tag);
                 }
             });
         });

@@ -67,7 +67,7 @@ export class BranchRepos extends AbstractReposCommand {
     }
 
     private validateRepoClean(repo: Repository): Promise<Repository> {
-        return repo.fetch()
+        return repo.fetch({})
             .then(() => repo.status())
             .then((status) => this.checkRepoClean(repo, status))
             .then(() => repo);

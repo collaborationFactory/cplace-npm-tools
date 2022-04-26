@@ -8,6 +8,7 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import {IRepoStatus} from './models';
 
 export class CloneRepos extends AbstractReposCommand {
 
@@ -19,7 +20,7 @@ export class CloneRepos extends AbstractReposCommand {
                 Global.isVerbose() && console.log('cloning repository', repoName);
                 const repoProperties = this.parentRepos[repoName];
                 const toPath = path.resolve('..', repoName);
-                return Repository.clone(toPath, repoProperties.url, repoProperties.branch, this.depth);
+                return this.handleRepo(toPath, repoName, repoProperties, this.depth);
             });
 
         return promiseAllSettledParallel(promises)
@@ -29,6 +30,15 @@ export class CloneRepos extends AbstractReposCommand {
                 },
                 (err) => Promise.reject('failed to clone repos: ' + err)
             );
+    }
+
+    private handleRepo(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<void> {
+        return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+            .then((latestTag) => {
+                repoProperties.latestTagForRelease = latestTag;
+                return Repository.clone(toPath, repoProperties, this.depth);
+            })
+            .catch((err) => Promise.reject('failed to clone repos: ' + err));
     }
 
     private checkRepoMissing(repoName: string): boolean {
