@@ -112,7 +112,7 @@ export class UpdateRepos extends AbstractReposCommand {
                             `  Switching branches may interfere with a running cplace-asc process!`);
         }
 
-        await this.checkoutTagOrBranch(repo, repoName, repoProperties);
+        await this.checkout(repo, repoName, repoProperties);
 
         const isGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
         if (isGradleBuild !== wasGradleBuild) {
@@ -124,7 +124,7 @@ export class UpdateRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log('successfully updated', repoName);
     }
 
-    private async checkoutTagOrBranch(repo: Repository, repoName: string, repoProperties: IRepoStatus): Promise<void> {
+    private async checkout(repo: Repository, repoName: string, repoProperties: IRepoStatus): Promise<void> {
         if (repoProperties.commit) {
             Global.isVerbose() && console.log(repoName, 'checking out commit', repoProperties.commit);
             await repo.fetch({branch: repoProperties.branch});

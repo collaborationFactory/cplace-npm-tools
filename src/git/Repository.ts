@@ -38,14 +38,19 @@ export class Repository {
         return new Promise<Repository>((resolve, reject) => {
             const options = [];
 
-            const refToCheckout = repoProperties.tag || repoProperties.latestTagForRelease || repoProperties.branch;
+            let refToCheckout = repoProperties.branch;
+            let refIsTag = false;
+            if (!repoProperties.commit && (repoProperties.tag || repoProperties.latestTagForRelease)) {
+                refToCheckout = repoProperties.tag || repoProperties.latestTagForRelease;
+                refIsTag = true;
+            }
             if (refToCheckout) {
                 Global.isVerbose() && console.log('cloning tag or branch', refToCheckout, 'from', repoProperties.url, 'to', toPath);
                 options.push('--branch', refToCheckout);
             } else {
                 Global.isVerbose() && console.log('cloning default branch from', repoProperties.url, 'to', toPath);
             }
-            if (depth > 0) {
+            if (depth > 0 && !repoProperties.commit) {
                 options.push('--depth', depth.toString(10));
             }
             simpleGit().clone(repoProperties.url, toPath, options, (err) => {
@@ -53,7 +58,15 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(new Repository(toPath));
+                    const newRepo = new Repository(toPath);
+                    if (refIsTag) {
+                        newRepo.createBranchForTag(refToCheckout)
+                            .then(() => {
+                                resolve(newRepo);
+                            });
+                    } else {
+                        resolve(newRepo);
+                    }
                 }
             });
         });
@@ -164,13 +177,13 @@ export class Repository {
 
     public fetch({tag, branch}: {tag?: string, branch?: string}): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`fetching repo ${this.repoName}`);
             const options = [];
             if (branch || tag) {
                 options.push('--no-tags', '--force', 'origin');
                 tag ? options.push('tag', tag) : options.push(branch);
             }
 
+            Global.isVerbose() && console.log(`fetching repo ${this.repoName} with options ${options}`);
             this.git.fetch(options, (err) => {
                 if (err) {
                     reject(err);
