@@ -100,9 +100,13 @@ export class Repository {
                 } else {
                     Global.isVerbose() && console.log('result of git ls-remote:\n', result);
                     const lines: string[] = result.match(/[^\r\n]+/g);
-                    const lastLine = lines.slice(-1)[0];
-                    const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
-                    resolve(tagMatch ? tagMatch[0] : null);
+                    if (lines) {
+                        const lastLine = lines.slice(-1)[0];
+                        const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
+                        resolve(tagMatch ? tagMatch[0] : null);
+                    } else {
+                        resolve(null);
+                    }
                 }
             });
         });
