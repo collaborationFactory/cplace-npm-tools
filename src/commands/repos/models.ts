@@ -11,6 +11,7 @@ export interface IRepoStatus {
     branch: string;
     tag?: string;
     tagMarker?: string;
+    latestTagForRelease?: string;
     commit?: string;
     description?: string;
 }

@@ -65,7 +65,7 @@ export class Upmerge implements ICommand {
 
     public execute(): Promise<void> {
         return this.repo
-            .fetch()
+            .fetch({})
             .then(() => this.checkRepoClean())
             .then(() => this.checkForRelease())
             .then((release) => {

@@ -94,6 +94,7 @@ const cli = meow(
             --clone|-c [--depth <depth>] :
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
+                The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
                 The --force setting has no effect for this command.
 
             --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
