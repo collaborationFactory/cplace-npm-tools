@@ -9,7 +9,7 @@ import * as os from 'os';
 import {fs} from '../../p/fs';
 import {exec} from 'child_process';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
-import { ReleaseNumber } from "../flow/ReleaseNumber";
+import { ReleaseNumber } from '../flow/ReleaseNumber';
 
 export class VisualizeCommand implements ICommand {
 

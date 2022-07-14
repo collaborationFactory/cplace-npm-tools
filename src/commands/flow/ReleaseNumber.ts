@@ -2,9 +2,9 @@
  * Represents a release version number
  */
 export class ReleaseNumber {
+    public static readonly MASTER: string = 'master';
+    public static readonly MAIN: string = 'main';
     private static readonly RELEASE_NUMBER_PATTERN: RegExp = new RegExp(/^\d+(\.\d+){0,2}$/);
-    public static readonly MASTER = 'master';
-    public static readonly MAIN = 'main';
 
     public readonly defaultBranch: boolean;
     public readonly major: number;
@@ -61,9 +61,9 @@ export class ReleaseNumber {
         return this.defaultBranch ? 'default' : `${this.major}.${this.minor}.${this.patch}`;
     }
 
-    public static isDefaultBranch(branchName: string, remote = ''): boolean {
-        let isDefault = false;
-        if (remote && remote != '' && (branchName === `${remote}/${ReleaseNumber.MASTER}` || branchName === `${remote}/${ReleaseNumber.MAIN}`)) isDefault = true;
+    public static isDefaultBranch(branchName: string, remote: string = ''): boolean {
+        let isDefault: boolean = false;
+        if (remote && remote !== '' && (branchName === `${remote}/${ReleaseNumber.MASTER}` || branchName === `${remote}/${ReleaseNumber.MAIN}`)) isDefault = true;
         if (branchName === ReleaseNumber.MASTER || branchName === ReleaseNumber.MAIN) isDefault = true;
         return isDefault;
     }

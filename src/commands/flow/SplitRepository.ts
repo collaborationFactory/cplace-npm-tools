@@ -2,7 +2,7 @@ import { ICommand, ICommandParameters } from '../models';
 import * as path from 'path';
 import { Repository } from '../../git';
 import { Global } from '../../Global';
-import { ReleaseNumber } from "./ReleaseNumber";
+import { ReleaseNumber } from './ReleaseNumber';
 
 export class SplitRepository implements ICommand {
     private static readonly PATH_TO_TARGET_REPOSITORY: string = 'pathToTargetRepo';
