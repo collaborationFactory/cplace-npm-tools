@@ -41,6 +41,17 @@ export class ReleaseNumber {
         return new ReleaseNumber(false, major, minor, patch);
     }
 
+    public static isDefaultBranch(branchName: string, remote: string = ''): boolean {
+        let isDefault: boolean = false;
+        if (remote && remote !== '' && (branchName === `${remote}/${ReleaseNumber.MASTER}` || branchName === `${remote}/${ReleaseNumber.MAIN}`)) {
+            isDefault = true;
+        }
+        if (branchName === ReleaseNumber.MASTER || branchName === ReleaseNumber.MAIN) {
+            isDefault = true;
+        }
+        return isDefault;
+    }
+
     public compareTo(other: ReleaseNumber): number {
         if (this.defaultBranch && other.defaultBranch) {
             return 0;
@@ -61,10 +72,4 @@ export class ReleaseNumber {
         return this.defaultBranch ? 'default' : `${this.major}.${this.minor}.${this.patch}`;
     }
 
-    public static isDefaultBranch(branchName: string, remote: string = ''): boolean {
-        let isDefault: boolean = false;
-        if (remote && remote !== '' && (branchName === `${remote}/${ReleaseNumber.MASTER}` || branchName === `${remote}/${ReleaseNumber.MAIN}`)) isDefault = true;
-        if (branchName === ReleaseNumber.MASTER || branchName === ReleaseNumber.MAIN) isDefault = true;
-        return isDefault;
-    }
 }
