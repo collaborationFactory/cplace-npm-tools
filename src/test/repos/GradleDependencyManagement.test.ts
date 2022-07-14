@@ -1,9 +1,9 @@
-import {IReposDescriptor} from '../models';
-import {withRepositories} from '../../../test/helpers/repositories';
 import * as path from 'path';
-import {createGradleBuild} from '../../../test/helpers/gradle';
-import {GradleDependencyManagement} from './GradleDependencyManagement';
-import {fs} from '../../../p/fs';
+import { IReposDescriptor } from "../../commands/repos/models";
+import { createGradleBuild } from "../helpers/gradle";
+import { withRepositories } from "../helpers/repositories";
+import { GradleDependencyManagement } from "../../commands/repos/add-dependency/GradleDependencyManagement";
+import * as fs from "fs";
 
 const allRepos: IReposDescriptor = {
     main: {

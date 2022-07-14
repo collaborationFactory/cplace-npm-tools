@@ -4,13 +4,13 @@
 export class ReleaseNumber {
     private static readonly RELEASE_NUMBER_PATTERN: RegExp = new RegExp(/^\d+(\.\d+){0,2}$/);
 
-    public readonly master: boolean;
+    public readonly defaultBranch: boolean;
     public readonly major: number;
     public readonly minor: number;
     public readonly patch: number;
 
-    private constructor(master: boolean, major: number, minor: number, patch: number) {
-        this.master = master;
+    private constructor(defaultBranch: boolean, major: number, minor: number, patch: number) {
+        this.defaultBranch = defaultBranch;
         this.major = major;
         this.minor = minor;
         this.patch = patch;
@@ -40,11 +40,11 @@ export class ReleaseNumber {
     }
 
     public compareTo(other: ReleaseNumber): number {
-        if (this.master && other.master) {
+        if (this.defaultBranch && other.defaultBranch) {
             return 0;
-        } else if (this.master) {
+        } else if (this.defaultBranch) {
             return 1;
-        } else if (other.master) {
+        } else if (other.defaultBranch) {
             return -1;
         } else if (this.major !== other.major) {
             return this.major - other.major;
@@ -56,6 +56,6 @@ export class ReleaseNumber {
     }
 
     public toString(): string {
-        return this.master ? ' master' : `${this.major}.${this.minor}.${this.patch}`;
+        return this.defaultBranch ? 'default' : `${this.major}.${this.minor}.${this.patch}`;
     }
 }

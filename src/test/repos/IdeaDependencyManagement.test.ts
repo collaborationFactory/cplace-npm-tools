@@ -1,9 +1,9 @@
-import {IReposDescriptor} from '../models';
-import {IdeaDependencyManagement} from './IdeaDependencyManagement';
 import * as path from 'path';
-import {withRepositories} from '../../../test/helpers/repositories';
-import {writeModuleIml, writeModulesXml} from '../../../test/helpers/idea';
-import {fs} from '../../../p/fs';
+import { IReposDescriptor } from "../../commands/repos/models";
+import { withRepositories } from "../helpers/repositories";
+import { IdeaDependencyManagement } from "../../commands/repos/add-dependency/IdeaDependencyManagement";
+import { writeModuleIml, writeModulesXml } from "../helpers/idea";
+import * as fs from "fs";
 
 const allRepos: IReposDescriptor = {
     main: {

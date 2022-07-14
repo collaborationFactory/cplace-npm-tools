@@ -1,4 +1,4 @@
-import { ReleaseNumber } from "../commands/flow/ReleaseNumber";
+import { ReleaseNumber } from "../../commands/flow/ReleaseNumber";
 
 test('can sort releases', () => {
     let releases = [];
@@ -18,6 +18,6 @@ test('can sort releases', () => {
     expect(releases[1].toString()).toBe('5.17.0')
     expect(releases[2].toString()).toBe('22.3.0')
     expect(releases[3].toString()).toBe('22.4.0')
-    expect(releases[4].toString()).toBe('main')
+    expect(releases[4].toString()).toBe('master')
 
 });
