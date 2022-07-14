@@ -81,7 +81,7 @@ export class SplitRepository implements ICommand {
     private getSourceBranch(): Promise<void> {
         return this.sourceRepo.rawWrapper(['rev-parse', '--abbrev-ref', 'HEAD']).then((currentBranch) => {
             this.sourceBranchName = currentBranch.trim();
-            if (this.sourceBranchName === 'master') {
+            if (this.sourceBranchName === 'master' || 'main') {
                 const currentDate = new Date();
                 this.targetBranchName = `source-master-${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
             } else {

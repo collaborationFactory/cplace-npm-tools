@@ -140,7 +140,7 @@ export class VisualizeCommand implements ICommand {
                 result.push(`    "${branch}" [style=bold,color="blue"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }
-            if (branch.indexOf('master') === 0) {
+            if (branch.indexOf('master') === 0 || branch.indexOf('main') === 0) {
                 result.push(`    "${branch}" [style=bold,color="green"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }

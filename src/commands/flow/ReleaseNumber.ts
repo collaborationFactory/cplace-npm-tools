@@ -17,7 +17,7 @@ export class ReleaseNumber {
     }
 
     public static parse(release: string): ReleaseNumber | null {
-        if (release === 'master') {
+        if (release === 'master' || 'main') {
             return new ReleaseNumber(true, null, null, null);
         } else if (!ReleaseNumber.RELEASE_NUMBER_PATTERN.test(release)) {
             return null;
