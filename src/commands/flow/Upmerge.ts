@@ -133,7 +133,7 @@ export class Upmerge implements ICommand {
                 let version: string;
                 let customerName: string;
 
-                if (branch.name === `${this.remote}/master` || branch.name === `${this.remote}/main`) {
+                if (ReleaseNumber.isDefaultBranch(branch.name, this.remote)) {
                     version = 'master';
                 } else {
                     let match = this.remoteReleaseBranchPattern.exec(branch.name);

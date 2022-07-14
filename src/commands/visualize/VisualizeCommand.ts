@@ -9,6 +9,7 @@ import * as os from 'os';
 import {fs} from '../../p/fs';
 import {exec} from 'child_process';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import { ReleaseNumber } from "../flow/ReleaseNumber";
 
 export class VisualizeCommand implements ICommand {
 
@@ -140,7 +141,7 @@ export class VisualizeCommand implements ICommand {
                 result.push(`    "${branch}" [style=bold,color="blue"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }
-            if (branch.indexOf('master') === 0 || branch.indexOf('main') === 0) {
+            if (branch.indexOf(ReleaseNumber.MASTER) === 0 || branch.indexOf(ReleaseNumber.MAIN) === 0) {
                 result.push(`    "${branch}" [style=bold,color="green"];${os.EOL}`);
                 this.styledBranches.push(branch);
             }

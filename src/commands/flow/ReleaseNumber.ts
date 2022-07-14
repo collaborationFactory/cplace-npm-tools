@@ -3,6 +3,8 @@
  */
 export class ReleaseNumber {
     private static readonly RELEASE_NUMBER_PATTERN: RegExp = new RegExp(/^\d+(\.\d+){0,2}$/);
+    public static readonly MASTER = 'master';
+    public static readonly MAIN = 'main';
 
     public readonly defaultBranch: boolean;
     public readonly major: number;
@@ -17,7 +19,7 @@ export class ReleaseNumber {
     }
 
     public static parse(release: string): ReleaseNumber | null {
-        if (release === 'master' || release === 'main') {
+        if (ReleaseNumber.isDefaultBranch(release)) {
             return new ReleaseNumber(true, null, null, null);
         } else if (!ReleaseNumber.RELEASE_NUMBER_PATTERN.test(release)) {
             return null;
@@ -57,5 +59,12 @@ export class ReleaseNumber {
 
     public toString(): string {
         return this.defaultBranch ? 'default' : `${this.major}.${this.minor}.${this.patch}`;
+    }
+
+    public static isDefaultBranch(branchName: string, remote = ''): boolean {
+        let isDefault = false;
+        if (remote && remote != '' && (branchName === `${remote}/${ReleaseNumber.MASTER}` || branchName === `${remote}/${ReleaseNumber.MAIN}`)) isDefault = true;
+        if (branchName === ReleaseNumber.MASTER || branchName === ReleaseNumber.MAIN) isDefault = true;
+        return isDefault;
     }
 }
