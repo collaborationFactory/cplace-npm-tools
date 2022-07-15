@@ -9,7 +9,7 @@ test('can sort releases', () => {
     releases.push(ReleaseNumber.parse('22.3'));
     releases.push(ReleaseNumber.parse('22.4'));
 
-    releases =  Array.from(releases)
+    releases = Array.from(releases)
         .sort((r1, r2) => {
             return r1.compareTo(r2);
         });
@@ -22,3 +22,10 @@ test('can sort releases', () => {
     expect(releases[4].toString()).toBe('default')
     expect(releases[5].toString()).toBe('default')
 });
+
+test('can detect default branches', () => {
+    expect(ReleaseNumber.isDefaultBranch('main')).toBe(true);
+    expect(ReleaseNumber.isDefaultBranch('master')).toBe(true);
+    expect(ReleaseNumber.isDefaultBranch('master', 'origin')).toBe(true);
+    expect(ReleaseNumber.isDefaultBranch('main', 'origin')).toBe(true);
+})
