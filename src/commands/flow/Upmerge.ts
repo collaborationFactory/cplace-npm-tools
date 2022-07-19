@@ -2,14 +2,14 @@
  * Upmerge command for merging the release branches chain to master
  */
 import * as Promise from 'bluebird';
-import {Repository} from '../../git';
-import {ICommand, ICommandParameters} from '../models';
-import {ReleaseNumber} from './ReleaseNumber';
-import {IGitBranchDetails} from '../../git/models';
+import { Repository } from '../../git';
+import { ICommand, ICommandParameters } from '../models';
+import { ReleaseNumber } from './ReleaseNumber';
+import { IGitBranchDetails } from '../../git/models';
 import * as randomatic from 'randomatic';
-import {IBranchDetails} from './models';
-import {Global} from '../../Global';
-import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import { IBranchDetails } from './models';
+import { Global } from '../../Global';
+import { promiseAllSettledParallel } from '../../promiseAllSettled';
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -133,7 +133,7 @@ export class Upmerge implements ICommand {
                 let version: string;
                 let customerName: string;
 
-                if (branch.name === `${this.remote}/master`) {
+                if (ReleaseNumber.isDefaultBranch(branch.name, this.remote)) {
                     version = 'master';
                 } else {
                     let match = this.remoteReleaseBranchPattern.exec(branch.name);

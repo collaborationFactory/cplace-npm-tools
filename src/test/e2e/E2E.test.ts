@@ -1,9 +1,9 @@
-import {E2E} from './E2E';
 import {withTempDirectory} from '../../test/helpers/directories';
 import * as util from '../../util';
 import {mocked} from 'ts-jest/utils';
 import * as path from 'path';
 import {fs} from '../../p/fs';
+import { E2E } from "../../commands/e2e";
 
 jest.mock('../../util');
 

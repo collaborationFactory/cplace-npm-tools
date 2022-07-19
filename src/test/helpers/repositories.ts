@@ -24,7 +24,7 @@ function createRepositories(repos: IReposDescriptor, rootDir: string): Promise<v
         fs.mkdirSync(pathToRepo);
 
         let command = `git init && git remote add origin "${descriptor.url}" && git commit --no-gpg-sign --allow-empty -m "empty" `;
-        if (descriptor.branch !== 'master') {
+        if (descriptor.branch !== 'master' && descriptor.branch !== 'main') {
             command = `${command} && git checkout -b "${descriptor.branch}"`;
         }
 

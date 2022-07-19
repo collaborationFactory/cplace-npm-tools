@@ -1,7 +1,8 @@
-import {ICommand, ICommandParameters} from '../models';
+import { ICommand, ICommandParameters } from '../models';
 import * as path from 'path';
-import {Repository} from '../../git';
-import {Global} from '../../Global';
+import { Repository } from '../../git';
+import { Global } from '../../Global';
+import { ReleaseNumber } from './ReleaseNumber';
 
 export class SplitRepository implements ICommand {
     private static readonly PATH_TO_TARGET_REPOSITORY: string = 'pathToTargetRepo';
@@ -81,7 +82,7 @@ export class SplitRepository implements ICommand {
     private getSourceBranch(): Promise<void> {
         return this.sourceRepo.rawWrapper(['rev-parse', '--abbrev-ref', 'HEAD']).then((currentBranch) => {
             this.sourceBranchName = currentBranch.trim();
-            if (this.sourceBranchName === 'master') {
+            if (ReleaseNumber.isDefaultBranch(this.sourceBranchName)) {
                 const currentDate = new Date();
                 this.targetBranchName = `source-master-${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
             } else {
