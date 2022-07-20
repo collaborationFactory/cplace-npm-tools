@@ -78,7 +78,7 @@ export class Repository {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
                 Global.isVerbose() && console.log(repoName, `release version: ${currentReleaseVersion}`);
 
-                this.getLatestTagOfPattern(repoName, `version/${currentReleaseVersion}.*`)
+                this.getLatestTagOfPattern(repoProperties.url, `version/${currentReleaseVersion}.*`)
                     .then((latestTag) => {
                         Global.isVerbose() && console.log(repoName, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
                         resolve(latestTag);
@@ -90,12 +90,12 @@ export class Repository {
         });
     }
 
-    public static getLatestTagOfPattern(repoName: string, tagPattern: string): Promise<string> {
+    public static getLatestTagOfPattern(repoUrl: string, tagPattern: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`Getting the last tag with pattern ${tagPattern}:\n`);
-            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', `https://github.com/collaborationFactory/${repoName}`, tagPattern], (err, result: string) => {
+            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', repoUrl, tagPattern], (err, result: string) => {
                 if (err) {
-                    Global.isVerbose() && console.log(repoName, 'ls-remote failed', err);
+                    Global.isVerbose() && console.log(repoUrl, ': ls-remote failed!\n', err);
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log('result of git ls-remote:\n', result);
