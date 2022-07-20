@@ -72,6 +72,7 @@ export class Repository {
         });
     }
 
+    // FIXME rename as it is not necessarily the latest tag
     public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.branch.startsWith('release/')) {
@@ -84,6 +85,13 @@ export class Repository {
                         resolve(latestTag);
                     })
                     .catch((error) => reject(error));
+            } else if (repoProperties.tag) {
+                Global.isVerbose() && console.log(repoName, `release version from predefined tag: ${repoProperties.tag}`);
+                resolve(repoProperties.tag);
+            } else if (repoProperties.branch.startsWith('release-version/')) {
+                const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
+                Global.isVerbose() && console.log(repoName, `release version from local tag branch name: ${currentReleaseVersion}`);
+                resolve(currentReleaseVersion);
             } else {
                 resolve(null);
             }
@@ -179,7 +187,7 @@ export class Repository {
         });
     }
 
-    public fetch({tag, branch}: {tag?: string, branch?: string}): Promise<void> {
+    public fetch({tag, branch}: { tag?: string, branch?: string }): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const options = [];
             if (branch || tag) {

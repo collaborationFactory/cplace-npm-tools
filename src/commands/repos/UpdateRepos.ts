@@ -62,6 +62,7 @@ export class UpdateRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log('commit', repoProperties.commit);
         Global.isVerbose() && console.log('branch', repoProperties.branch);
         Global.isVerbose() && console.log('tag', repoProperties.tag);
+        Global.isVerbose() && console.log('tagMarker', repoProperties.tagMarker);
 
         if (!repoProperties.branch && !repoProperties.tag) {
             return Promise.reject('No branch or tag given in parent-repos.json for repo: ' + repoName);

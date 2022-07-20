@@ -12,8 +12,10 @@ import {ICommandParameters} from '../models';
  */
 export class WriteRepos extends AbstractReposCommand {
     private static readonly PARAMETER_FREEZE: string = 'freeze';
+    private static readonly PARAMETER_USE_TAGS: string = 'useTags';
 
     private freeze: boolean = false;
+    private useTags: boolean = false;
 
     public execute(): Promise<void> {
         return Promise
@@ -30,7 +32,9 @@ export class WriteRepos extends AbstractReposCommand {
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         this.freeze = params[WriteRepos.PARAMETER_FREEZE] as boolean;
-        Global.isVerbose() && this.freeze && console.log('Freezing repo states');
+        this.useTags = params[WriteRepos.PARAMETER_USE_TAGS] as boolean;
+
+        Global.isVerbose() && this.freeze && console.log(`Freezing repo states, using tags: ${this.useTags}.`);
         return true;
     }
 
@@ -47,19 +51,40 @@ export class WriteRepos extends AbstractReposCommand {
     }
 
     private mapStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
-        return repo
-            .getCurrentCommitHash()
-            .then((commit) => {
-                const current = this.parentRepos[repo.repoName];
-                const result: IRepoStatus = {
-                    url: current.url,
-                    branch: status.current,
-                    description: current.description ? current.description : repo.repoName
-                };
-                if (this.freeze || current.commit) {
-                    result.commit = commit;
-                }
-                return result;
-            });
+        if (this.freeze && this.useTags) {
+            return Repository.getLatestTagOfReleaseBranch(repo.repoName, this.parentRepos[repo.repoName])
+                .then((latestTag) => {
+                    const current = this.parentRepos[repo.repoName];
+                    const result: IRepoStatus = {
+                        url: current.url,
+                        branch: current.branch,
+                        description: current.description ? current.description : repo.repoName
+                    };
+                    if (latestTag) {
+                        result.tag = latestTag;
+                        result.tagMarker = latestTag;
+                        Global.isVerbose() && console.log(`using latest tag ${result.tag}`);
+                    } else {
+                        Global.isVerbose() && console.log(`no tag found for ${repo.repoName}`);
+                    }
+                    return result;
+                });
+        } else {
+            return repo
+                .getCurrentCommitHash()
+                .then((commit) => {
+                    const current = this.parentRepos[repo.repoName];
+                    const result: IRepoStatus = {
+                        url: current.url,
+                        branch: status.current,
+                        description: current.description ? current.description : repo.repoName
+                    };
+                    if (this.freeze || current.commit) {
+                        result.commit = commit;
+                        Global.isVerbose() && console.log(`using HEAD commit ${result.commit}`);
+                    }
+                    return result;
+                });
+        }
     }
 }

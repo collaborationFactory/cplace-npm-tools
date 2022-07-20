@@ -54,3 +54,4 @@ dist/
 
 # Ignore generated package file
 *.tgz
+/parent-repos.json
