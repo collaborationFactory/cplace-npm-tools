@@ -1,8 +1,6 @@
 import * as Promise from 'bluebird';
-import {fs} from '../../p/fs';
 import {IGitStatus, Repository} from '../../git';
 import {Global} from '../../Global';
-import {enforceNewline} from '../../util';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
 import {ICommandParameters} from '../models';
@@ -12,9 +10,12 @@ import {ICommandParameters} from '../models';
  */
 export class WriteRepos extends AbstractReposCommand {
     private static readonly PARAMETER_FREEZE: string = 'freeze';
+    private static readonly PARAMETER_UN_FREEZE: string = 'unFreeze';
     private static readonly PARAMETER_USE_TAGS: string = 'useTags';
+    private static readonly RELEASE_VERSION_BRANCH_PATTERN: RegExp = new RegExp(/^release-version\/(\d+).(\d+)/);
 
     private freeze: boolean = false;
+    private unFreeze: boolean = false;
     private useTags: boolean = false;
 
     public execute(): Promise<void> {
@@ -32,6 +33,7 @@ export class WriteRepos extends AbstractReposCommand {
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         this.freeze = params[WriteRepos.PARAMETER_FREEZE] as boolean;
+        this.unFreeze = params[WriteRepos.PARAMETER_UN_FREEZE] as boolean;
         this.useTags = params[WriteRepos.PARAMETER_USE_TAGS] as boolean;
 
         Global.isVerbose() && this.freeze && console.log(`Freezing repo states, using tags: ${this.useTags}.`);
@@ -51,7 +53,25 @@ export class WriteRepos extends AbstractReposCommand {
     }
 
     private mapStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
-        if (this.freeze && this.useTags) {
+        if (this.unFreeze) {
+            return new Promise<IRepoStatus>((resolve) => {
+                const current = this.parentRepos[repo.repoName];
+                let currentBranch = current.branch;
+                if (currentBranch.startsWith('release-version/')) {
+                    const match = WriteRepos.RELEASE_VERSION_BRANCH_PATTERN.exec(currentBranch);
+                    if (match.length > 1) {
+                        const major = match[1];
+                        const minor = match[2];
+                        currentBranch = `release/${major}.${minor}`;
+                    }
+                }
+                resolve({
+                            url: current.url,
+                            branch: currentBranch,
+                            description: current.description ? current.description : repo.repoName
+                        });
+            });
+        } else if (this.freeze && this.useTags) {
             return Repository.getLatestTagOfReleaseBranch(repo.repoName, this.parentRepos[repo.repoName])
                 .then((latestTag) => {
                     const current = this.parentRepos[repo.repoName];
@@ -66,6 +86,10 @@ export class WriteRepos extends AbstractReposCommand {
                         Global.isVerbose() && console.log(`using latest tag ${result.tag}`);
                     } else {
                         Global.isVerbose() && console.log(`no tag found for ${repo.repoName}`);
+                        if (current.commit) {
+                            Global.isVerbose() && console.log(`preserving commit ${repo.commit}`);
+                            result.commit = current.commit;
+                        }
                     }
                     return result;
                 });
