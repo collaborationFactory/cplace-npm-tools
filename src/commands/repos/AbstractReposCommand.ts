@@ -21,9 +21,13 @@ export abstract class AbstractReposCommand implements ICommand {
     protected force: boolean;
     protected sequential: boolean;
     protected depth: number;
+    protected parentReposConfigPath: string;
+    protected rootDir: string;
 
-    public prepareAndMayExecute(params: ICommandParameters): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir: string = ''): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
+
+        this.rootDir = rootDir;
 
         this.force = !!params[AbstractReposCommand.PARAMETER_FORCE];
         if (this.force) {
@@ -47,15 +51,16 @@ export abstract class AbstractReposCommand implements ICommand {
             Global.isVerbose() && console.log('running with depth for cloning = ' + this.depth);
         }
 
-        if (!fs.existsSync(AbstractReposCommand.PARENT_REPOS_FILE_NAME)) {
-            console.error('Cannot find repo description', AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+        this.parentReposConfigPath = path.join(rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+        if (!fs.existsSync(this.parentReposConfigPath)) {
+            console.error('Cannot find repo description', this.parentReposConfigPath);
             return false;
         }
 
         try {
-            this.parentRepos = JSON.parse(fs.readFileSync(AbstractReposCommand.PARENT_REPOS_FILE_NAME, 'utf8'));
+            this.parentRepos = JSON.parse(fs.readFileSync(this.parentReposConfigPath, 'utf8'));
         } catch (e) {
-            console.error('Failed to parse repo description', AbstractReposCommand.PARENT_REPOS_FILE_NAME, e);
+            console.error('Failed to parse repo description', this.parentReposConfigPath, e);
             return false;
         }
 
@@ -97,10 +102,8 @@ export abstract class AbstractReposCommand implements ICommand {
     protected writeNewParentRepos(newParentRepos: IReposDescriptor): Promise<void> {
         const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
         Global.isVerbose() && console.log('new repo description', newParentReposContent);
-        return fs
-            .writeFileAsync(AbstractReposCommand.PARENT_REPOS_FILE_NAME, newParentReposContent, 'utf8')
-            .then(() => {
-                this.parentRepos = newParentRepos;
-            });
+        fs.writeFileSync(this.parentReposConfigPath, newParentReposContent, 'utf8');
+        this.parentRepos = newParentRepos;
+        return Promise.resolve();
     }
 }

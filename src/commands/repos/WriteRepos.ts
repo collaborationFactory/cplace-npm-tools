@@ -45,7 +45,7 @@ export class WriteRepos extends AbstractReposCommand {
         const repoProperties = this.parentRepos[repoName];
         Global.isVerbose() && console.log('repoProperties', repoProperties);
 
-        const repo = new Repository(`../${repoName}`);
+        const repo = new Repository(`${this.rootDir}/../${repoName}`);
         return repo.status()
             .then((status) => this.checkRepoClean(repo, status))
             .then((status) => this.mapStatus(repo, status))
