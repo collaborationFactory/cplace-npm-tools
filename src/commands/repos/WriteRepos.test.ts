@@ -9,6 +9,21 @@ import {ICommandParameters} from '../models';
 
 const REPO_NAMES = ['main', 'test-1', 'test-2'];
 describe('writing the parent repos json', () => {
+
+    const assertRaw = async (parentRepos: string) => {
+        debugLog(parentRepos);
+        const parentReposJson = JSON.parse(parentRepos);
+        expect(Object.keys(parentReposJson)).toHaveLength(3);
+        Object.values(parentReposJson).map((status: IRepoStatus) => {
+            expect(status.url).toBeDefined();
+            expect(status.branch).toEqual('release/22.2');
+            expect(status.description).toBeDefined();
+            expect(status.commit).toBeUndefined();
+            expect(status.tag).toBeUndefined();
+            expect(status.tagMarker).toBeUndefined();
+        });
+    };
+
     test('raw', async () => {
         const testUsingTags = async (rootDir: string) => {
             const params: ICommandParameters = {};
@@ -17,21 +32,7 @@ describe('writing the parent repos json', () => {
             await wr.execute();
         };
 
-        const assertUsingTags = async (parentRepos: string) => {
-            debugLog(parentRepos);
-            const parentReposJson = JSON.parse(parentRepos);
-            expect(Object.keys(parentReposJson)).toHaveLength(3);
-            Object.values(parentReposJson).map((status: IRepoStatus) => {
-                expect(status.url).toBeDefined();
-                expect(status.branch).toEqual('release/22.2');
-                expect(status.description).toBeDefined();
-                expect(status.commit).toBeUndefined();
-                expect(status.tag).toBeUndefined();
-                expect(status.tagMarker).toBeUndefined();
-            });
-        };
-
-        await evaluate(testUsingTags, assertUsingTags);
+        await evaluate(testUsingTags, assertRaw);
     });
 
     test('using commits', async () => {
@@ -44,7 +45,7 @@ describe('writing the parent repos json', () => {
             await wr.execute();
         };
 
-        const assertUsingTags = async (parentRepos: string) => {
+        const assertUsingCommits = async (parentRepos: string) => {
             debugLog(parentRepos);
             const parentReposJson = JSON.parse(parentRepos);
             expect(Object.keys(parentReposJson)).toHaveLength(3);
@@ -58,7 +59,7 @@ describe('writing the parent repos json', () => {
             });
         };
 
-        await evaluate(testUsingTags, assertUsingTags);
+        await evaluate(testUsingTags, assertUsingCommits);
     });
 
     test('using tags', async () => {
@@ -87,6 +88,27 @@ describe('writing the parent repos json', () => {
         };
 
         await evaluate(testUsingTags, assertUsingTags);
+    });
+
+    test('un-freeze', async () => {
+        const testUsingTags = async (rootDir: string) => {
+            const prepareParams: ICommandParameters = {};
+            prepareParams[WriteRepos.PARAMETER_FREEZE] = true;
+            prepareParams[WriteRepos.PARAMETER_USE_TAGS] = true;
+
+            const prepareWr = new WriteRepos();
+            prepareWr.prepareAndMayExecute(prepareParams, rootDir);
+            await prepareWr.execute();
+
+            const params: ICommandParameters = {};
+            params[WriteRepos.PARAMETER_FREEZE] = true;
+            params[WriteRepos.PARAMETER_UN_FREEZE] = true;
+            const wr = new WriteRepos();
+            wr.prepareAndMayExecute(params, rootDir);
+            await wr.execute();
+        };
+
+        await evaluate(testUsingTags, assertRaw);
     });
 });
 
