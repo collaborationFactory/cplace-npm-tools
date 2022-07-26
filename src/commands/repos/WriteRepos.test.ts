@@ -1,4 +1,4 @@
-import {IReposDescriptor} from './models';
+import {IReposDescriptor, IRepoStatus} from './models';
 import * as fs from 'fs';
 import * as path from 'path';
 import {withTempDirectory} from '../../test/helpers/directories';
@@ -8,11 +8,85 @@ import {enforceNewline} from '../../util';
 import {ICommandParameters} from '../models';
 
 const REPO_NAMES = ['main', 'test-1', 'test-2'];
+describe('writing the parent repos json', () => {
+    test('raw', async () => {
+        const testUsingTags = async (rootDir: string) => {
+            const params: ICommandParameters = {};
+            const wr = new WriteRepos();
+            wr.prepareAndMayExecute(params, rootDir);
+            await wr.execute();
+        };
 
-test('Say hello world', async () => {
-    console.log(`starting with all repos`);
-    await createGitReposSetup().then(() => {
-        console.log(`done with all repos`);
+        const assertUsingTags = async (parentRepos: string) => {
+            debugLog(parentRepos);
+            const parentReposJson = JSON.parse(parentRepos);
+            expect(Object.keys(parentReposJson)).toHaveLength(3);
+            Object.values(parentReposJson).map((status: IRepoStatus) => {
+                expect(status.url).toBeDefined();
+                expect(status.branch).toEqual('release/22.2');
+                expect(status.description).toBeDefined();
+                expect(status.commit).toBeUndefined();
+                expect(status.tag).toBeUndefined();
+                expect(status.tagMarker).toBeUndefined();
+            });
+        };
+
+        await evaluate(testUsingTags, assertUsingTags);
+    });
+
+    test('using commits', async () => {
+        const testUsingTags = async (rootDir: string) => {
+            const params: ICommandParameters = {};
+            params[WriteRepos.PARAMETER_FREEZE] = true;
+
+            const wr = new WriteRepos();
+            wr.prepareAndMayExecute(params, rootDir);
+            await wr.execute();
+        };
+
+        const assertUsingTags = async (parentRepos: string) => {
+            debugLog(parentRepos);
+            const parentReposJson = JSON.parse(parentRepos);
+            expect(Object.keys(parentReposJson)).toHaveLength(3);
+            Object.values(parentReposJson).map((status: IRepoStatus) => {
+                expect(status.url).toBeDefined();
+                expect(status.branch).toEqual('release/22.2');
+                expect(status.description).toBeDefined();
+                expect(status.commit).toBeDefined();
+                expect(status.tag).toBeUndefined();
+                expect(status.tagMarker).toBeUndefined();
+            });
+        };
+
+        await evaluate(testUsingTags, assertUsingTags);
+    });
+
+    test('using tags', async () => {
+        const testUsingTags = async (rootDir: string) => {
+            const params: ICommandParameters = {};
+            params[WriteRepos.PARAMETER_FREEZE] = true;
+            params[WriteRepos.PARAMETER_USE_TAGS] = true;
+
+            const wr = new WriteRepos();
+            wr.prepareAndMayExecute(params, rootDir);
+            await wr.execute();
+        };
+
+        const assertUsingTags = async (parentRepos: string) => {
+            debugLog(parentRepos);
+            const parentReposJson = JSON.parse(parentRepos);
+            expect(Object.keys(parentReposJson)).toHaveLength(3);
+            Object.values(parentReposJson).map((status: IRepoStatus) => {
+                expect(status.url).toBeDefined();
+                expect(status.branch).toEqual('release/22.2');
+                expect(status.description).toBeDefined();
+                expect(status.commit).toBeUndefined();
+                expect(status.tag).toEqual('version/22.2.0');
+                expect(status.tagMarker).toEqual('version/22.2.0');
+            });
+        };
+
+        await evaluate(testUsingTags, assertUsingTags);
     });
 });
 
@@ -21,11 +95,20 @@ interface ILocalRepoData {
     url: string;
 }
 
-async function createGitReposSetup(): Promise<void> {
-    return withTempDirectory('freeze-parent-repos', createRemoteRepos);
+const debug = false;
+
+// tslint:disable-next-line:no-any
+function debugLog(message?: any, ...args: any[]): void {
+    if (debug) {
+        console.log(message, ...args);
+    }
 }
 
-const createRemoteRepos = async (dir: string) => {
+async function evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void> {
+    return withTempDirectory('freeze-parent-repos', createRemoteRepos, testCase, assertion);
+}
+
+const createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
     const remotePath = path.join(dir, 'remote');
     fs.mkdirSync(remotePath);
     const repoFolders = createRepositories(REPO_NAMES, remotePath);
@@ -76,23 +159,17 @@ const createRemoteRepos = async (dir: string) => {
     }
 
     const initialParentRepos = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-    console.log(`initial\n${initialParentRepos.toString()}`);
+    debugLog(`initial\n${initialParentRepos.toString()}`);
 
-    const wr = new WriteRepos();
     try {
-        const params: ICommandParameters = {};
-        const FREEZE = 'freeze';
-        const USE_TAGS = 'useTags';
-        params[FREEZE] = true;
-        params[USE_TAGS] = true;
-
-        wr.prepareAndMayExecute(params, rootDir);
-        await wr.execute();
-        const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-        console.log(result.toString());
+        await testCase(rootDir);
     } catch (e) {
-        console.log('Unexpected error!', e);
+        debugLog('Unexpected error during test evaluation!', e);
+        throw e;
     }
+
+    const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
+    await assertion(result.toString());
 };
 
 function writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): void {
@@ -102,7 +179,7 @@ function writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): vo
 }
 
 function execSync(pathToRepo: string, command: string): void {
-    console.log(child_process.execSync(
+    debugLog(child_process.execSync(
         command,
         {
             cwd: pathToRepo,
@@ -117,7 +194,7 @@ function createRepositories(repos: string[], rootDir: string): ILocalRepoData[] 
     for (const repo of repos) {
         const pathToRepo = path.join(rootDir, repo);
         fs.mkdirSync(pathToRepo);
-        console.log(`init repo ${repo} in ${pathToRepo}`);
+        debugLog(`init repo ${repo} in ${pathToRepo}`);
         execSync(pathToRepo, command);
         data.push({
                       name: repo,
@@ -129,30 +206,30 @@ function createRepositories(repos: string[], rootDir: string): ILocalRepoData[] 
 
 function initRepo(pathToRepo: string): void {
     const command = `git init && git commit --no-gpg-sign --allow-empty -m "empty" `;
-    console.log(`init repo in ${pathToRepo}`);
+    debugLog(`init repo in ${pathToRepo}`);
     execSync(pathToRepo, command);
 }
 
 function checkoutBranch(pathToRepo: string, branch: string): void {
     const command = `git checkout -B "${branch}"`;
-    console.log(`checkout branch in ${pathToRepo}: ${command}`);
+    debugLog(`checkout branch in ${pathToRepo}: ${command}`);
     execSync(pathToRepo, command);
 }
 
 function updateRepo(pathToRepo: string): void {
     const command = `git status && git add '.' && git commit --no-gpg-sign --allow-empty -m "empty"`;
-    console.log(`update repo in ${pathToRepo}`);
+    debugLog(`update repo in ${pathToRepo}`);
     execSync(pathToRepo, command);
 }
 
 function tagRepo(pathToRepo: string, version: string): void {
     const command = `git tag -a "${version}" -m "empty"`;
-    console.log(`tag repo in ${pathToRepo} to ${version}`);
+    debugLog(`tag repo in ${pathToRepo} to ${version}`);
     execSync(pathToRepo, command);
 }
 
 function cloneRepo(pathToRepo: string, repoUrl: string): void {
     const command = `git clone ${repoUrl}`;
-    console.log(`cloning repo ${repoUrl} in ${pathToRepo}`);
+    debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
     execSync(pathToRepo, command);
 }

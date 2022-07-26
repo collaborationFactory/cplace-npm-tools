@@ -9,9 +9,9 @@ import {ICommandParameters} from '../models';
  * General write-repos-state command
  */
 export class WriteRepos extends AbstractReposCommand {
-    private static readonly PARAMETER_FREEZE: string = 'freeze';
-    private static readonly PARAMETER_UN_FREEZE: string = 'unFreeze';
-    private static readonly PARAMETER_USE_TAGS: string = 'useTags';
+    public static readonly PARAMETER_FREEZE: string = 'freeze';
+    public static readonly PARAMETER_UN_FREEZE: string = 'unFreeze';
+    public static readonly PARAMETER_USE_TAGS: string = 'useTags';
     private static readonly RELEASE_VERSION_BRANCH_PATTERN: RegExp = new RegExp(/^release-version\/(\d+).(\d+)/);
 
     private freeze: boolean = false;
