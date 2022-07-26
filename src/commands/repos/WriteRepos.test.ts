@@ -7,11 +7,9 @@ import {WriteRepos} from './WriteRepos';
 import {enforceNewline} from '../../util';
 import {ICommandParameters} from '../models';
 
-const REPO_NAMES = ['main', 'test-1', 'test-2'];
 describe('writing the parent repos json', () => {
 
     const assertRaw = async (parentRepos: string) => {
-        debugLog(parentRepos);
         const parentReposJson = JSON.parse(parentRepos);
         expect(Object.keys(parentReposJson)).toHaveLength(3);
         Object.values(parentReposJson).map((status: IRepoStatus) => {
@@ -32,7 +30,7 @@ describe('writing the parent repos json', () => {
             await wr.execute();
         };
 
-        await evaluate(testUsingTags, assertRaw);
+        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertRaw);
     });
 
     test('using commits', async () => {
@@ -46,7 +44,6 @@ describe('writing the parent repos json', () => {
         };
 
         const assertUsingCommits = async (parentRepos: string) => {
-            debugLog(parentRepos);
             const parentReposJson = JSON.parse(parentRepos);
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
@@ -59,7 +56,7 @@ describe('writing the parent repos json', () => {
             });
         };
 
-        await evaluate(testUsingTags, assertUsingCommits);
+        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertUsingCommits);
     });
 
     test('using tags', async () => {
@@ -74,7 +71,6 @@ describe('writing the parent repos json', () => {
         };
 
         const assertUsingTags = async (parentRepos: string) => {
-            debugLog(parentRepos);
             const parentReposJson = JSON.parse(parentRepos);
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
@@ -87,7 +83,7 @@ describe('writing the parent repos json', () => {
             });
         };
 
-        await evaluate(testUsingTags, assertUsingTags);
+        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertUsingTags);
     });
 
     test('un-freeze', async () => {
@@ -108,7 +104,7 @@ describe('writing the parent repos json', () => {
             await wr.execute();
         };
 
-        await evaluate(testUsingTags, assertRaw);
+        new EvaluateWithRemoteRepos(basicTestSetupData, true).evaluate(testUsingTags, assertRaw);
     });
 });
 
@@ -117,141 +113,188 @@ interface ILocalRepoData {
     url: string;
 }
 
-const debug = false;
+interface ITestSetupData {
+    rootRepo: IRepoReleaseTestSetupData;
 
-// tslint:disable-next-line:no-any
-function debugLog(message?: any, ...args: any[]): void {
-    if (debug) {
-        console.log(message, ...args);
-    }
+    [repoName: string]: IRepoReleaseTestSetupData;
 }
 
-async function evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void> {
-    return withTempDirectory('freeze-parent-repos', createRemoteRepos, testCase, assertion);
+interface IBranchReleaseTestSetupData {
+    branchName: string;
+    releases?: string[];
 }
 
-const createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
-    const remotePath = path.join(dir, 'remote');
-    fs.mkdirSync(remotePath);
-    const repoFolders = createRepositories(REPO_NAMES, remotePath);
+interface IRepoReleaseTestSetupData {
+    repoName: string;
+    releaseBranches: IBranchReleaseTestSetupData[];
+}
 
-    if (!Array.isArray(repoFolders)) {
-        throw new Error('Failed to create test setup!');
+const basicTestSetupData: ITestSetupData = {
+    rootRepo: {
+        repoName: 'root',
+        releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
+    },
+    main: {
+        repoName: 'main',
+        releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
+    },
+    test_1: {
+        repoName: 'test-1',
+        releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
+    },
+    test_2: {
+        repoName: 'test-2', releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     }
-
-    const workingDir = path.join(dir, 'working');
-    fs.mkdirSync(workingDir);
-
-    const repos: IReposDescriptor = {};
-    repoFolders.forEach((localRepoData) => {
-        repos[localRepoData.name] = {
-            url: `file://${localRepoData.url}/.git`,
-            branch: 'master'
-        };
-    });
-
-    const rootDir = path.join(workingDir, 'root');
-    fs.mkdirSync(rootDir);
-    initRepo(rootDir);
-    writeParentRepos(rootDir, repos);
-    updateRepo(rootDir);
-    checkoutBranch(rootDir, 'release/22.2');
-    repoFolders.forEach((localRepoData) => {
-        repos[localRepoData.name] = {
-            url: `file://${localRepoData.url}/.git`,
-            branch: 'release/22.2'
-        };
-    });
-    writeParentRepos(rootDir, repos);
-    updateRepo(rootDir);
-
-    for (const localRepoData of repoFolders) {
-        fs.writeFileSync(`${localRepoData.url}/test.txt`, 'test', 'utf8');
-        updateRepo(localRepoData.url);
-        checkoutBranch(localRepoData.url, 'release/22.2');
-
-        fs.writeFileSync(`${localRepoData.url}/test_1.txt`, 'test', 'utf8');
-        updateRepo(localRepoData.url);
-        tagRepo(localRepoData.url, 'version/22.2.0');
-
-        const repoDir = path.join(workingDir, localRepoData.name);
-        fs.mkdirSync(repoDir);
-        cloneRepo(workingDir, repos[localRepoData.name].url);
-        checkoutBranch(path.join(workingDir, localRepoData.name), 'release/22.2');
-    }
-
-    const initialParentRepos = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-    debugLog(`initial\n${initialParentRepos.toString()}`);
-
-    try {
-        await testCase(rootDir);
-    } catch (e) {
-        debugLog('Unexpected error during test evaluation!', e);
-        throw e;
-    }
-
-    const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-    await assertion(result.toString());
 };
 
-function writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): void {
-    const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
-    const parentRepos = path.join(rootDir, 'parent-repos.json');
-    fs.writeFileSync(parentRepos, newParentReposContent, 'utf8');
-}
+export class EvaluateWithRemoteRepos {
 
-function execSync(pathToRepo: string, command: string): void {
-    debugLog(child_process.execSync(
-        command,
-        {
-            cwd: pathToRepo,
-            shell: 'bash'
-        }
-    ).toString());
-}
+    private readonly debug: boolean;
+    private readonly testSetupData: ITestSetupData;
 
-function createRepositories(repos: string[], rootDir: string): ILocalRepoData[] {
-    const command = `git init && git commit --no-gpg-sign --allow-empty -m "empty" `;
-    const data: ILocalRepoData[] = [];
-    for (const repo of repos) {
-        const pathToRepo = path.join(rootDir, repo);
-        fs.mkdirSync(pathToRepo);
-        debugLog(`init repo ${repo} in ${pathToRepo}`);
-        execSync(pathToRepo, command);
-        data.push({
-                      name: repo,
-                      url: pathToRepo
-                  });
+    constructor(testSetupData: ITestSetupData, debug: boolean = false) {
+        this.debug = debug;
+        this.testSetupData = testSetupData;
     }
-    return data;
-}
 
-function initRepo(pathToRepo: string): void {
-    const command = `git init && git commit --no-gpg-sign --allow-empty -m "empty" `;
-    debugLog(`init repo in ${pathToRepo}`);
-    execSync(pathToRepo, command);
-}
+    private static writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): void {
+        const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
+        const parentRepos = path.join(rootDir, 'parent-repos.json');
+        fs.writeFileSync(parentRepos, newParentReposContent, 'utf8');
+    }
 
-function checkoutBranch(pathToRepo: string, branch: string): void {
-    const command = `git checkout -B "${branch}"`;
-    debugLog(`checkout branch in ${pathToRepo}: ${command}`);
-    execSync(pathToRepo, command);
-}
+    public evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): void {
+        withTempDirectory('freeze-parent-repos', this.createRemoteRepos, testCase, assertion).then(
+            () => Promise.resolve(),
+            (e) => Promise.reject(e));
+    }
 
-function updateRepo(pathToRepo: string): void {
-    const command = `git status && git add '.' && git commit --no-gpg-sign --allow-empty -m "empty"`;
-    debugLog(`update repo in ${pathToRepo}`);
-    execSync(pathToRepo, command);
-}
+    private createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
+        const remotePath = path.join(dir, 'remote');
+        fs.mkdirSync(remotePath);
+        const remoteRepos = this.createRepositories(Object.keys(this.testSetupData), remotePath);
 
-function tagRepo(pathToRepo: string, version: string): void {
-    const command = `git tag -a "${version}" -m "empty"`;
-    debugLog(`tag repo in ${pathToRepo} to ${version}`);
-    execSync(pathToRepo, command);
-}
+        if (!Array.isArray(remoteRepos)) {
+            throw new Error('Failed to create test setup!');
+        }
 
-function cloneRepo(pathToRepo: string, repoUrl: string): void {
-    const command = `git clone ${repoUrl}`;
-    debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
-    execSync(pathToRepo, command);
+        const workingDir = path.join(dir, 'working');
+        fs.mkdirSync(workingDir);
+
+        // set up remotes
+        for (const remote of remoteRepos) {
+            this.testSetupData[remote.name].releaseBranches.forEach((releaseBranch) => {
+                this.debugLog(`setting up remote repository ${remote.name}`);
+                this.branchOff(remote, releaseBranch.branchName);
+                releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
+            });
+        }
+
+        // set up working copy
+        const rootDir = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName).url;
+        const repos = this.initParentRepos(rootDir, remoteRepos, 'release/22.2');
+        for (const remote of remoteRepos) {
+            this.cloneRepo(workingDir, repos[remote.name].url);
+            this.checkoutBranch(path.join(workingDir, remote.name), 'release/22.2');
+        }
+
+        if (this.debug) {
+            this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')));
+        }
+
+        try {
+            await testCase(rootDir);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
+
+        const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
+        await assertion(result.toString());
+    }
+
+    private createRelease(localRepoData: ILocalRepoData, tag: string): void {
+        this.commitSomeChanges(localRepoData, 'test_1.txt');
+        this.tagRepo(localRepoData.url, tag);
+    }
+
+    private initParentRepos(rootDir: string, repoData: ILocalRepoData[], branchName: string): IReposDescriptor {
+        const repos: IReposDescriptor = {};
+        repoData.forEach((localRepoData) => {
+            repos[localRepoData.name] = {
+                url: `file://${localRepoData.url}/.git`,
+                branch: branchName
+            };
+        });
+        EvaluateWithRemoteRepos.writeParentRepos(rootDir, repos);
+        this.updateRepo(rootDir);
+        return repos;
+    }
+
+    private branchOff(localRepoData: ILocalRepoData, releaseBranch: string = 'release/22.2'): void {
+        this.commitSomeChanges(localRepoData);
+        this.checkoutBranch(localRepoData.url, releaseBranch);
+    }
+
+    private commitSomeChanges(localRepoData: ILocalRepoData, fileName: string = 'test.txt'): void {
+        fs.writeFileSync(`${localRepoData.url}/${fileName}`, 'test', 'utf8');
+        this.updateRepo(localRepoData.url);
+    }
+
+    // tslint:disable-next-line:no-any
+    private debugLog(message?: any, ...args: any[]): void {
+        if (this.debug) {
+            console.log(message, ...args);
+        }
+    }
+
+    private execSync(pathToRepo: string, command: string): void {
+        this.debugLog(child_process.execSync(
+            command,
+            {
+                cwd: pathToRepo,
+                shell: 'bash'
+            }
+        ).toString());
+    }
+
+    private createRepositories(repos: string[], rootDir: string): ILocalRepoData[] {
+        const command = `git init && git commit --no-gpg-sign --allow-empty -m "empty" `;
+        const data: ILocalRepoData[] = [];
+        for (const repo of repos) {
+            const pathToRepo = path.join(rootDir, repo);
+            fs.mkdirSync(pathToRepo);
+            this.debugLog(`init repo ${repo} in ${pathToRepo}`);
+            this.execSync(pathToRepo, command);
+            data.push({
+                          name: repo,
+                          url: pathToRepo
+                      });
+        }
+        return data;
+    }
+
+    private checkoutBranch(pathToRepo: string, branch: string): void {
+        const command = `git checkout -B "${branch}"`;
+        this.debugLog(`checkout branch in ${pathToRepo}: ${command}`);
+        this.execSync(pathToRepo, command);
+    }
+
+    private updateRepo(pathToRepo: string): void {
+        const command = `git status && git add '.' && git commit --no-gpg-sign --allow-empty -m "empty"`;
+        this.debugLog(`update repo in ${pathToRepo}`);
+        this.execSync(pathToRepo, command);
+    }
+
+    private tagRepo(pathToRepo: string, version: string): void {
+        const command = `git tag -a "${version}" -m "empty"`;
+        this.debugLog(`tag repo in ${pathToRepo} to ${version}`);
+        this.execSync(pathToRepo, command);
+    }
+
+    private cloneRepo(pathToRepo: string, repoUrl: string): void {
+        const command = `git clone ${repoUrl}`;
+        this.debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
+        this.execSync(pathToRepo, command);
+    }
 }
