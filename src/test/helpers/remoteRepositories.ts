@@ -60,7 +60,46 @@ export const basicTestSetupData: ITestSetupData = {
     }
 };
 
-export class EvaluateWithRemoteRepos implements ITestRun {
+export const multiBranchTestSetupData: ITestSetupData = {
+    rootRepo: {
+        repoName: ROOT_REPO,
+        releaseBranches: [
+            {branchName: 'release/5.20', releases: []},
+            {branchName: 'release/22.2', releases: ['version/22.2.0', 'version/22.2.1', 'version/22.2.2', 'version/22.2.3']},
+            {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2', 'version/22.3.3', 'version/22.3.4']},
+            {branchName: 'release/22.4', releases: ['version/22.4.0']}
+        ]
+    },
+    main: {
+        repoName: 'main',
+        releaseBranches: [
+            {branchName: 'release/5.20', releases: []},
+            {branchName: 'release/22.2', releases: ['version/22.2.0', 'version/22.2.1']},
+            {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2']},
+            {branchName: 'release/22.4', releases: ['version/22.4.0']}
+        ]
+    },
+    test_1: {
+        repoName: 'test-1',
+        releaseBranches: [
+            {branchName: 'release/5.20', releases: []},
+            {branchName: 'release/22.2', releases: ['version/22.2.0', 'version/22.2.1', 'version/22.2.2', 'version/22.2.3']},
+            {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2', 'version/22.3.3', 'version/22.3.4']},
+            {branchName: 'release/22.4', releases: ['version/22.4.0', 'version/22.4.1']}
+        ]
+    },
+    test_2: {
+        repoName: 'test-2',
+        releaseBranches: [
+            {branchName: 'release/5.20', releases: []},
+            {branchName: 'release/22.2', releases: []},
+            {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2']},
+            {branchName: 'release/22.4', releases: ['version/22.4.0']}
+        ]
+    }
+};
+
+class EvaluateWithRemoteRepos implements ITestRun {
 
     private debug: boolean = false;
     private readonly testSetupData: ITestSetupData;
@@ -130,25 +169,28 @@ export class EvaluateWithRemoteRepos implements ITestRun {
             });
         }
 
-        // set up working copy
         const remoteRootRepo = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName);
         if (!remoteRootRepo) {
             // tslint:disable-next-line:max-line-length
             throw new Error(`Remote repo name in test setup data [${this.testSetupData.rootRepo.repoName}] does not match any name of created repo names [${Object.values(remoteRepos).map((r) => r.name).join(', ')}]!`);
         }
-        const rootDir = remoteRootRepo.url;
-        const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
-
-        for (const remote of remoteRepos) {
-            this.cloneRepo(workingDir, repos[remote.name].url);
-            this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
-        }
 
         // set up rootRepo
+        const rootDir = path.join(workingDir, ROOT_REPO);
+        this.cloneRepo(workingDir, remoteRootRepo.url);
         for (const branch of this.branchesToCheckout) {
             this.checkoutBranch(path.join(workingDir, ROOT_REPO), branch);
         }
         this.checkoutBranch(path.join(workingDir, ROOT_REPO), this.branchUnderTest);
+        const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
+
+        // set up working copy
+        for (const remote of remoteRepos) {
+            if (remote.name !== ROOT_REPO) {
+                this.cloneRepo(workingDir, repos[remote.name].url);
+                this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
+            }
+        }
 
         if (this.debug) {
             this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')));
@@ -201,13 +243,18 @@ export class EvaluateWithRemoteRepos implements ITestRun {
     }
 
     private execSync(pathToRepo: string, command: string): void {
-        this.debugLog(child_process.execSync(
-            command,
-            {
-                cwd: pathToRepo,
-                shell: 'bash'
-            }
-        ).toString());
+        try {
+            this.debugLog(child_process.execSync(
+                command,
+                {
+                    cwd: pathToRepo,
+                    shell: 'bash'
+                }
+            ).toString());
+        } catch (e) {
+            console.log(`error when executing command [${command}] in [${pathToRepo}]!`, e);
+            throw e;
+        }
     }
 
     private createRepositories(repos: string[], rootDir: string): ILocalRepoData[] {
