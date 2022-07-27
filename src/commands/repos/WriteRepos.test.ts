@@ -148,9 +148,11 @@ interface ILocalRepoData {
     url: string;
 }
 
+export const ROOT_REPO = 'rootRepo';
+
 export const basicTestSetupData: ITestSetupData = {
     rootRepo: {
-        repoName: 'rootRepo',
+        repoName: 'foo',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     main: {
@@ -171,6 +173,7 @@ export class EvaluateWithRemoteRepos implements ITestRun {
     private debug: boolean = false;
     private readonly testSetupData: ITestSetupData;
     private branchUnderTest: string;
+    private readonly branchesToCheckout: string[] = [];
 
     constructor(testSetupData: ITestSetupData) {
         this.testSetupData = testSetupData;
@@ -179,7 +182,7 @@ export class EvaluateWithRemoteRepos implements ITestRun {
     private static writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): void {
         const filtered: IReposDescriptor = {};
         Object.keys(newParentRepos).forEach((name) => {
-            if (name !== 'rootRepo') {
+            if (name !== ROOT_REPO) {
                 filtered[name] = newParentRepos[name];
             }
         });
@@ -190,6 +193,11 @@ export class EvaluateWithRemoteRepos implements ITestRun {
 
     public withBranchUnderTest(branchUnderTest: string): ITestRun {
         this.branchUnderTest = branchUnderTest;
+        return this;
+    }
+
+    public withBranchesToCheckout(branchesToCheckout: string[]): ITestRun {
+        this.branchesToCheckout.push(...branchesToCheckout);
         return this;
     }
 
@@ -233,14 +241,22 @@ export class EvaluateWithRemoteRepos implements ITestRun {
         // set up working copy
         const remoteRootRepo = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName);
         if (!remoteRootRepo) {
-            throw new Error(`Remote repo name in test setup data ${this.testSetupData.rootRepo.repoName} does not match any name of created repo names ${remoteRepos.keys()}!`);
+            // tslint:disable-next-line:max-line-length
+            throw new Error(`Remote repo name in test setup data [${this.testSetupData.rootRepo.repoName}] does not match any name of created repo names [${Object.values(remoteRepos).map((r) => r.name).join(', ')}]!`);
         }
         const rootDir = remoteRootRepo.url;
         const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
+
         for (const remote of remoteRepos) {
             this.cloneRepo(workingDir, repos[remote.name].url);
             this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
         }
+
+        // set up rootRepo
+        for (const branch of this.branchesToCheckout) {
+            this.checkoutBranch(path.join(workingDir, ROOT_REPO), branch);
+        }
+        this.checkoutBranch(path.join(workingDir, ROOT_REPO), this.branchUnderTest);
 
         if (this.debug) {
             this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')));
