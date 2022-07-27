@@ -23,18 +23,20 @@ describe('writing the parent repos json', () => {
     };
 
     test('raw', async () => {
-        const testUsingTags = async (rootDir: string) => {
+        const testRaw = async (rootDir: string) => {
             const params: ICommandParameters = {};
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
         };
 
-        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertRaw);
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluate(testRaw, assertRaw);
     });
 
     test('using commits', async () => {
-        const testUsingTags = async (rootDir: string) => {
+        const testUsingCommits = async (rootDir: string) => {
             const params: ICommandParameters = {};
             params[WriteRepos.PARAMETER_FREEZE] = true;
 
@@ -55,8 +57,9 @@ describe('writing the parent repos json', () => {
                 expect(status.tagMarker).toBeUndefined();
             });
         };
-
-        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertUsingCommits);
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluate(testUsingCommits, assertUsingCommits);
     });
 
     test('using tags', async () => {
@@ -83,11 +86,13 @@ describe('writing the parent repos json', () => {
             });
         };
 
-        new EvaluateWithRemoteRepos(basicTestSetupData).evaluate(testUsingTags, assertUsingTags);
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluate(testUsingTags, assertUsingTags);
     });
 
     test('un-freeze', async () => {
-        const testUsingTags = async (rootDir: string) => {
+        const testUnFreeze = async (rootDir: string) => {
             const prepareParams: ICommandParameters = {};
             prepareParams[WriteRepos.PARAMETER_FREEZE] = true;
             prepareParams[WriteRepos.PARAMETER_USE_TAGS] = true;
@@ -104,9 +109,23 @@ describe('writing the parent repos json', () => {
             await wr.execute();
         };
 
-        new EvaluateWithRemoteRepos(basicTestSetupData, true).evaluate(testUsingTags, assertRaw);
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluate(testUnFreeze, assertRaw);
     });
 });
+
+function testWith(testSetupData: ITestSetupData): ITestRun {
+    return new EvaluateWithRemoteRepos(testSetupData);
+}
+
+interface ITestRun {
+    withBranchUnderTest(branchUnderTest: string): ITestRun;
+
+    withDebug(debug: boolean): ITestRun;
+
+    evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void>;
+}
 
 interface ILocalRepoData {
     name: string;
@@ -131,7 +150,7 @@ interface IRepoReleaseTestSetupData {
 
 const basicTestSetupData: ITestSetupData = {
     rootRepo: {
-        repoName: 'root',
+        repoName: 'rootRepo',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     main: {
@@ -147,26 +166,47 @@ const basicTestSetupData: ITestSetupData = {
     }
 };
 
-export class EvaluateWithRemoteRepos {
+export class EvaluateWithRemoteRepos implements ITestRun {
 
-    private readonly debug: boolean;
+    private debug: boolean = false;
     private readonly testSetupData: ITestSetupData;
+    private branchUnderTest: string;
 
-    constructor(testSetupData: ITestSetupData, debug: boolean = false) {
-        this.debug = debug;
+    constructor(testSetupData: ITestSetupData) {
         this.testSetupData = testSetupData;
     }
 
     private static writeParentRepos(rootDir: string, newParentRepos: IReposDescriptor): void {
-        const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
+        const filtered: IReposDescriptor = {};
+        Object.keys(newParentRepos).forEach((name) => {
+            if (name !== 'rootRepo') {
+                filtered[name] = newParentRepos[name];
+            }
+        });
+        const newParentReposContent = enforceNewline(JSON.stringify(filtered, null, 2));
         const parentRepos = path.join(rootDir, 'parent-repos.json');
         fs.writeFileSync(parentRepos, newParentReposContent, 'utf8');
     }
 
-    public evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): void {
-        withTempDirectory('freeze-parent-repos', this.createRemoteRepos, testCase, assertion).then(
+    public withBranchUnderTest(branchUnderTest: string): ITestRun {
+        this.branchUnderTest = branchUnderTest;
+        return this;
+    }
+
+    public withDebug(debug: boolean): ITestRun {
+        this.debug = debug;
+        return this;
+    }
+
+    public evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.createRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
-            (e) => Promise.reject(e));
+            (e) => {
+                console.log('Failed assertion or error while evaluating a test!', e);
+                // fail in case of an exception
+                expect(e).toBeUndefined();
+                Promise.reject(e);
+            });
     }
 
     private createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
@@ -191,11 +231,15 @@ export class EvaluateWithRemoteRepos {
         }
 
         // set up working copy
-        const rootDir = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName).url;
-        const repos = this.initParentRepos(rootDir, remoteRepos, 'release/22.2');
+        const remoteRootRepo = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName);
+        if (!remoteRootRepo) {
+            throw new Error(`Remote repo name in test setup data ${this.testSetupData.rootRepo.repoName} does not match any name of created repo names ${remoteRepos.keys()}!`);
+        }
+        const rootDir = remoteRootRepo.url;
+        const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
         for (const remote of remoteRepos) {
             this.cloneRepo(workingDir, repos[remote.name].url);
-            this.checkoutBranch(path.join(workingDir, remote.name), 'release/22.2');
+            this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
         }
 
         if (this.debug) {
@@ -231,7 +275,7 @@ export class EvaluateWithRemoteRepos {
         return repos;
     }
 
-    private branchOff(localRepoData: ILocalRepoData, releaseBranch: string = 'release/22.2'): void {
+    private branchOff(localRepoData: ILocalRepoData, releaseBranch: string): void {
         this.commitSomeChanges(localRepoData);
         this.checkoutBranch(localRepoData.url, releaseBranch);
     }
