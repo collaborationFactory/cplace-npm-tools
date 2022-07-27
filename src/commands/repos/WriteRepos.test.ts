@@ -127,28 +127,28 @@ interface ITestRun {
     evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void>;
 }
 
-interface ILocalRepoData {
-    name: string;
-    url: string;
-}
-
-interface ITestSetupData {
+export interface ITestSetupData {
     rootRepo: IRepoReleaseTestSetupData;
 
     [repoName: string]: IRepoReleaseTestSetupData;
 }
 
-interface IBranchReleaseTestSetupData {
+export interface IBranchReleaseTestSetupData {
     branchName: string;
     releases?: string[];
 }
 
-interface IRepoReleaseTestSetupData {
+export interface IRepoReleaseTestSetupData {
     repoName: string;
     releaseBranches: IBranchReleaseTestSetupData[];
 }
 
-const basicTestSetupData: ITestSetupData = {
+interface ILocalRepoData {
+    name: string;
+    url: string;
+}
+
+export const basicTestSetupData: ITestSetupData = {
     rootRepo: {
         repoName: 'rootRepo',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
