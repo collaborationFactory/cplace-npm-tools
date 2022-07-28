@@ -8,7 +8,7 @@ import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
 import {exec} from 'child_process';
 import * as util from 'util';
-import {IReposDescriptor, IRepoStatus} from '../commands/repos/models';
+import {IRepoStatus} from '../commands/repos/models';
 
 export class Repository {
 
@@ -72,7 +72,6 @@ export class Repository {
         });
     }
 
-    // FIXME rename as it is not necessarily the latest tag
     public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.branch.startsWith('release/')) {
@@ -85,7 +84,15 @@ export class Repository {
                         resolve(latestTag);
                     })
                     .catch((error) => reject(error));
-            } else if (repoProperties.tag) {
+            } else {
+                resolve(null);
+            }
+        });
+    }
+
+    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            if (repoProperties.tag) {
                 Global.isVerbose() && console.log(repoName, `release version from predefined tag: ${repoProperties.tag}`);
                 resolve(repoProperties.tag);
             } else if (repoProperties.branch.startsWith('release-version/')) {
@@ -93,7 +100,14 @@ export class Repository {
                 Global.isVerbose() && console.log(repoName, `release version from local tag branch name: ${currentReleaseVersion}`);
                 resolve(currentReleaseVersion);
             } else {
-                resolve(null);
+                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+                    .then((latestTag) => {
+                        if (latestTag) {
+                            Global.isVerbose() && console.log(repoName, `release version from latest tag: ${latestTag}`);
+                        }
+                        resolve(latestTag);
+                    })
+                    .catch((error) => reject(error));
             }
         });
     }

@@ -72,18 +72,18 @@ export class WriteRepos extends AbstractReposCommand {
                         });
             });
         } else if (this.freeze && this.useTags) {
-            return Repository.getLatestTagOfReleaseBranch(repo.repoName, this.parentRepos[repo.repoName])
-                .then((latestTag) => {
+            return Repository.getActiveTagOfReleaseBranch(repo.repoName, this.parentRepos[repo.repoName])
+                .then((activeTag) => {
                     const current = this.parentRepos[repo.repoName];
                     const result: IRepoStatus = {
                         url: current.url,
                         branch: current.branch,
                         description: current.description ? current.description : repo.repoName
                     };
-                    if (latestTag) {
-                        result.tag = latestTag;
-                        result.tagMarker = latestTag;
-                        Global.isVerbose() && console.log(`using latest tag ${result.tag}`);
+                    if (activeTag) {
+                        result.tag = activeTag;
+                        result.tagMarker = activeTag;
+                        Global.isVerbose() && console.log(`using tag ${result.tag}`);
                     } else {
                         Global.isVerbose() && console.log(`no tag found for ${repo.repoName}`);
                         if (current.commit) {
