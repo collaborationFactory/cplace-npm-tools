@@ -24,7 +24,12 @@ export class Repository {
     private readonly git: simpleGit.Git;
 
     constructor(repoPath: string = './') {
-        this.git = simpleGit(repoPath);
+        try {
+            this.git = simpleGit(repoPath);
+        } catch (e) {
+            console.log(`Error at initialising a new Repository for ${repoPath}!`, e);
+            throw e;
+        }
         if (Global.isVerbose()) {
             this.git.outputHandler((command, stdout, stderr) => {
                 stdout.pipe(process.stdout);

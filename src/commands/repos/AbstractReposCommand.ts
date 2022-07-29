@@ -24,7 +24,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected parentReposConfigPath: string;
     protected rootDir: string;
 
-    public prepareAndMayExecute(params: ICommandParameters, rootDir: string = ''): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir: string = './'): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
 
         this.rootDir = rootDir;
