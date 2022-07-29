@@ -83,7 +83,7 @@ export class WriteRepos extends AbstractReposCommand {
                     } else {
                         Global.isVerbose() && console.log(`no tag found for ${repoName}`);
                         if (current.commit) {
-                            Global.isVerbose() && console.log(`preserving commit ${current.commit}`);
+                            Global.isVerbose() && console.log('preserving commit');
                             status.commit = current.commit;
                         }
                     }
