@@ -4,6 +4,7 @@ import {Global} from '../../Global';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
 import {ICommandParameters} from '../models';
+import * as path from 'path';
 
 /**
  * General write-repos-state command
@@ -24,7 +25,9 @@ export class WriteRepos extends AbstractReposCommand {
             .map((repoName: string) => this.handleRepo(repoName), {concurrency: 1})
             .then((states) => {
                 const newParentRepos: IReposDescriptor = {};
-                states.forEach((s) => newParentRepos[s.repoName] = s.status);
+                states.forEach((s) => {
+                    newParentRepos[s.repoName] = s.status;
+                });
 
                 Global.isVerbose() && console.log('status and revparse successfully completed');
                 return this.writeNewParentRepos(newParentRepos);
@@ -45,17 +48,9 @@ export class WriteRepos extends AbstractReposCommand {
         const repoProperties = this.parentRepos[repoName];
         Global.isVerbose() && console.log('repoProperties', repoProperties);
 
-        const repo = new Repository(`${this.rootDir}/../${repoName}`);
-        return repo.status()
-            .then((status) => this.checkRepoClean(repo, status))
-            .then((status) => this.mapStatus(repo, status))
-            .then((status) => ({repoName, status}));
-    }
-
-    private mapStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
         if (this.unFreeze) {
             return new Promise<IRepoStatus>((resolve) => {
-                const current = this.parentRepos[repo.repoName];
+                const current = this.parentRepos[repoName];
                 let currentBranch = current.branch;
                 if (currentBranch.startsWith('release-version/')) {
                     const match = WriteRepos.RELEASE_VERSION_BRANCH_PATTERN.exec(currentBranch);
@@ -65,50 +60,59 @@ export class WriteRepos extends AbstractReposCommand {
                         currentBranch = `release/${major}.${minor}`;
                     }
                 }
-                resolve({
-                            url: current.url,
-                            branch: currentBranch,
-                            description: current.description ? current.description : repo.repoName
-                        });
+                const status = {
+                    url: current.url,
+                    branch: currentBranch,
+                    description: current.description ? current.description : repoName
+                };
+                resolve({repoName, status});
             });
         } else if (this.freeze && this.useTags) {
-            return Repository.getActiveTagOfReleaseBranch(repo.repoName, this.parentRepos[repo.repoName])
+            return Repository.getActiveTagOfReleaseBranch(repoName, this.parentRepos[repoName])
                 .then((activeTag) => {
-                    const current = this.parentRepos[repo.repoName];
-                    const result: IRepoStatus = {
+                    const current = this.parentRepos[repoName];
+                    const status: IRepoStatus = {
                         url: current.url,
                         branch: current.branch,
-                        description: current.description ? current.description : repo.repoName
+                        description: current.description ? current.description : repoName
                     };
                     if (activeTag) {
-                        result.tag = activeTag;
-                        result.tagMarker = activeTag;
-                        Global.isVerbose() && console.log(`using tag ${result.tag}`);
+                        status.tag = activeTag;
+                        status.tagMarker = activeTag;
+                        Global.isVerbose() && console.log(`using tag ${status.tag}`);
                     } else {
-                        Global.isVerbose() && console.log(`no tag found for ${repo.repoName}`);
+                        Global.isVerbose() && console.log(`no tag found for ${repoName}`);
                         if (current.commit) {
-                            Global.isVerbose() && console.log(`preserving commit ${repo.commit}`);
-                            result.commit = current.commit;
+                            Global.isVerbose() && console.log(`preserving commit ${current.commit}`);
+                            status.commit = current.commit;
                         }
                     }
-                    return result;
+                    return ({repoName, status});
                 });
         } else {
-            return repo
-                .getCurrentCommitHash()
-                .then((commit) => {
-                    const current = this.parentRepos[repo.repoName];
-                    const result: IRepoStatus = {
-                        url: current.url,
-                        branch: status.current,
-                        description: current.description ? current.description : repo.repoName
-                    };
-                    if (this.freeze || current.commit) {
-                        result.commit = commit;
-                        Global.isVerbose() && console.log(`using HEAD commit ${result.commit}`);
-                    }
-                    return result;
-                });
+            const repo = new Repository(path.join(this.rootDir, '..', repoName));
+            return repo.status()
+                .then((status) => this.checkRepoClean(repo, status))
+                .then((status) => this.mapCommitStatus(repo, status))
+                .then((status) => ({repoName, status}));
         }
+    }
+
+    private mapCommitStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
+        return repo
+            .getCurrentCommitHash()
+            .then((commit) => {
+                const current = this.parentRepos[repo.repoName];
+                const result: IRepoStatus = {
+                    url: current.url,
+                    branch: status.current,
+                    description: current.description ? current.description : repo.repoName
+                };
+                if (this.freeze || current.commit) {
+                    result.commit = commit;
+                    Global.isVerbose() && console.log(`using HEAD commit ${result.commit}`);
+                }
+                return result;
+            });
     }
 }
