@@ -12,7 +12,8 @@ export function createTempDirectory(suffix: string): string {
     return dirPath;
 }
 
-export function withTempDirectory(suffix: string, func: (dir: string) => Promise<void>): Promise<void> {
+// tslint:disable-next-line:no-any
+export function withTempDirectory(suffix: string, func: (dir: string, ...args: any[]) => Promise<void>, ...args: any[]): Promise<void> {
     // tslint:disable-next-line:promise-must-complete
     return new Promise((resolve, reject) => {
         const cleanup = (error?: Error) => {
@@ -29,7 +30,7 @@ export function withTempDirectory(suffix: string, func: (dir: string) => Promise
         };
 
         const dir = createTempDirectory(suffix);
-        func(dir)
+        func(dir, ...args)
             .then(() => {
                 cleanup();
             })
