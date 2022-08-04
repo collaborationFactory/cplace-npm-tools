@@ -292,7 +292,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
     }
 
     private cloneRepo(pathToRepo: string, repoUrl: string): void {
-        const command = `git clone ${repoUrl}`;
+        const command = `git clone "${repoUrl}"`;
         this.debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
         this.execSync(pathToRepo, command);
     }
