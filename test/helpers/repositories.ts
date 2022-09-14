@@ -1,9 +1,9 @@
-import {IReposDescriptor} from '../../commands/repos/models';
 import {withTempDirectory} from './directories';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
-import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import { IReposDescriptor } from "../../src/commands/repos/models";
+import { promiseAllSettledParallel } from "../../src/promiseAllSettled";
 
 export function withRepositories(repos: IReposDescriptor,
                                  func: (rootDir: string) => Promise<void>): Promise<void> {

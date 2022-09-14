@@ -1,4 +1,4 @@
-import { ReleaseNumber } from "../../commands/flow/ReleaseNumber";
+import { ReleaseNumber } from "../../src/commands/flow/ReleaseNumber";
 
 test('can sort releases', () => {
     let releases = [];

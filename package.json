@@ -22,8 +22,14 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "jest": {
-    "rootDir": "src/",
-    "preset": "ts-jest"
+    "globals": {
+      "ts-jest": {
+        "diagnostics": false
+      }
+    },
+    "preset": "ts-jest",
+    "rootDir": "test",
+    "verbose": true
   },
   "devDependencies": {
     "@types/jest": "^26.0.9",

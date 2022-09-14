@@ -1,5 +1,5 @@
-import { ReleaseNotesMessagesFile } from "../../commands/release-notes/ReleaseNotesMessagesFile";
-import { IGitLogEntry } from "../../git";
+import { ReleaseNotesMessagesFile } from "../../src/commands/release-notes/ReleaseNotesMessagesFile";
+import { IGitLogEntry } from "../../src/git";
 
 test('path to messages file is computed correctly', () => {
     const dePath = ReleaseNotesMessagesFile.getPathToMessages('de');

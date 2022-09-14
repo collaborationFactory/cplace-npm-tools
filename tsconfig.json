@@ -9,7 +9,7 @@
     "experimentalDecorators": true,
     "outDir": "dist",
     "noImplicitAny": false,
-    "rootDir": "src/",
+    "rootDirs": ["src", "test"],
     "lib": ["ES6"]
   },
   "include": [
@@ -17,6 +17,6 @@
   ],
   "exclude": [
     "src/**/*.test.ts",
-    "src/test/**/*"
+    "test/**/*"
   ]
 }
