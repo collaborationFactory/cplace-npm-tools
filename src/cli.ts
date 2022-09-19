@@ -5,11 +5,10 @@
 import * as meow from 'meow';
 import {CommandRunner} from './commands';
 import {Global} from './Global';
-import * as updateNotifier from 'update-notifier';
+import updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 import hardRejection from 'hard-rejection';
-import {E2E} from './commands/e2e';
 
 const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
 const packageJson = JSON.parse(packageJsonContent);

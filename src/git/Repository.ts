@@ -11,11 +11,6 @@ import * as util from 'util';
 import { IRepoStatus } from '../commands/repos/models';
 
 export class Repository {
-
-    get baseDir(): string {
-        return this.git._baseDir;
-    }
-
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
@@ -75,6 +70,18 @@ export class Repository {
                 }
             });
         });
+    }
+
+    public static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
+        if (regexForInclusion.length > 0) {
+            const re = new RegExp(regexForInclusion);
+            const match = branch.match(re);
+            return match !== null && branch === match[0];
+        } else {
+            const re = new RegExp(regexForExclusion);
+            const match = branch.match(re);
+            return !(match !== null && branch === match[0]);
+        }
     }
 
     public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
@@ -139,16 +146,8 @@ export class Repository {
         });
     }
 
-    private static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
-        if (regexForInclusion.length > 0) {
-            const re = new RegExp(regexForInclusion);
-            const match = branch.match(re);
-            return match !== null && branch === match[0];
-        } else {
-            const re = new RegExp(regexForExclusion);
-            const match = branch.match(re);
-            return !(match !== null && branch === match[0]);
-        }
+    get baseDir(): string {
+        return this.git._baseDir;
     }
 
     public checkRepoHasPathInBranch(options: { branch: string, pathname: string }): Promise<boolean> {
