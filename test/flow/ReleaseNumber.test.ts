@@ -18,7 +18,6 @@ test('can find predecessor release', () => {
     expect(ReleaseNumber.parse('32.1').getMajorOrMinorPredecessorRelease().toString()).toBe(ReleaseNumber.parse('31.4').toString())
 });
 
-
 test('can sort releases', () => {
     let releases = [];
     releases.push(ReleaseNumber.parse('main'));
