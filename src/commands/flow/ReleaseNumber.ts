@@ -72,4 +72,22 @@ export class ReleaseNumber {
         return this.defaultBranch ? 'default' : `${this.major}.${this.minor}.${this.patch}`;
     }
 
+    public releaseBranchName(): string {
+        return this.defaultBranch ? '' : `release/${this.major}.${this.minor}`;
+    }
+
+    public getMajorOrMinorPredecessorRelease(): ReleaseNumber {
+        if (this.major === 5 && this.minor === 0 && (this.patch === 0 || this.patch === null)) {
+            return ReleaseNumber.parse('4.57');
+        } else if (this.major === 22 && this.minor === 2 && (this.patch === 0 || this.patch === null)) {
+            return ReleaseNumber.parse('5.20');
+        } else {
+            if (this.major > 22 && this.minor === 1) {
+                return ReleaseNumber.parse(`${this.major - 1}.4`);
+            }
+            if (this.minor > 0) {
+                return ReleaseNumber.parse(`${this.major}.${this.minor - 1}`);
+            }
+        }
+    }
 }

@@ -42,10 +42,18 @@ const cli = meow(
 
     Commands:
         release-notes (--from <from> [--to <to>] [--lang <lang>] [--force]) | (--check [--size <size>])
-            Generates release notes between the two given commits (excluding <from>, including <to>).
+            Generates release notes for a given release or between the two given commits (excluding <from>, including <to>).
             If <to> is not given "HEAD" is used.
             If <lang> is not given "en" is used.
 
+            --release <version>
+                Create release notes for commits between the head of the release Branch for the given release 
+                and the head of the predecessor release branch.
+            
+            --docs
+                Stores release notes as markdown in folder documentation/changelog/_index.md so that it can 
+                be published to cplace documentation
+                  
             If --force is set then release notes will also be generated if commits are commented out or in conflict.
 
             If --check is set then no release notes will be generated but the last <size> (default: 100) commits
