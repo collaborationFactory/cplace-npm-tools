@@ -1,4 +1,4 @@
-import { ReleaseNumber } from "../../src/commands/flow/ReleaseNumber";
+import { ReleaseNumber } from '../../src/commands/flow/ReleaseNumber';
 
 test('can parse release', () => {
     expect(ReleaseNumber.parse('4.57.12').toString()).toBe('4.57.12')
@@ -6,22 +6,6 @@ test('can parse release', () => {
 });
 
 test('can find predecessor release', () => {
-    /*
-22.2 cdbe6c6ca29a888c1ed8fad1e894957298ca2d62
-22.3 eefb556ffe500487f403a9f6857e5490b544bf2e
-cplace-cli release-notes --from cdbe6c6ca29a888c1ed8fad1e894957298ca2d62 --to eefb556ffe500487f403a9f6857e5490b544bf2e
-       
-        release/4.56
-        release/4.57
-        release/5.0
-        release/5.1
-        release/5.12
-        release/5.20
-        release/22.2
-        release/22.3
-        release/22.4
-        release/23.1
-*/
     expect(ReleaseNumber.parse('4.57.12').getMajorOrMinorPredecessorRelease().toString()).toBe(ReleaseNumber.parse('4.56').toString())
     expect(ReleaseNumber.parse('5.0').getMajorOrMinorPredecessorRelease().toString()).toBe(ReleaseNumber.parse('4.57').toString())
     expect(ReleaseNumber.parse('5.20').getMajorOrMinorPredecessorRelease().toString()).toBe(ReleaseNumber.parse('5.19').toString())

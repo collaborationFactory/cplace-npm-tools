@@ -1,5 +1,5 @@
-import { withTempDirectory } from "./directories";
-import * as path from "path";
+import { withTempDirectory } from './directories';
+import * as path from 'path';
 import * as fs from 'fs';
 
 export function withTempGradleBuild(func: (directory: string) => Promise<void>,

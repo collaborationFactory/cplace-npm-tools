@@ -2,8 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {withTempDirectory} from './directories';
 import * as child_process from 'child_process';
-import { enforceNewline } from "../../src/util";
-import { IReposDescriptor } from "../../src/commands/repos/models";
+import { enforceNewline } from '../../src/util';
+import { IReposDescriptor } from '../../src/commands/repos/models';
 
 export function testWith(testSetupData: ITestSetupData): ITestRun {
     return new EvaluateWithRemoteRepos(testSetupData);

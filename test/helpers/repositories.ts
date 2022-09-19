@@ -2,8 +2,8 @@ import {withTempDirectory} from './directories';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
-import { IReposDescriptor } from "../../src/commands/repos/models";
-import { promiseAllSettledParallel } from "../../src/promiseAllSettled";
+import { IReposDescriptor } from '../../src/commands/repos/models';
+import { promiseAllSettledParallel } from '../../src/promiseAllSettled';
 
 export function withRepositories(repos: IReposDescriptor,
                                  func: (rootDir: string) => Promise<void>): Promise<void> {
@@ -17,7 +17,7 @@ export function withRepositories(repos: IReposDescriptor,
 }
 
 function createRepositories(repos: IReposDescriptor, rootDir: string): Promise<void[]> {
-    const promises: Array<Promise<void>> = Object.keys(repos).map((repoName) => {
+    const promises: Promise<void>[] = Object.keys(repos).map((repoName) => {
         const pathToRepo = path.join(rootDir, repoName);
         const descriptor = repos[repoName];
 

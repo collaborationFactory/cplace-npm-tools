@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { withRepositories } from "../helpers/repositories";
-import { IReposDescriptor } from "../../src/commands/repos/models";
+import { withRepositories } from '../helpers/repositories';
+import { IReposDescriptor } from '../../src/commands/repos/models';
 
 test('Creating a dummy repo setup works', async () => {
     const repos: IReposDescriptor = {

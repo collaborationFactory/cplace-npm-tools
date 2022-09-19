@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as fs from "fs";
+import * as fs from 'fs';
 
 export function writeModulesXml(rootDir: string, repositoryName: string, content: string) {
     const ideaDir = path.join(rootDir, repositoryName, '.idea');
