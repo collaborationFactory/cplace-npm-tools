@@ -13,6 +13,6 @@ jobs:
       - name: Setup GIT for testing
         run: git config --global user.email "cplace-npm-tools@cplace.io" && git config --global user.name "cplace-npm-tools GitHub Action"
       - name: Install modules
-        run: npm install
+        run: npm install && npm install -g jest
       - name: Run Jest
-        run: node_modules/.bin/jest --verbose
+        run: jest --verbose
