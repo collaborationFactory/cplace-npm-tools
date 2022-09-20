@@ -34,8 +34,9 @@ export class GenerateReleaseNotes implements ICommand {
     private isGeneratingMarkdownForDocumentation: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
-        const release = params[GenerateReleaseNotes.PARAMETER_RELEASE] as string;
+        let release = params[GenerateReleaseNotes.PARAMETER_RELEASE] as string;
         if (release) {
+            release = release.replace('release/', '');
             this.release = ReleaseNumber.parse(release);
         }
 
