@@ -192,7 +192,8 @@ export class GenerateReleaseNotes implements ICommand {
         });
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
-            .replace(/(\r\n|\n|\r)/gm, '');
+            .replace(/(\r\n|\n|\r)/gm, '')
+            .replace('git@github.com:collaborationFactory', 'https://github.com/collaborationFactory');
 
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
