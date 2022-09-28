@@ -85,7 +85,7 @@ export class ReleaseNumber {
             if (this.major > 22 && this.minor === 1) {
                 return ReleaseNumber.parse(`${this.major - 1}.4`);
             }
-            if (this.minor > 0) {
+            if (this.minor > 1) {
                 return ReleaseNumber.parse(`${this.major}.${this.minor - 1}`);
             }
         }

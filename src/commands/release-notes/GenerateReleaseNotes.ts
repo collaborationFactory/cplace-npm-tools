@@ -31,7 +31,7 @@ export class GenerateReleaseNotes implements ICommand {
     private explicitsFile: string;
     private repo: Repository;
     private changelog: string[];
-    private isGeneratingMarkdownForDocumentation: boolean = false;
+    private generateMarkdownForDocumentation: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         let release = params[GenerateReleaseNotes.PARAMETER_RELEASE] as string;
@@ -42,7 +42,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         const docs = params[GenerateReleaseNotes.PARAMETER_DOCS] as boolean;
         if (docs) {
-            this.isGeneratingMarkdownForDocumentation = docs;
+            this.generateMarkdownForDocumentation = docs;
         }
 
         const fromHash = params[GenerateReleaseNotes.PARAMETER_FROM] as string;
@@ -212,7 +212,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         fs.writeFileSync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, this.changelog.join('\n'), 'utf8');
         console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
-        if (this.isGeneratingMarkdownForDocumentation) {
+        if (this.generateMarkdownForDocumentation) {
             this.createMarkdownForCplaceDocs();
         }
     }
