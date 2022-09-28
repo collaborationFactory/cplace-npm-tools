@@ -100,7 +100,7 @@ export class GenerateReleaseNotes implements ICommand {
 
             try {
                 this.toHash = await this.repo.commitExists(this.toHash);
-                Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
+                Global.isVerbose() && console.log(`--to commit has hash ${this.toHash}`);
             } catch {
                 throw new Error(`Commit does not exist: ${this.toHash}`);
             }
