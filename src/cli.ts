@@ -48,6 +48,7 @@ const cli = meow(
             --release <version>
                 Create release notes for commits between the head of the release Branch for the given release 
                 and the head of the predecessor release branch.
+                (Release takes precedence over --from / --to mode)
             
             --docs
                 Stores release notes as markdown in folder documentation/changelog/_index.md so that it can 

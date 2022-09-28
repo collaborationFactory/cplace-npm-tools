@@ -31,7 +31,7 @@ export class GenerateReleaseNotes implements ICommand {
     private explicitsFile: string;
     private repo: Repository;
     private changelog: string[];
-    private generateMarkdownForDocumentation: boolean = false;
+    private generateMarkdownForDocs: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         let release = params[GenerateReleaseNotes.PARAMETER_RELEASE] as string;
@@ -42,7 +42,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         const docs = params[GenerateReleaseNotes.PARAMETER_DOCS] as boolean;
         if (docs) {
-            this.generateMarkdownForDocumentation = docs;
+            this.generateMarkdownForDocs = docs;
         }
 
         const fromHash = params[GenerateReleaseNotes.PARAMETER_FROM] as string;
@@ -113,19 +113,17 @@ export class GenerateReleaseNotes implements ICommand {
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
         const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
-        try {
-            await fs.statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
-        } catch {
-            try {
-                await fs.mkdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
-            } catch {
-                throw new Error(`Failed to create directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}`);
-            }
+        if (!fs.existsSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)) {
+            fs.mkdirSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
         }
 
         const file = await this.updateMessagesFile(relevant);
         const files = await this.readExplicits(file);
-        await this.generateChangelog(files.messages, files.explicits, log.all);
+        if (this.generateMarkdownForDocs) {
+            this.generateChangelogDocs(files.messages, files.explicits, log.all);
+        } else {
+            this.generateChangelogCircleCi(files.messages, files.explicits, log.all);
+        }
     }
 
     private async updateMessagesFile(relevant: IGitLogEntry[]): Promise<ReleaseNotesMessagesFile> {
@@ -180,7 +178,25 @@ export class GenerateReleaseNotes implements ICommand {
         return result;
     }
 
-    private generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
+    private generateChangelogCircleCi(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
+        const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
+
+        changelog.push('');
+        changelog.push(`_Commit range: ${this.fromHash} - ${this.toHash}_`);
+        changelog.push('');
+
+        for (const c of log) {
+            const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
+            if (message) {
+                changelog.push(`   * ${message}`);
+            }
+        }
+
+        fs.writeFileSync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, changelog.join('\n'), 'utf8');
+        console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
+    }
+
+    private generateChangelogDocs(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
         this.changelog = [`_Changelog created on ${new Date().toDateString()}_`];
         if (this.release) {
             this.changelog.push(`_for ${this.release.releaseBranchName()}_`);
@@ -212,9 +228,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         fs.writeFileSync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, this.changelog.join('\n'), 'utf8');
         console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
-        if (this.generateMarkdownForDocumentation) {
-            this.createMarkdownForCplaceDocs();
-        }
+        this.createMarkdownForCplaceDocs();
     }
 
     private createMarkdownForCplaceDocs(): void {
