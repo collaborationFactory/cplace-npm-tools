@@ -3,14 +3,25 @@
  * CLI entry point
  */
 import * as meow from 'meow';
+import {CommandRunner} from './commands';
+import {Global} from './Global';
+import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 import hardRejection from 'hard-rejection';
-import { CommandRunner } from './commands';
-import { Global } from './Global';
 
 const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
 const packageJson = JSON.parse(packageJsonContent);
+
+// Checks for available update on every startup
+const notifier = updateNotifier({
+                                    pkg: {
+                                        name: packageJson.name,
+                                        version: packageJson.version
+                                    },
+                                    updateCheckInterval: 0
+                                });
+notifier.notify();
 
 // Register a handler for unhandled rejections, which gives an explanation to the user and kills the process.
 // This call takes precedence over the default registration from meow because we call first.

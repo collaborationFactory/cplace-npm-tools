@@ -141,6 +141,6 @@ export function promiseAllSettled<K, T>(options: { keys: K[], promiseFactory: ((
  * @return an array of results, if all promises resolved
  * @throws an Error containing details about all rejected promises, if any promise was rejected
  */
-export function promiseAllSettledParallel<T>(promises: Promise<T>[]): Promise<T[]> {
+export function promiseAllSettledParallel<T>(promises: Array<Promise<T>>): Promise<T[]> {
     return promiseAllSettled({keys: [...promises.keys()], promiseFactory: (key) => promises[key], sequential: false});
 }
