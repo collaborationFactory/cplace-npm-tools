@@ -1,9 +1,9 @@
-import { mocked } from 'jest-mock';
 import * as path from 'path';
-import * as fs from "fs";
-import { E2E } from "../../src/commands/e2e";
-import { withTempDirectory } from "../helpers/directories";;
-import * as util from "../../src/util";
+import * as fs from 'fs';
+import { E2E } from '../../src/commands/e2e';
+import { withTempDirectory } from '../helpers/directories';;
+import * as util from '../../src/util';
+import { mocked } from 'ts-jest';
 
 jest.mock('../../src/util');
 
