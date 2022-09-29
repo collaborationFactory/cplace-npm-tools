@@ -1,7 +1,7 @@
-import {IReposDescriptor, IRepoStatus} from './models';
-import {WriteRepos} from './WriteRepos';
-import {ICommandParameters} from '../models';
-import {basicTestSetupData, multiBranchTestSetupData, testWith} from '../../test/helpers/remoteRepositories';
+import { IReposDescriptor, IRepoStatus } from '../../src/commands/repos/models';
+import { ICommandParameters } from '../../src/commands/models';
+import { WriteRepos } from '../../src/commands/repos/WriteRepos';
+import { basicTestSetupData, multiBranchTestSetupData, testWith } from '../helpers/remoteRepositories';
 
 describe('writing the parent repos json for a basic setup', () => {
 

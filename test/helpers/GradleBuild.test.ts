@@ -1,5 +1,5 @@
-import { GradleBuild } from "../../helpers/GradleBuild";
-import { withTempGradleBuild } from "./gradle";
+import { GradleBuild } from '../../dist/helpers/GradleBuild';
+import { withTempGradleBuild } from './gradle';
 
 test('Splitting and trimming lines', () => {
     const lines = `first\n`

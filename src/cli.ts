@@ -9,7 +9,6 @@ import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 import hardRejection from 'hard-rejection';
-import {E2E} from './commands/e2e';
 
 const packageJsonContent = fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8');
 const packageJson = JSON.parse(packageJsonContent);
@@ -42,10 +41,19 @@ const cli = meow(
 
     Commands:
         release-notes (--from <from> [--to <to>] [--lang <lang>] [--force]) | (--check [--size <size>])
-            Generates release notes between the two given commits (excluding <from>, including <to>).
+            Generates release notes for a given release or between the two given commits (excluding <from>, including <to>).
             If <to> is not given "HEAD" is used.
             If <lang> is not given "en" is used.
 
+            --release <version>
+                Create release notes for commits between the head of the release Branch for the given release 
+                and the head of the predecessor release branch.
+                (Release takes precedence over --from / --to mode)
+            
+            --docs
+                Stores release notes as markdown in folder documentation/changelog/_index.md so that it can 
+                be published to cplace documentation
+                  
             If --force is set then release notes will also be generated if commits are commented out or in conflict.
 
             If --check is set then no release notes will be generated but the last <size> (default: 100) commits

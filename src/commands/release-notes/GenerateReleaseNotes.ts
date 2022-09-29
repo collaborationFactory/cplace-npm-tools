@@ -1,16 +1,21 @@
 /**
  * Command for generating release notes
  */
-import {IGitLogEntry, IGitLogSummary, Repository} from '../../git';
-import {Global} from '../../Global';
-import {fs} from '../../p/fs';
-import {ICommand, ICommandParameters} from '../models';
-import {ReleaseNotesMessagesFile} from './ReleaseNotesMessagesFile';
+import { IGitLogEntry, IGitLogSummary, Repository } from '../../git';
+import { Global } from '../../Global';
+import { fs } from '../../p/fs';
+import { ICommand, ICommandParameters } from '../models';
+import { ReleaseNotesMessagesFile } from './ReleaseNotesMessagesFile';
+import { ReleaseNumber } from '../flow/ReleaseNumber';
+import { execSync } from 'child_process';
+import * as path from 'path';
 
 export class GenerateReleaseNotes implements ICommand {
     private static readonly PARAMETER_FROM: string = 'from';
     private static readonly PARAMETER_TO: string = 'to';
     private static readonly PARAMETER_LANG: string = 'lang';
+    private static readonly PARAMETER_RELEASE: string = 'release';
+    private static readonly PARAMETER_DOCS: string = 'docs';
 
     private static readonly PARAMETER_FORCE: string = 'force';
 
@@ -20,14 +25,29 @@ export class GenerateReleaseNotes implements ICommand {
     private toHash: string;
     private lang: string;
     private force: boolean;
+    private release: ReleaseNumber = null;
 
     private messagesFile: string;
     private explicitsFile: string;
+    private repo: Repository;
+    private changelog: string[];
+    private generateMarkdownForDocs: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
+        let release = params[GenerateReleaseNotes.PARAMETER_RELEASE] as string;
+        if (release) {
+            release = release.replace('release/', '');
+            this.release = ReleaseNumber.parse(release);
+        }
+
+        const docs = params[GenerateReleaseNotes.PARAMETER_DOCS] as boolean;
+        if (docs) {
+            this.generateMarkdownForDocs = docs;
+        }
+
         const fromHash = params[GenerateReleaseNotes.PARAMETER_FROM] as string;
-        if (!fromHash) {
-            console.error(`Missing required parameter "${GenerateReleaseNotes.PARAMETER_FROM}"`);
+        if (!release && !fromHash) {
+            console.error(`Missing required parameter '${GenerateReleaseNotes.PARAMETER_FROM}'`);
             return false;
         }
         this.fromHash = String(fromHash);
@@ -38,7 +58,6 @@ export class GenerateReleaseNotes implements ICommand {
         } else {
             this.toHash = 'HEAD';
         }
-
         const lang = params[GenerateReleaseNotes.PARAMETER_LANG] as string;
         if (lang) {
             this.lang = String(lang);
@@ -56,42 +75,55 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     public async execute(): Promise<void> {
-        Global.isVerbose() && console.log('generating release notes from', this.fromHash, 'to', this.toHash);
+        this.repo = new Repository();
 
-        const repo = new Repository();
-        try {
-            this.fromHash = await repo.commitExists(this.fromHash);
-            Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
-        } catch {
-            throw new Error(`Commit does not exist: ${this.fromHash}`);
+        if (this.release) {
+            console.log('generating release notes for release branch: ', this.release.releaseBranchName());
+            const predecessorReleaseBranch = this.release.getMajorOrMinorPredecessorRelease().releaseBranchName();
+            if (this.repo.checkBranchExistsOnRemote(this.release.releaseBranchName()) && this.repo.checkBranchExistsOnRemote(predecessorReleaseBranch)) {
+                const fetchAll = execSync(`git fetch --all`).toString();
+                Global.isVerbose() && console.log(fetchAll);
+                this.fromHash = execSync(`git log -n 1 --pretty=format:"%H" origin/${this.release.getMajorOrMinorPredecessorRelease().releaseBranchName()}`).toString();
+                this.toHash = execSync(`git log -n 1 --pretty=format:"%H" origin/${this.release.releaseBranchName()}`).toString();
+            } else {
+                console.error(`Either given release branch or branch of predecessor release does not exist on remote.`);
+                process.exit(1);
+            }
+        } else {
+            console.log(`generating release notes for given --from Hash ${this.fromHash} and --to Hash ${this.toHash}`);
+            try {
+                this.fromHash = await this.repo.commitExists(this.fromHash);
+                Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
+            } catch {
+                throw new Error(`Commit does not exist: ${this.fromHash}`);
+            }
+
+            try {
+                this.toHash = await this.repo.commitExists(this.toHash);
+                Global.isVerbose() && console.log(`--to commit has hash ${this.toHash}`);
+            } catch {
+                throw new Error(`Commit does not exist: ${this.toHash}`);
+            }
         }
 
-        try {
-            this.toHash = await repo.commitExists(this.toHash);
-            Global.isVerbose() && console.log(`to commit has hash ${this.toHash}`);
-        } catch {
-            throw new Error(`Commit does not exist: ${this.toHash}`);
-        }
-
-        const log = await repo.log(this.fromHash, this.toHash);
+        console.log(`commits for --from Hash ${this.fromHash} and --to Hash ${this.toHash} exist `);
+        const log = await this.repo.log(this.fromHash, this.toHash);
         return await this.parseLog(log);
     }
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
         const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
-        try {
-            await fs.statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
-        } catch {
-            try {
-                await fs.mkdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
-            } catch {
-                throw new Error(`Failed to create directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}`);
-            }
+        if (!fs.existsSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)) {
+            fs.mkdirSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
         }
 
         const file = await this.updateMessagesFile(relevant);
         const files = await this.readExplicits(file);
-        await this.generateChangelog(files.messages, files.explicits, log.all);
+        if (this.generateMarkdownForDocs) {
+            this.generateChangelogDocs(files.messages, files.explicits, log.all);
+        } else {
+            this.generateChangelogCircleCi(files.messages, files.explicits, log.all);
+        }
     }
 
     private async updateMessagesFile(relevant: IGitLogEntry[]): Promise<ReleaseNotesMessagesFile> {
@@ -120,7 +152,7 @@ export class GenerateReleaseNotes implements ICommand {
         }
     }
 
-    private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile }> {
+    private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile; explicits: ReleaseNotesMessagesFile }> {
         await fs.statAsync(this.explicitsFile);
 
         const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
@@ -146,7 +178,7 @@ export class GenerateReleaseNotes implements ICommand {
         return result;
     }
 
-    private async generateChangelog(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): Promise<void> {
+    private generateChangelogCircleCi(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
         const changelog = [`# Changelog ${new Date().toDateString()}`, ''];
 
         changelog.push('');
@@ -160,7 +192,58 @@ export class GenerateReleaseNotes implements ICommand {
             }
         }
 
-        await fs.writeFileAsync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, changelog.join('\n'), 'utf8');
+        fs.writeFileSync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, changelog.join('\n'), 'utf8');
         console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
+    }
+
+    private generateChangelogDocs(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
+        this.changelog = [`_Changelog created on ${new Date().toDateString()}_`];
+        if (this.release) {
+            this.changelog.push(`_for ${this.release.releaseBranchName()}_`);
+        }
+        this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
+
+        log = log.sort((a, b) => {
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+        const remoteUrl = execSync('git config --get remote.origin.url')
+            .toString()?.replace('.git', '')
+            .replace(/(\r\n|\n|\r)/gm, '')
+            .replace('git@github.com:collaborationFactory', 'https://github.com/collaborationFactory');
+
+        if (!remoteUrl) {
+            throw new Error(`Remote url of your local git repository doesn't exist.`);
+        }
+        for (const c of log) {
+            const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
+            if (message) {
+                const prNumber = message.split('#')[1]?.replace(']', '').trim();
+                if (prNumber && remoteUrl) {
+                    this.changelog.push(`   * ${message}(${remoteUrl}/pull/${prNumber})`);
+                } else {
+                    this.changelog.push(`   * ${message}`);
+                }
+            }
+        }
+
+        fs.writeFileSync(GenerateReleaseNotes.FILE_NAME_CHANGELOG, this.changelog.join('\n'), 'utf8');
+        console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
+        this.createMarkdownForCplaceDocs();
+    }
+
+    private createMarkdownForCplaceDocs(): void {
+        const pathToReleaseNotesInMarkdown = path.join(this.repo.baseDir, 'documentation', 'changelog', `_index.md`);
+
+        const markdownHeader = `---
+title: "Release Notes"
+weight: "10"
+type: "section"
+---
+`;
+        if (!fs.existsSync(pathToReleaseNotesInMarkdown)) {
+            fs.mkdirSync(path.join(this.repo.baseDir, 'documentation', 'changelog'), {recursive: true});
+        }
+        fs.writeFileSync(pathToReleaseNotesInMarkdown, markdownHeader + ' ' + this.changelog.join('\n'), 'utf8');
+        console.log(`>> Changelog has successfully been generated in ${pathToReleaseNotesInMarkdown}`);
     }
 }

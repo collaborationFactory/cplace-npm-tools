@@ -2,10 +2,10 @@
  * Utility class for parsing and writing a messages file
  */
 import * as Promise from 'bluebird';
-import {IGitLogEntry} from '../../git';
-import {Global} from '../../Global';
-import {fs} from '../../p/fs';
-import {enforceNewline, makeSingleLine} from '../../util';
+import { IGitLogEntry } from '../../git';
+import { Global } from '../../Global';
+import { fs } from '../../p/fs';
+import { enforceNewline, makeSingleLine } from '../../util';
 
 type MessageEntryStatus = 'ok' | 'commented' | 'conflict';
 
@@ -36,11 +36,27 @@ export class ReleaseNotesMessagesFile {
     }
 
     public static getPathToMessages(lang: string): string {
-        return `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/messages_${lang}.db`;
+        ReleaseNotesMessagesFile.createReleaseNotesFolderIfNotYetExists();
+        const pathToMessages = `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/messages_${lang}.db`;
+        if (!fs.existsSync(pathToMessages)) {
+            fs.writeFileSync(pathToMessages, '');
+        }
+        return pathToMessages;
     }
 
     public static getPathToExplicits(lang: string): string {
-        return `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/explicits_${lang}.db`;
+        ReleaseNotesMessagesFile.createReleaseNotesFolderIfNotYetExists();
+        const pathToExplicits = `${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES}/explicits_${lang}.db`;
+        if (!fs.existsSync(pathToExplicits)) {
+            fs.writeFileSync(pathToExplicits, '');
+        }
+        return pathToExplicits;
+    }
+
+    public static createReleaseNotesFolderIfNotYetExists(): void {
+        if (!fs.existsSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)) {
+            fs.mkdirSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES);
+        }
     }
 
     public static filterRelevantCommits(entry: IGitLogEntry): boolean {

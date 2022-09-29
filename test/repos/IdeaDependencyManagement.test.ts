@@ -1,9 +1,9 @@
 import * as path from 'path';
-import { IReposDescriptor } from "../../commands/repos/models";
-import { withRepositories } from "../helpers/repositories";
-import { IdeaDependencyManagement } from "../../commands/repos/add-dependency/IdeaDependencyManagement";
-import { writeModuleIml, writeModulesXml } from "../helpers/idea";
-import * as fs from "fs";
+import { withRepositories } from '../helpers/repositories';
+import { writeModuleIml, writeModulesXml } from '../helpers/idea';
+import * as fs from 'fs';
+import { IReposDescriptor } from '../../src/commands/repos/models';
+import { IdeaDependencyManagement } from '../../dist/commands/repos/add-dependency/IdeaDependencyManagement';
 
 const allRepos: IReposDescriptor = {
     main: {
@@ -98,7 +98,7 @@ test('Adding a single plugin dependency works', async () => {
             const mgmt = new IdeaDependencyManagement(path.join(rootDir, 'test'), currentRepos);
             await mgmt.addSinglePlugin('mainPlugin', false);
 
-            const content = await fs.readFileAsync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
+            const content = fs.readFileSync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
             expect(content).toContain(
                 '<module fileurl="file://$PROJECT_DIR$/testPlugin/testPlugin.iml" filepath="$PROJECT_DIR$/testPlugin/testPlugin.iml"/>'
             );
@@ -168,7 +168,7 @@ test('Adding a plugin dependency transparency works', async () => {
             const mgmt = new IdeaDependencyManagement(path.join(rootDir, 'test'), currentRepos);
             await mgmt.addSinglePlugin('main2Plugin', true);
 
-            const content = await fs.readFileAsync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
+            const content = fs.readFileSync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
             expect(content).toContain(
                 '<module fileurl="file://$PROJECT_DIR$/testPlugin/testPlugin.iml" filepath="$PROJECT_DIR$/testPlugin/testPlugin.iml"/>'
             );
@@ -211,7 +211,7 @@ test('Adding all plugins from a repo as dependencies works', async () => {
             const mgmt = new IdeaDependencyManagement(path.join(rootDir, 'test'), currentRepos);
             await mgmt.addAllPluginsFromRepository('main');
 
-            const content = await fs.readFileAsync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
+            const content = fs.readFileSync(path.join(rootDir, 'test', '.idea', 'modules.xml'), 'utf8');
             expect(content).toContain(
                 '<module fileurl="file://$PROJECT_DIR$/testPlugin/testPlugin.iml" filepath="$PROJECT_DIR$/testPlugin/testPlugin.iml"/>'
             );

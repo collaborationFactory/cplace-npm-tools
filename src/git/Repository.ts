@@ -4,18 +4,13 @@
 import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
-import {Global} from '../Global';
-import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
-import {exec} from 'child_process';
+import { Global } from '../Global';
+import { IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus } from './models';
+import { exec, execSync } from 'child_process';
 import * as util from 'util';
-import {IRepoStatus} from '../commands/repos/models';
+import { IRepoStatus } from '../commands/repos/models';
 
 export class Repository {
-
-    get baseDir(): string {
-        return this.git._baseDir;
-    }
-
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
@@ -75,6 +70,18 @@ export class Repository {
                 }
             });
         });
+    }
+
+    public static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
+        if (regexForInclusion.length > 0) {
+            const re = new RegExp(regexForInclusion);
+            const match = branch.match(re);
+            return match !== null && branch === match[0];
+        } else {
+            const re = new RegExp(regexForExclusion);
+            const match = branch.match(re);
+            return !(match !== null && branch === match[0]);
+        }
     }
 
     public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
@@ -139,16 +146,8 @@ export class Repository {
         });
     }
 
-    private static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
-        if (regexForInclusion.length > 0) {
-            const re = new RegExp(regexForInclusion);
-            const match = branch.match(re);
-            return match !== null && branch === match[0];
-        } else {
-            const re = new RegExp(regexForExclusion);
-            const match = branch.match(re);
-            return !(match !== null && branch === match[0]);
-        }
+    get baseDir(): string {
+        return this.git._baseDir;
     }
 
     public checkRepoHasPathInBranch(options: { branch: string, pathname: string }): Promise<boolean> {
@@ -183,8 +182,8 @@ export class Repository {
             const pathSpec = `${fromHash}..${toHash}`;
             options[pathSpec] = null;
             this.git.log(options, (err, data: IGitLogSummary) => {
-                             err ? reject(err) : resolve(data);
-                         }
+                    err ? reject(err) : resolve(data);
+                }
             );
         });
     }
@@ -555,7 +554,7 @@ export class Repository {
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
                                 console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
-                                                ', ignoring branch ' + branchAndCommit.branch);
+                                    ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
                                 return false;
@@ -690,6 +689,16 @@ export class Repository {
         });
     }
 
+    public checkBranchExistsOnRemote(branchName: string): boolean {
+        let result = '';
+        try {
+            result = execSync(`git rev-parse origin/${branchName}`).toString();
+        } catch (e) {
+            throw new Error(`Branch ${branchName} doesn't exist. ${e}`);
+        }
+        return result === '' ? false : true;
+    }
+
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
         const match = Repository.TRACKING_BRANCH_PATTERN.exec(label);
         if (!match || match.length < 2 || !match[1]) {
@@ -728,5 +737,4 @@ export class Repository {
         const branchName = match[1];
         return branchName ? branchName : null;
     }
-
 }

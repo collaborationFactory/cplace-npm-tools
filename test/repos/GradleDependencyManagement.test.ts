@@ -1,9 +1,9 @@
 import * as path from 'path';
-import { IReposDescriptor } from "../../commands/repos/models";
-import { createGradleBuild } from "../helpers/gradle";
-import { withRepositories } from "../helpers/repositories";
-import { GradleDependencyManagement } from "../../commands/repos/add-dependency/GradleDependencyManagement";
-import * as fs from "fs";
+import * as fs from 'fs';
+import { IReposDescriptor } from '../../dist/commands/repos/models';
+import { GradleDependencyManagement } from '../../dist/commands/repos/add-dependency/GradleDependencyManagement';
+import { withRepositories } from '../helpers/repositories';
+import { createGradleBuild } from '../helpers/gradle';
 
 const allRepos: IReposDescriptor = {
     main: {
@@ -178,8 +178,8 @@ test('Adding a single plugin as dependency works', async () => {
             await createGradleBuild(path.join(rootDir, 'test'), undefined, testSettingsGradleContent);
 
             const mainPluginDir = path.join(rootDir, 'main', 'mainPlugin');
-            await fs.mkdirAsync(mainPluginDir);
-            await fs.writeFileAsync(path.join(mainPluginDir, 'pluginDescriptor.json'), '', 'utf8');
+            await fs.mkdirSync(mainPluginDir);
+            await fs.writeFileSync(path.join(mainPluginDir, 'pluginDescriptor.json'), '', 'utf8');
 
             const mgmt = new GradleDependencyManagement(path.join(rootDir, 'test'), currentRepos);
             await mgmt.addSinglePlugin('mainPlugin', false);
