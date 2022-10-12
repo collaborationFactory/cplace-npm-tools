@@ -78,7 +78,7 @@ export class GenerateReleaseNotes implements ICommand {
         this.repo = new Repository();
 
         if (this.release) {
-            console.log('generating release notes for release branch: ', this.release.releaseBranchName());
+            console.log('generating changelogs for release branch: ', this.release.releaseBranchName());
             const predecessorReleaseBranch = this.release.getMajorOrMinorPredecessorRelease().releaseBranchName();
             if (this.repo.checkBranchExistsOnRemote(this.release.releaseBranchName()) && this.repo.checkBranchExistsOnRemote(predecessorReleaseBranch)) {
                 const fetchAll = execSync(`git fetch --all`).toString();
@@ -90,7 +90,7 @@ export class GenerateReleaseNotes implements ICommand {
                 process.exit(1);
             }
         } else {
-            console.log(`generating release notes for given --from Hash ${this.fromHash} and --to Hash ${this.toHash}`);
+            console.log(`generating changelogs for given --from Hash ${this.fromHash} and --to Hash ${this.toHash}`);
             try {
                 this.fromHash = await this.repo.commitExists(this.fromHash);
                 Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
@@ -146,7 +146,7 @@ export class GenerateReleaseNotes implements ICommand {
                 Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
                 return file;
             }
-            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in messages');
+            throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in messages');
         } else {
             return file;
         }
@@ -172,7 +172,7 @@ export class GenerateReleaseNotes implements ICommand {
                 Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
                 return result;
             }
-            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in explicits');
+            throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in explicits');
         }
 
         return result;
@@ -235,7 +235,7 @@ export class GenerateReleaseNotes implements ICommand {
         const pathToReleaseNotesInMarkdown = path.join(this.repo.baseDir, 'documentation', 'changelog', `_index.md`);
 
         const markdownHeader = `---
-title: "Release Notes"
+title: "Changelog"
 weight: "10"
 type: "section"
 ---
