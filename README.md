@@ -2,7 +2,7 @@
 
 Item | Value
 --- | ---
-Owner | Christian Kaltenbach, Philip Stöhrer, Stefan Stadler
+Owner | Christian Kaltenbach, Vladimir Arsov
 Team | none yet
 Project | none
 Parent | none
