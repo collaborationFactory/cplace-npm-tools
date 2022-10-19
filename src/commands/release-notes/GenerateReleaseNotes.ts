@@ -111,6 +111,33 @@ export class GenerateReleaseNotes implements ICommand {
         return await this.parseLog(log);
     }
 
+    public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
+        logs = this.assignAndFilterForSquad(logs);
+        return logs.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (a.squad === b.squad) {
+                return dateA < dateB ? -1 : 1;
+            } else {
+                return a.squad < b.squad ? -1 : 1;
+            }
+        });
+    }
+
+    public assignAndFilterForSquad(logs: IGitLogEntry[]): IGitLogEntry[] {
+        const filteredLogs: IGitLogEntry[] = [];
+        const regExp = /changelog:[\s\w]+[-]*[\s\w]+:/;
+        for (const log of logs) {
+            if (log.message.match(regExp)) {
+                log.squad = log.message.match(regExp)[0]?.replace('changelog:', '')
+                    .replace(':', '')
+                    .trim();
+                filteredLogs.push(log);
+            }
+        }
+        return filteredLogs;
+    }
+
     private async parseLog(log: IGitLogSummary): Promise<void> {
         const relevant = log.all.filter(ReleaseNotesMessagesFile.filterRelevantCommits);
         if (!fs.existsSync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)) {
@@ -203,9 +230,7 @@ export class GenerateReleaseNotes implements ICommand {
         }
         this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
 
-        log = log.sort((a, b) => {
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-        });
+        log = this.sortLogs(log);
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -244,6 +269,6 @@ type: "section"
             fs.mkdirSync(path.join(this.repo.baseDir, 'documentation', 'changelog'), {recursive: true});
         }
         fs.writeFileSync(pathToReleaseNotesInMarkdown, markdownHeader + ' ' + this.changelog.join('\n'), 'utf8');
-        console.log(`>> Changelog has successfully been generated in ${pathToReleaseNotesInMarkdown}`);
+        console.log(`>> Changelog has successfully been generated in ${path.join(process.cwd(), pathToReleaseNotesInMarkdown)}`);
     }
 }

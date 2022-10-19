@@ -14,6 +14,7 @@ export interface IGitLogEntry {
     message: string;
     author_name: string;
     author_email: string;
+    squad: string;
 }
 
 export interface IGitStatus {
