@@ -78,7 +78,7 @@ export class GenerateReleaseNotes implements ICommand {
         this.repo = new Repository();
 
         if (this.release) {
-            console.log('generating release notes for release branch: ', this.release.releaseBranchName());
+            console.log('generating changelogs for release branch: ', this.release.releaseBranchName());
             const predecessorReleaseBranch = this.release.getMajorOrMinorPredecessorRelease().releaseBranchName();
             if (this.repo.checkBranchExistsOnRemote(this.release.releaseBranchName()) && this.repo.checkBranchExistsOnRemote(predecessorReleaseBranch)) {
                 const fetchAll = execSync(`git fetch --all`).toString();
@@ -90,7 +90,7 @@ export class GenerateReleaseNotes implements ICommand {
                 process.exit(1);
             }
         } else {
-            console.log(`generating release notes for given --from Hash ${this.fromHash} and --to Hash ${this.toHash}`);
+            console.log(`generating changelogs for given --from Hash ${this.fromHash} and --to Hash ${this.toHash}`);
             try {
                 this.fromHash = await this.repo.commitExists(this.fromHash);
                 Global.isVerbose() && console.log(`from commit has hash ${this.fromHash}`);
@@ -109,6 +109,19 @@ export class GenerateReleaseNotes implements ICommand {
         console.log(`commits for --from Hash ${this.fromHash} and --to Hash ${this.toHash} exist `);
         const log = await this.repo.log(this.fromHash, this.toHash);
         return await this.parseLog(log);
+    }
+
+    public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
+        return logs.filter((log) => log.squad)
+            .sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                if (a.squad.toLowerCase() === b.squad.toLowerCase()) {
+                    return dateA < dateB ? -1 : 1;
+                } else {
+                    return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
+                }
+            });
     }
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
@@ -146,7 +159,7 @@ export class GenerateReleaseNotes implements ICommand {
                 Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
                 return file;
             }
-            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in messages');
+            throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in messages');
         } else {
             return file;
         }
@@ -172,7 +185,7 @@ export class GenerateReleaseNotes implements ICommand {
                 Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
                 return result;
             }
-            throw new Error('Cannot generate release notes - some commits are still commented out or in conflict in explicits');
+            throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in explicits');
         }
 
         return result;
@@ -196,16 +209,22 @@ export class GenerateReleaseNotes implements ICommand {
         console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
     }
 
-    private generateChangelogDocs(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
+    private generateChangelogDocs(releaseNotesMessagesFile: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, gitLogEntries: IGitLogEntry[]): void {
         this.changelog = [`_Changelog created on ${new Date().toDateString()}_`];
         if (this.release) {
             this.changelog.push(`_for ${this.release.releaseBranchName()}_`);
         }
         this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
-
-        log = log.sort((a, b) => {
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-        });
+        let sortedLogs: IGitLogEntry[];
+        for (const log of gitLogEntries) {
+            log.message = (releaseNotesMessagesFile.getMessage(log.hash) || (explicits && explicits.getMessage(log.hash)));
+            const regExp = /^[\s\w-]+:/;
+            if (log.message?.match(regExp)) {
+                log.squad = log.message.match(regExp)[0]?.replace(':', '')
+                    .trim();
+            }
+        }
+        sortedLogs = this.sortLogs(gitLogEntries);
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -214,14 +233,13 @@ export class GenerateReleaseNotes implements ICommand {
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
-        for (const c of log) {
-            const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
-            if (message) {
-                const prNumber = message.split('#')[1]?.replace(']', '').trim();
+        for (const sortedLog of sortedLogs) {
+            if (sortedLog.message) {
+                const prNumber = sortedLog.message.split('#')[1]?.replace(']', '').trim();
                 if (prNumber && remoteUrl) {
-                    this.changelog.push(`   * ${message}(${remoteUrl}/pull/${prNumber})`);
+                    this.changelog.push(`   * ${sortedLog.message}(${remoteUrl}/pull/${prNumber})`);
                 } else {
-                    this.changelog.push(`   * ${message}`);
+                    this.changelog.push(`   * ${sortedLog.message}`);
                 }
             }
         }
@@ -244,6 +262,6 @@ type: "section"
             fs.mkdirSync(path.join(this.repo.baseDir, 'documentation', 'changelog'), {recursive: true});
         }
         fs.writeFileSync(pathToReleaseNotesInMarkdown, markdownHeader + ' ' + this.changelog.join('\n'), 'utf8');
-        console.log(`>> Changelog has successfully been generated in ${pathToReleaseNotesInMarkdown}`);
+        console.log(`>> Changelog has successfully been generated in ${path.join(process.cwd(), pathToReleaseNotesInMarkdown)}`);
     }
 }
