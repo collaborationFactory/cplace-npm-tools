@@ -112,30 +112,16 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
-        logs = this.assignAndFilterForSquad(logs);
-        return logs.sort((a, b) => {
-            const dateA = new Date(a.date).getTime();
-            const dateB = new Date(b.date).getTime();
-            if (a.squad === b.squad) {
-                return dateA < dateB ? -1 : 1;
-            } else {
-                return a.squad < b.squad ? -1 : 1;
-            }
-        });
-    }
-
-    public assignAndFilterForSquad(logs: IGitLogEntry[]): IGitLogEntry[] {
-        const filteredLogs: IGitLogEntry[] = [];
-        const regExp = /changelog:[\s\w]+[-]*[\s\w]+:/;
-        for (const log of logs) {
-            if (log.message.match(regExp)) {
-                log.squad = log.message.match(regExp)[0]?.replace('changelog:', '')
-                    .replace(':', '')
-                    .trim();
-                filteredLogs.push(log);
-            }
-        }
-        return filteredLogs;
+        return logs.filter((log) => log.squad)
+            .sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                if (a.squad.toLowerCase() === b.squad.toLowerCase()) {
+                    return dateA < dateB ? -1 : 1;
+                } else {
+                    return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
+                }
+            });
     }
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
@@ -223,14 +209,22 @@ export class GenerateReleaseNotes implements ICommand {
         console.log(`>> Changelog has successfully been generated in ${GenerateReleaseNotes.FILE_NAME_CHANGELOG}`);
     }
 
-    private generateChangelogDocs(file: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, log: IGitLogEntry[]): void {
+    private generateChangelogDocs(releaseNotesMessagesFile: ReleaseNotesMessagesFile, explicits: ReleaseNotesMessagesFile | null, gitLogEntries: IGitLogEntry[]): void {
         this.changelog = [`_Changelog created on ${new Date().toDateString()}_`];
         if (this.release) {
             this.changelog.push(`_for ${this.release.releaseBranchName()}_`);
         }
         this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
-
-        log = this.sortLogs(log);
+        let sortedLogs: IGitLogEntry[];
+        for (const log of gitLogEntries) {
+            log.message = (releaseNotesMessagesFile.getMessage(log.hash) || (explicits && explicits.getMessage(log.hash)));
+            const regExp = /^[\s\w-]+:/;
+            if (log.message?.match(regExp)) {
+                log.squad = log.message.match(regExp)[0]?.replace(':', '')
+                    .trim();
+            }
+        }
+        sortedLogs = this.sortLogs(gitLogEntries);
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -239,14 +233,13 @@ export class GenerateReleaseNotes implements ICommand {
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
-        for (const c of log) {
-            const message = file.getMessage(c.hash) || (explicits && explicits.getMessage(c.hash));
-            if (message) {
-                const prNumber = message.split('#')[1]?.replace(']', '').trim();
+        for (const sortedLog of sortedLogs) {
+            if (sortedLog.message) {
+                const prNumber = sortedLog.message.split('#')[1]?.replace(']', '').trim();
                 if (prNumber && remoteUrl) {
-                    this.changelog.push(`   * ${message}(${remoteUrl}/pull/${prNumber})`);
+                    this.changelog.push(`   * ${sortedLog.message}(${remoteUrl}/pull/${prNumber})`);
                 } else {
-                    this.changelog.push(`   * ${message}`);
+                    this.changelog.push(`   * ${sortedLog.message}`);
                 }
             }
         }
@@ -260,7 +253,7 @@ export class GenerateReleaseNotes implements ICommand {
         const pathToReleaseNotesInMarkdown = path.join(this.repo.baseDir, 'documentation', 'changelog', `_index.md`);
 
         const markdownHeader = `---
-title: "Changelog"
+title: "Release Notes"
 weight: "10"
 type: "section"
 ---

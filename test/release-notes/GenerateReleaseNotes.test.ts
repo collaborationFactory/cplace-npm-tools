@@ -3,7 +3,7 @@ import { IGitLogEntry } from '../../src/git';
 
 const releaseNotes: GenerateReleaseNotes = new GenerateReleaseNotes();
 const log1: IGitLogEntry = {
-    squad: '',
+    squad: 'UIX',
     date: '10.10.2020',
     author_email: 'a',
     author_name: 'a',
@@ -11,7 +11,7 @@ const log1: IGitLogEntry = {
     hash: 'a'
 };
 const log2: IGitLogEntry = {
-    squad: '',
+    squad: 'Frontend-Core',
     date: '09.10.2020',
     author_email: 'b',
     author_name: 'b',
@@ -19,7 +19,7 @@ const log2: IGitLogEntry = {
     hash: 'b'
 };
 const log3: IGitLogEntry = {
-    squad: '',
+    squad: 'Frontend-Core',
     date: '10.10.2020',
     author_email: 'b',
     author_name: 'b',
@@ -27,7 +27,7 @@ const log3: IGitLogEntry = {
     hash: 'b'
 };
 const log4: IGitLogEntry = {
-    squad: '',
+    squad: 'Frontend-Core',
     date: '09.10.2020',
     author_email: 'b',
     author_name: 'b',
@@ -35,7 +35,7 @@ const log4: IGitLogEntry = {
     hash: 'b'
 };
 const log5: IGitLogEntry = {
-    squad: '',
+    squad: 'UIX',
     date: '09.10.2020',
     author_email: 'b',
     author_name: 'b',
@@ -50,15 +50,6 @@ const log6: IGitLogEntry = {
     message: 'changelog: [PFM-TASK-6] some awesome feature [PR cplace-frontend-applications#520]',
     hash: 'b'
 };
-
-test('can assign squad from changelog', () => {
-    const logs = releaseNotes.assignAndFilterForSquad([log2, log4, log5, log1, log3, log6]);
-    expect(logs[0].squad).toBe('Frontend-Core');
-    expect(logs[1].squad).toBe('Frontend-Core');
-    expect(logs[2].squad).toBe('UIX');
-    expect(logs[3].squad).toBe('UIX');
-    expect(logs[4].squad).toBe('Frontend-Core');
-});
 
 test('can sort by squad and then by date', () => {
     const logs = releaseNotes.sortLogs([log2, log4, log5, log1, log3, log6]);
