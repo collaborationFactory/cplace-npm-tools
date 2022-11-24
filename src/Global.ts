@@ -4,7 +4,7 @@
 import {ICommandParameters} from './commands/models';
 
 export class Global {
-    private static readonly PARAMETER_VERBOSE: string = 'verbose';
+    public static readonly PARAMETER_VERBOSE: string = 'verbose';
     private static readonly instance: Global = new Global();
     private verbose: boolean;
 

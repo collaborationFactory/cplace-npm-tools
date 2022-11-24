@@ -15,11 +15,11 @@ export class CloneRepos extends AbstractReposCommand {
     public execute(): Promise<void> {
         const promises = Object
             .keys(this.parentRepos)
-            .filter(this.checkRepoMissing)
+            .filter((repoName) => this.checkRepoMissing(this.rootDir, repoName))
             .map((repoName) => {
                 Global.isVerbose() && console.log('cloning repository', repoName);
                 const repoProperties = this.parentRepos[repoName];
-                const toPath = path.resolve('..', repoName);
+                const toPath = path.resolve(this.rootDir, '..', repoName);
                 return this.handleRepo(toPath, repoName, repoProperties, this.depth);
             });
 
@@ -36,13 +36,13 @@ export class CloneRepos extends AbstractReposCommand {
         return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
             .then((latestTag) => {
                 repoProperties.latestTagForRelease = latestTag;
-                return Repository.clone(toPath, repoProperties, this.depth);
+                return Repository.clone(toPath, repoProperties, depth);
             })
             .catch((err) => Promise.reject('failed to clone repos: ' + err));
     }
 
-    private checkRepoMissing(repoName: string): boolean {
-        const pathToRepo = path.resolve('..', repoName);
+    private checkRepoMissing(rootDir: string, repoName: string): boolean {
+        const pathToRepo = path.resolve(rootDir, '..', repoName);
         const exists = fs.existsSync(pathToRepo);
         Global.isVerbose() && console.log('repository', repoName, 'already exists:', exists);
         return !exists;
