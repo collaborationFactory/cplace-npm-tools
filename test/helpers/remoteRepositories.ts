@@ -2,8 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {withTempDirectory} from './directories';
 import * as child_process from 'child_process';
-import { enforceNewline } from '../../src/util';
-import { IReposDescriptor } from '../../src/commands/repos/models';
+import {enforceNewline} from '../../src/util';
+import {IReposDescriptor} from '../../src/commands/repos/models';
 
 export function testWith(testSetupData: ITestSetupData): ITestRun {
     return new EvaluateWithRemoteRepos(testSetupData);
@@ -16,7 +16,9 @@ export interface ITestRun {
 
     withDebug(debug: boolean): ITestRun;
 
-    evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void>;
+    evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
+
+    evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
 }
 
 export interface ITestSetupData {
@@ -137,8 +139,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
-    public evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.createRemoteRepos, testCase, assertion).then(
+    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -148,7 +150,43 @@ class EvaluateWithRemoteRepos implements ITestRun {
             });
     }
 
-    private createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
+    public evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
+            () => Promise.resolve(),
+            (e) => {
+                console.log('Failed assertion or error while evaluating a test!', e);
+                // fail in case of an exception
+                expect(e).toBeUndefined();
+                Promise.reject(e);
+            });
+    }
+
+    private testWithRemoteRepos = async <T>(dir: string, testCase: (workingDir: string, remoteRepos: ILocalRepoData[]) => Promise<T>, assertion: (result: T) => Promise<void>) => {
+        const remoteRepos = this.createRemoteRepos(dir);
+        const rootDir = this.createLocalRepos(dir, remoteRepos, false);
+        try {
+            const testResult = await testCase(rootDir, remoteRepos);
+            await assertion(testResult);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
+    }
+
+    private testWithRemoteAndLocalRepos = async <T>(dir: string, testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>) => {
+        const remoteRepos = this.createRemoteRepos(dir);
+        const rootDir = this.createLocalRepos(dir, remoteRepos, true);
+
+        try {
+            const testResult = await testCase(rootDir);
+            await assertion(testResult);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
+    }
+
+    private createRemoteRepos(dir: string): ILocalRepoData[] {
         const remotePath = path.join(dir, 'remote');
         fs.mkdirSync(remotePath);
         const remoteRepos = this.createRepositories(Object.keys(this.testSetupData), remotePath);
@@ -156,9 +194,6 @@ class EvaluateWithRemoteRepos implements ITestRun {
         if (!Array.isArray(remoteRepos)) {
             throw new Error('Failed to create test setup!');
         }
-
-        const workingDir = path.join(dir, 'working');
-        fs.mkdirSync(workingDir);
 
         // set up remotes
         for (const remote of remoteRepos) {
@@ -168,7 +203,10 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
             });
         }
+        return remoteRepos;
+    }
 
+    private createLocalRepos(dir: string, remoteRepos: ILocalRepoData[], setupParentRepos: boolean): string {
         const remoteRootRepo = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName);
         if (!remoteRootRepo) {
             // tslint:disable-next-line:max-line-length
@@ -176,6 +214,9 @@ class EvaluateWithRemoteRepos implements ITestRun {
         }
 
         // set up rootRepo
+        const workingDir = path.join(dir, 'working');
+        fs.mkdirSync(workingDir);
+
         const rootDir = path.join(workingDir, ROOT_REPO);
         this.cloneRepo(workingDir, remoteRootRepo.url);
         for (const branch of this.branchesToCheckout) {
@@ -184,27 +225,19 @@ class EvaluateWithRemoteRepos implements ITestRun {
         this.checkoutBranch(path.join(workingDir, ROOT_REPO), this.branchUnderTest);
         const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
 
-        // set up working copy
-        for (const remote of remoteRepos) {
-            if (remote.name !== ROOT_REPO) {
-                this.cloneRepo(workingDir, repos[remote.name].url);
-                this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
+        if (setupParentRepos) {
+            for (const remote of remoteRepos) {
+                if (remote.name !== ROOT_REPO) {
+                    this.cloneRepo(workingDir, repos[remote.name].url);
+                    this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
+                }
             }
         }
 
         if (this.debug) {
-            this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')));
+            this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString());
         }
-
-        try {
-            await testCase(rootDir);
-        } catch (e) {
-            this.debugLog('Unexpected error during test evaluation!', e);
-            throw e;
-        }
-
-        const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-        await assertion(result.toString());
+        return rootDir;
     }
 
     private createRelease(localRepoData: ILocalRepoData, tag: string): void {

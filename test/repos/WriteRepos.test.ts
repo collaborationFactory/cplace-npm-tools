@@ -1,7 +1,13 @@
-import { IReposDescriptor, IRepoStatus } from '../../src/commands/repos/models';
-import { ICommandParameters } from '../../src/commands/models';
-import { WriteRepos } from '../../src/commands/repos/WriteRepos';
-import { basicTestSetupData, multiBranchTestSetupData, testWith } from '../helpers/remoteRepositories';
+import {IReposDescriptor, IRepoStatus} from '../../src/commands/repos/models';
+import {ICommandParameters} from '../../src/commands/models';
+import {WriteRepos} from '../../src/commands/repos/WriteRepos';
+import {basicTestSetupData, multiBranchTestSetupData, testWith} from '../helpers/remoteRepositories';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const catParentReposJson = (rootDir: string) => {
+    return fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString();
+};
 
 describe('writing the parent repos json for a basic setup', () => {
 
@@ -24,11 +30,12 @@ describe('writing the parent repos json for a basic setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluate(testRaw, assertRaw);
+            .evaluateWithRemoteAndLocalRepos(testRaw, assertRaw);
     });
 
     test('using commits', async () => {
@@ -39,6 +46,7 @@ describe('writing the parent repos json for a basic setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingCommits = async (parentRepos: string) => {
@@ -55,7 +63,7 @@ describe('writing the parent repos json for a basic setup', () => {
         };
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluate(testUsingCommits, assertUsingCommits);
+            .evaluateWithRemoteAndLocalRepos(testUsingCommits, assertUsingCommits);
     });
 
     test('using tags', async () => {
@@ -67,6 +75,7 @@ describe('writing the parent repos json for a basic setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingTags = async (parentRepos: string) => {
@@ -84,7 +93,7 @@ describe('writing the parent repos json for a basic setup', () => {
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluate(testUsingTags, assertUsingTags);
+            .evaluateWithRemoteAndLocalRepos(testUsingTags, assertUsingTags);
     });
 
     test('un-freeze', async () => {
@@ -103,11 +112,12 @@ describe('writing the parent repos json for a basic setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluate(testUnFreeze, assertRaw);
+            .evaluateWithRemoteAndLocalRepos(testUnFreeze, assertRaw);
     });
 });
 describe('writing the parent repos json for a complex setup', () => {
@@ -121,6 +131,7 @@ describe('writing the parent repos json for a complex setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingTags = async (parentRepos: string) => {
@@ -138,7 +149,7 @@ describe('writing the parent repos json for a complex setup', () => {
 
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/5.20')
-            .evaluate(testUsingTags, assertUsingTags);
+            .evaluateWithRemoteAndLocalRepos(testUsingTags, assertUsingTags);
     });
 
     test('using tags where some remotes dont have any tags', async () => {
@@ -150,6 +161,7 @@ describe('writing the parent repos json for a complex setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingTags = async (parentRepos: string) => {
@@ -169,7 +181,7 @@ describe('writing the parent repos json for a complex setup', () => {
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/22.2')
             .withBranchesToCheckout(['release/5.20', 'release/22.2', 'release/22.3', 'release/22.4'])
-            .evaluate(testUsingTags, assertUsingTags);
+            .evaluateWithRemoteAndLocalRepos(testUsingTags, assertUsingTags);
     });
 
     test('using tags', async () => {
@@ -181,6 +193,7 @@ describe('writing the parent repos json for a complex setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingTags = async (parentRepos: string) => {
@@ -200,7 +213,7 @@ describe('writing the parent repos json for a complex setup', () => {
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/22.3')
             .withBranchesToCheckout(['release/5.20', 'release/22.2', 'release/22.3', 'release/22.4'])
-            .evaluate(testUsingTags, assertUsingTags);
+            .evaluateWithRemoteAndLocalRepos(testUsingTags, assertUsingTags);
     });
 
     test('using commits', async () => {
@@ -211,6 +224,7 @@ describe('writing the parent repos json for a complex setup', () => {
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
             await wr.execute();
+            return catParentReposJson(rootDir);
         };
 
         const assertUsingCommits = async (parentRepos: string) => {
@@ -228,7 +242,7 @@ describe('writing the parent repos json for a complex setup', () => {
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/5.20')
             .withDebug(false)
-            .evaluate(testUsingCommits, assertUsingCommits);
+            .evaluateWithRemoteAndLocalRepos(testUsingCommits, assertUsingCommits);
     });
 
     function assertTagVersion(repo: string, tag: string, parentReposJson: IReposDescriptor): void {

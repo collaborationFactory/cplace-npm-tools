@@ -11,10 +11,11 @@ import * as path from 'path';
 import * as rimraf from 'rimraf';
 
 export abstract class AbstractReposCommand implements ICommand {
-    protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
+    public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
+    public static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
+
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
-    protected static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
     protected static readonly NODE_MODULES: string = 'node_modules';
 
     protected parentRepos: IReposDescriptor;
