@@ -9,6 +9,10 @@ export function testWith(testSetupData: ITestSetupData): ITestRun {
     return new EvaluateWithRemoteRepos(testSetupData);
 }
 
+export function catParentReposJson(rootDir: string): IReposDescriptor {
+    return JSON.parse(fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString());
+}
+
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
 

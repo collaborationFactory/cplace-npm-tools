@@ -1,18 +1,32 @@
 import {IReposDescriptor, IRepoStatus} from '../../src/commands/repos/models';
 import {ICommandParameters} from '../../src/commands/models';
 import {WriteRepos} from '../../src/commands/repos/WriteRepos';
-import {basicTestSetupData, multiBranchTestSetupData, testWith} from '../helpers/remoteRepositories';
-import * as fs from 'fs';
-import * as path from 'path';
+import {basicTestSetupData, multiBranchTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
 
-const catParentReposJson = (rootDir: string) => {
-    return fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString();
+const testUsingTags = async (rootDir: string): Promise<IReposDescriptor> => {
+    const params: ICommandParameters = {};
+    params[WriteRepos.PARAMETER_FREEZE] = true;
+    params[WriteRepos.PARAMETER_USE_TAGS] = true;
+
+    const wr = new WriteRepos();
+    wr.prepareAndMayExecute(params, rootDir);
+    await wr.execute();
+    return catParentReposJson(rootDir);
+};
+
+const testUsingCommits = async (rootDir: string): Promise<IReposDescriptor> => {
+    const params: ICommandParameters = {};
+    params[WriteRepos.PARAMETER_FREEZE] = true;
+
+    const wr = new WriteRepos();
+    wr.prepareAndMayExecute(params, rootDir);
+    await wr.execute();
+    return catParentReposJson(rootDir);
 };
 
 describe('writing the parent repos json for a basic setup', () => {
 
-    const assertRaw = async (parentRepos: string) => {
-        const parentReposJson = JSON.parse(parentRepos);
+    const assertRaw = async (parentReposJson: IReposDescriptor): Promise<void> => {
         expect(Object.keys(parentReposJson)).toHaveLength(3);
         Object.values(parentReposJson).map((status: IRepoStatus) => {
             expect(status.url).toBeDefined();
@@ -25,7 +39,7 @@ describe('writing the parent repos json for a basic setup', () => {
     };
 
     test('raw', async () => {
-        const testRaw = async (rootDir: string) => {
+        const testRaw = async (rootDir: string): Promise<IReposDescriptor> => {
             const params: ICommandParameters = {};
             const wr = new WriteRepos();
             wr.prepareAndMayExecute(params, rootDir);
@@ -39,18 +53,7 @@ describe('writing the parent repos json for a basic setup', () => {
     });
 
     test('using commits', async () => {
-        const testUsingCommits = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingCommits = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingCommits = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
@@ -67,19 +70,7 @@ describe('writing the parent repos json for a basic setup', () => {
     });
 
     test('using tags', async () => {
-        const testUsingTags = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-            params[WriteRepos.PARAMETER_USE_TAGS] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingTags = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingTags = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
@@ -97,7 +88,7 @@ describe('writing the parent repos json for a basic setup', () => {
     });
 
     test('un-freeze', async () => {
-        const testUnFreeze = async (rootDir: string) => {
+        const testUnFreeze = async (rootDir: string): Promise<IReposDescriptor> => {
             const prepareParams: ICommandParameters = {};
             prepareParams[WriteRepos.PARAMETER_FREEZE] = true;
             prepareParams[WriteRepos.PARAMETER_USE_TAGS] = true;
@@ -123,19 +114,7 @@ describe('writing the parent repos json for a basic setup', () => {
 describe('writing the parent repos json for a complex setup', () => {
 
     test('using tags while none exist', async () => {
-        const testUsingTags = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-            params[WriteRepos.PARAMETER_USE_TAGS] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingTags = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingTags = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
@@ -153,19 +132,7 @@ describe('writing the parent repos json for a complex setup', () => {
     });
 
     test('using tags where some remotes dont have any tags', async () => {
-        const testUsingTags = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-            params[WriteRepos.PARAMETER_USE_TAGS] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingTags = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingTags = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
@@ -185,19 +152,7 @@ describe('writing the parent repos json for a complex setup', () => {
     });
 
     test('using tags', async () => {
-        const testUsingTags = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-            params[WriteRepos.PARAMETER_USE_TAGS] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingTags = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingTags = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
@@ -217,18 +172,7 @@ describe('writing the parent repos json for a complex setup', () => {
     });
 
     test('using commits', async () => {
-        const testUsingCommits = async (rootDir: string) => {
-            const params: ICommandParameters = {};
-            params[WriteRepos.PARAMETER_FREEZE] = true;
-
-            const wr = new WriteRepos();
-            wr.prepareAndMayExecute(params, rootDir);
-            await wr.execute();
-            return catParentReposJson(rootDir);
-        };
-
-        const assertUsingCommits = async (parentRepos: string) => {
-            const parentReposJson = JSON.parse(parentRepos);
+        const assertUsingCommits = async (parentReposJson: IReposDescriptor): Promise<void> => {
             expect(Object.keys(parentReposJson)).toHaveLength(3);
             Object.values(parentReposJson).map((status: IRepoStatus) => {
                 expect(status.url).toBeDefined();
