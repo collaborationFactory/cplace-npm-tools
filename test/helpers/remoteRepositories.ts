@@ -13,6 +13,10 @@ export function catParentReposJson(rootDir: string): IReposDescriptor {
     return JSON.parse(fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString());
 }
 
+export function writeParentReposJson(rootDir: string, parentRepos: IReposDescriptor): void {
+    fs.writeFileSync(path.join(rootDir, 'parent-repos.json'), JSON.stringify(parentRepos, null, 2), 'utf8');
+};
+
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
 
