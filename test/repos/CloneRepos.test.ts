@@ -10,7 +10,7 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
 
 function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, branch: string): void {
     const gitUpdateCommand = `git remote update`;
-    const gitDiffCommand = `git diff --quiet origin/${branch}`;
+    const gitDiffCommand = `git diff --exit-code origin/${branch}`;
     child_process.execSync(
         gitUpdateCommand,
         {
@@ -30,8 +30,8 @@ function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, 
         console.log(`Git diff failed due to:
         ${e.status}
         ${e.message}
-        ${e.stderr}
-        ${e.stdout}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
     `);
         throw e;
     }
@@ -40,6 +40,25 @@ function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, 
 async function testWithParentRepos(rootDir: string, parentRepos?: IReposDescriptor): Promise<string> {
     if (parentRepos) {
         writeParentReposJson(rootDir, parentRepos);
+
+        try {
+            child_process.execSync(
+                'git commit -a -m "updates parent repos" && git push',
+                {
+                    cwd: rootDir,
+                    shell: 'bash'
+                }
+            );
+        } catch (e) {
+            console.log(`Git diff failed due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+         `);
+            throw e;
+        }
+
         console.log(catParentReposJson(rootDir));
     }
     const params: ICommandParameters = {};
