@@ -15,7 +15,7 @@ export function catParentReposJson(rootDir: string): IReposDescriptor {
 
 export function writeParentReposJson(rootDir: string, parentRepos: IReposDescriptor): void {
     fs.writeFileSync(path.join(rootDir, 'parent-repos.json'), JSON.stringify(parentRepos, null, 2), 'utf8');
-};
+}
 
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
@@ -210,6 +210,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 this.branchOff(remote, releaseBranch.branchName);
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
             });
+            this.cloneRepo(remotePath, remote.url, true);
+            remote.url += '.git';
         }
         return remoteRepos;
     }
@@ -257,7 +259,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
         const repos: IReposDescriptor = {};
         repoData.forEach((localRepoData) => {
             repos[localRepoData.name] = {
-                url: `file://${localRepoData.url}/.git`,
+                url: `file://${localRepoData.url}`,
                 branch: branchName
             };
         });
@@ -332,8 +334,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         this.execSync(pathToRepo, command);
     }
 
-    private cloneRepo(pathToRepo: string, repoUrl: string): void {
-        const command = `git clone "${repoUrl}"`;
+    private cloneRepo(pathToRepo: string, repoUrl: string, bare?: boolean): void {
+        const command = `git clone ${bare ? '--bare ' : ''}${repoUrl}`;
         this.debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
         this.execSync(pathToRepo, command);
     }
