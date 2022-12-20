@@ -211,6 +211,8 @@ export class Repository {
             if (branch || tag) {
                 options.push('--no-tags', '--force', 'origin');
                 tag ? options.push('tag', tag) : options.push(branch);
+            } else {
+                options.push('--all');
             }
 
             Global.isVerbose() && console.log(`fetching repo ${this.repoName} with options ${options}`);
@@ -317,13 +319,14 @@ export class Repository {
         });
     }
 
-    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, listFiles?: boolean }): Promise<void> {
+    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean }): Promise<void> {
         opts = opts || {};
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
             const options = [otherBranch];
             opts.noFF && options.push('--no-ff');
             opts.ffOnly && options.push('--ff-only');
+            opts.noEdit && options.push('--no-edit');
             this.git.merge(options, (err, data) => {
                 if (err) {
                     reject(err);
@@ -697,6 +700,19 @@ export class Repository {
             throw new Error(`Branch ${branchName} doesn't exist. ${e}`);
         }
         return result === '' ? false : true;
+    }
+
+    public isRepoMerging(): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            const options = ['HEAD'];
+            this.git.merge(options, (err) => {
+                if (err) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            });
+        });
     }
 
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {
