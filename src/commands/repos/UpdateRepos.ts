@@ -68,8 +68,7 @@ export class UpdateRepos extends AbstractReposCommand {
             return Promise.reject('No branch or tag given in parent-repos.json for repo: ' + repoName);
         }
 
-        const latestTagOfRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
-        repoProperties.latestTagForRelease = latestTagOfRelease;
+        repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
 
         const pathToRepo = path.join(process.cwd(), '..', repoName);
 
@@ -135,7 +134,7 @@ export class UpdateRepos extends AbstractReposCommand {
             await repo.resetHard();
             await repo.fetch({tag: tagToCheckout});
             await repo.checkoutTag(tagToCheckout);
-            await repo.createBranchForTag(tagToCheckout);
+            await repo.createBranchForTag(repoName, tagToCheckout);
         } else {
             // checkout branch
             await repo.resetHard();
