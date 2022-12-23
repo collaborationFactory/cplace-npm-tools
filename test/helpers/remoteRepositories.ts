@@ -209,6 +209,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 this.debugLog(`setting up remote repository ${remote.name}`);
                 this.branchOff(remote, releaseBranch.branchName);
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
+                this.commitSomeChanges(remote, 'latest_change.txt');
             });
             this.cloneRepo(remotePath, remote.url, true);
             remote.url += '.git';
@@ -270,7 +271,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
 
     private branchOff(localRepoData: ILocalRepoData, releaseBranch: string): void {
         this.commitSomeChanges(localRepoData);
-        this.checkoutBranch(localRepoData.url, releaseBranch);
+        this.checkoutBranch(localRepoData.url, releaseBranch, true);
     }
 
     private commitSomeChanges(localRepoData: ILocalRepoData, fileName: string = 'test.txt'): void {
@@ -316,8 +317,9 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return data;
     }
 
-    private checkoutBranch(pathToRepo: string, branch: string): void {
-        const command = `git checkout -B "${branch}"`;
+    private checkoutBranch(pathToRepo: string, branch: string, createNew?: boolean): void {
+        const command = `git checkout ${createNew ? '-B ' : ''}"${branch}"`;
+        // const command = `git checkout -B "${branch}"`;
         this.debugLog(`checkout branch in ${pathToRepo}: ${command}`);
         this.execSync(pathToRepo, command);
     }

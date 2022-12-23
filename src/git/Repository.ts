@@ -4,11 +4,11 @@
 import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
-import { Global } from '../Global';
-import { IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus } from './models';
-import { exec, execSync } from 'child_process';
+import {Global} from '../Global';
+import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
+import {exec, execSync} from 'child_process';
 import * as util from 'util';
-import { IRepoStatus } from '../commands/repos/models';
+import {IRepoStatus} from '../commands/repos/models';
 
 export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
@@ -34,21 +34,35 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(toPath: string, repoProperties: IRepoStatus, depth: number): Promise<Repository> {
+    public static clone(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             const options = [];
 
-            let refToCheckout = repoProperties.branch;
+            let refToCheckout: string;
             let refIsTag = false;
-            if (!repoProperties.commit && (repoProperties.tag || repoProperties.latestTagForRelease)) {
-                refToCheckout = repoProperties.tag || repoProperties.latestTagForRelease;
+
+            if (repoProperties.useSnapshot) {
+                refToCheckout = repoProperties.branch;
+                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} with depth ${depth} because useSnapshot is true.`);
+            } else if (repoProperties.commit) {
+                refToCheckout = repoProperties.branch;
+                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.
+                    Use the update command to checkout the required commits after cloning!`);
+            } else if (repoProperties.tag) {
+                refToCheckout = repoProperties.tag;
                 refIsTag = true;
+                console.log(`[${repoName}]: will clone the tag ${refToCheckout} with depth ${depth} as configured.`);
+            } else if (repoProperties.latestTagForRelease) {
+                refToCheckout = repoProperties.latestTagForRelease;
+                refIsTag = true;
+                console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout} with depth ${depth}.`);
             }
+
             if (refToCheckout) {
-                Global.isVerbose() && console.log('cloning tag or branch', refToCheckout, 'from', repoProperties.url, 'to', toPath);
+                Global.isVerbose() && console.log(`[${repoName}]:`, 'cloning tag or branch', refToCheckout, 'from', repoProperties.url, 'to', toPath);
                 options.push('--branch', refToCheckout);
             } else {
-                Global.isVerbose() && console.log('cloning default branch from', repoProperties.url, 'to', toPath);
+                Global.isVerbose() && console.log(`[${repoName}]:`, 'cloning default branch from', repoProperties.url, 'to', toPath);
             }
             if (depth > 0 && !repoProperties.commit) {
                 options.push('--depth', depth.toString(10));
@@ -60,7 +74,7 @@ export class Repository {
                 } else {
                     const newRepo = new Repository(toPath);
                     if (refIsTag) {
-                        newRepo.createBranchForTag(refToCheckout)
+                        newRepo.createBranchForTag(repoName, refToCheckout)
                             .then(() => {
                                 resolve(newRepo);
                             });
@@ -88,11 +102,11 @@ export class Repository {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.branch.startsWith('release/')) {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
-                Global.isVerbose() && console.log(repoName, `release version: ${currentReleaseVersion}`);
+                Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
 
-                this.getLatestTagOfPattern(repoProperties.url, `version/${currentReleaseVersion}.*`)
+                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`)
                     .then((latestTag) => {
-                        Global.isVerbose() && console.log(repoName, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
+                        Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
                         resolve(latestTag);
                     })
                     .catch((error) => reject(error));
@@ -105,17 +119,17 @@ export class Repository {
     public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.tag) {
-                Global.isVerbose() && console.log(repoName, `release version from predefined tag: ${repoProperties.tag}`);
+                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
                 resolve(repoProperties.tag);
             } else if (repoProperties.branch.startsWith('release-version/')) {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
-                Global.isVerbose() && console.log(repoName, `release version from local tag branch name: ${currentReleaseVersion}`);
+                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
                 resolve(currentReleaseVersion);
             } else {
                 Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
                     .then((latestTag) => {
                         if (latestTag) {
-                            Global.isVerbose() && console.log(repoName, `release version from latest tag: ${latestTag}`);
+                            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
                         }
                         resolve(latestTag);
                     })
@@ -124,15 +138,15 @@ export class Repository {
         });
     }
 
-    public static getLatestTagOfPattern(repoUrl: string, tagPattern: string): Promise<string> {
+    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            Global.isVerbose() && console.log(`Getting the last tag with pattern ${tagPattern}:\n`);
+            Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
             simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', repoUrl, tagPattern], (err, result: string) => {
                 if (err) {
-                    Global.isVerbose() && console.log(repoUrl, ': ls-remote failed!\n', err);
+                    Global.isVerbose() && console.log(`[${repoName}]:`, repoUrl, ': ls-remote failed!\n', err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of git ls-remote:\n', result);
+                    Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
                     const lines: string[] = result.match(/[^\r\n]+/g);
                     if (lines) {
                         const lastLine = lines.slice(-1)[0];
@@ -182,8 +196,8 @@ export class Repository {
             const pathSpec = `${fromHash}..${toHash}`;
             options[pathSpec] = null;
             this.git.log(options, (err, data: IGitLogSummary) => {
-                    err ? reject(err) : resolve(data);
-                }
+                             err ? reject(err) : resolve(data);
+                         }
             );
         });
     }
@@ -286,17 +300,17 @@ export class Repository {
         });
     }
 
-    public createBranchForTag(tag: string): Promise<void> {
+    public createBranchForTag(repoName: string, tag: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const branchName = tag.startsWith('version/') ? `release-${tag}` : tag;
 
-            Global.isVerbose() && console.log(`Creating branch ${branchName} for tag ${tag}`);
+            Global.isVerbose() && console.log(`[${repoName}]: Creating branch ${branchName} for tag ${tag}`);
             this.git.checkout(['-B', branchName], (err) => {
                 if (err) {
-                    Global.isVerbose() && console.error(`failed to create branch ${branchName} for tag ${tag}`, err);
+                    Global.isVerbose() && console.error(`[${repoName}]:failed to create branch ${branchName} for tag ${tag}`, err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`Created branch ${branchName} for tag ${tag}`);
+                    Global.isVerbose() && console.log(`[${repoName}]: Created branch ${branchName} for tag ${tag}`);
                     resolve();
                 }
             });
@@ -330,6 +344,7 @@ export class Repository {
                 } else if (data.conflicts.length > 0) {
                     // abort if merge failed
                     this.git.mergeFromTo('--abort', undefined, (err2) => {
+                        console.log('error during merge:', err2);
                         reject(data);
                     });
                 } else {
@@ -554,7 +569,7 @@ export class Repository {
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
                                 console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
-                                    ', ignoring branch ' + branchAndCommit.branch);
+                                                ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
                                 return false;
@@ -696,7 +711,7 @@ export class Repository {
         } catch (e) {
             throw new Error(`Branch ${branchName} doesn't exist. ${e}`);
         }
-        return result === '' ? false : true;
+        return result !== '';
     }
 
     private extractTrackingInfoFromLabel(label: string): { tracking: string; gone?: boolean; ahead?: number; behind?: number; } {

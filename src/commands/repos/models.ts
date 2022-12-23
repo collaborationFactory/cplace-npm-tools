@@ -9,6 +9,7 @@ export interface IReposDescriptor {
 export interface IRepoStatus {
     url: string;
     branch: string;
+    useSnapshot?: boolean;
     tag?: string;
     tagMarker?: string;
     latestTagForRelease?: string;
