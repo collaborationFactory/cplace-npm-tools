@@ -123,6 +123,27 @@ const cli = meow(
                 corresponding IDEA module among all currently known referenced repositories.
                 If --all is set, then all dependencies of the plugin will also be added as dependencies.
 
+            --merge-skeleton|-m [--target-branch=<target-branch-name>] [--skeleton-branch=<skeleton-branch-name]
+                                [--ours=<file-name>] [--pull-request] [--push]:
+                Merges a branch from the skeleton repo to the current branch or to the specified target branch.
+                If no options are specified, the current branch is used as a target branch. A skeleteon branch 
+                will be selected automatically based on the cplace version. If the merge is successful, 
+                the changes will be committed, but not pushed.
+                
+                --target-branch - if specified, this branch will be checked out and the skeleton will be merged 
+                                  in it. The skeleton branch will be selected based on the cplace version from
+                                  this branch.
+                --skeleton-branch - if specified (ex. '--skeleton-branch=version/7.0'), this skeleton branch will
+                                    be merged to the selected target branch, bypassing the automatic selection and 
+                                    ignoring the compatibility with the current cplace version.
+                --ours - specify a file to be automatically accepted as ours in case of a merge conflict.
+                         For multiple files, use the parameter once per file 
+                         ex: '--ours=README.md --ours=version.gradle'.
+                --pull-request - creates a pull request if the merge was successful. This is only possible if the 
+                                 target branch (currently checked out or specified with --target-branch) is not 
+                                 already tracked.
+                --push - if specified, the changes will be pushed to the target branch if the merge was successful
+
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
             The output is a .dot file.

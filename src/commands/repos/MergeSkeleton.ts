@@ -19,11 +19,7 @@ export class MergeSkeleton extends AbstractReposCommand {
 
     protected static readonly SKELETON_REMOTE_NAME: string = 'skeleton';
     protected static readonly SKELETON_REMOTE: string = 'https://github.com/collaborationFactory/cplace-customer-repo-skeleton.git';
-
     protected static readonly DEFAULT_OURS: string[] = ['README.md'];
-
-    protected static readonly GH_CLI_COMMAND: string = 'gh';
-
     protected static readonly CPLACE_VERSION_TO_SKELETON_VERSION: Map<{major: number, minor: number, patch: number}, string> = new Map(
         [
             [{major: 5, minor: 4, patch: 0}, 'version/2.0'],
@@ -35,6 +31,8 @@ export class MergeSkeleton extends AbstractReposCommand {
         ]
     );
 
+    protected static readonly GH_CLI_COMMAND: string = 'gh';
+
     protected targetBranch: string;
     protected skeletonBranch: string;
     protected ours: Set<string> = new Set<string>();
@@ -42,9 +40,10 @@ export class MergeSkeleton extends AbstractReposCommand {
     protected push: boolean;
 
     protected selectedSkeletonBranch: string;
-    protected targetBranchIsNew: boolean = false;
+    protected targetBranchIsTracked: boolean = false;
     protected baseBranch: string = '';
     protected status: IGitStatus;
+    protected mergeSuccess: boolean = true;
 
     public async execute(): Promise<void> {
         const pathToRepo = path.join(process.cwd());
@@ -56,10 +55,10 @@ export class MergeSkeleton extends AbstractReposCommand {
         this.baseBranch = this.status.current;
 
         console.log(`Merging skeleton in repo ${repo.repoName}`);
-        await this.addSkeletonAsRemote(repo)
-            .catch((err) => console.log('Skeleton remote already exists'));
-
+        await this.addSkeletonAsRemote(repo);
         await this.checkoutTargetBranch(repo);
+        this.status = await repo.status();
+        this.targetBranchIsTracked = this.status.tracking != null;
 
         // validate cplace version after checking out the target branch
         this.validateCplaceVersion();
@@ -69,21 +68,37 @@ export class MergeSkeleton extends AbstractReposCommand {
         if (!isRepoMerging) {
             await this.validateRepoClean(repo);
 
-            this.status = await repo.status();
-            await repo.pullOnlyFastForward(this.status.current)
-                .catch((err) => console.log('Skip pulling branch as it\'s not tracked'));
+            if (this.targetBranchIsTracked) {
+                await repo.pullOnlyFastForward(this.status.current)
+                    .catch((err) => console.log(`Error when pulling target branch ${err}`));
+            }
             await this.mergeSkeletonBranch(repo, `${MergeSkeleton.SKELETON_REMOTE_NAME}/${this.selectedSkeletonBranch}`)
-                .catch((err) => this.acceptOursAndContinue(repo));
-        } else {
-            console.log('Repository already in merge state');
-            await this.acceptOursAndContinue(repo)
                 .catch((err) => {
+                    console.log(`Cannot merge skeleton branch: ${err}`);
+                    this.mergeSuccess = false;
+                });
+        }
+
+        this.status = await repo.status();
+        if (this.status.conflicted.length !== 0) {
+            this.mergeSuccess = true;
+            await this.acceptOursAndContinueMerge(repo)
+                .catch((err) => {
+                    this.mergeSuccess = false;
                     return Promise.reject('Cannot merge skeleton because of merge conflicts. Fix conflicts manually and rerun the same command.');
                 });
         }
 
-        await this.createPullRequest(repo, this.selectedSkeletonBranch, this.baseBranch);
-        console.log('Merging skeleton done');
+        if (this.mergeSuccess) {
+            if (this.pullRequest) {
+                await this.createPullRequest(repo, this.selectedSkeletonBranch, this.baseBranch, this.status.current);
+            }
+            if (this.push) {
+                await this.pushBranch(repo, this.status.current);
+            }
+
+            console.log('Merging skeleton done');
+        }
         return Promise.resolve();
     }
 
@@ -134,32 +149,9 @@ export class MergeSkeleton extends AbstractReposCommand {
 
     private async addSkeletonAsRemote(repo: Repository): Promise<void> {
         console.log('Add skeleton repo as remote');
-        await repo.addRemote(MergeSkeleton.SKELETON_REMOTE_NAME, MergeSkeleton.SKELETON_REMOTE);
+        await repo.addRemote(MergeSkeleton.SKELETON_REMOTE_NAME, MergeSkeleton.SKELETON_REMOTE)
+            .catch((err) => console.log('Skeleton remote already exists'));
         await repo.fetch({});
-    }
-
-    private validateCplaceVersion(): void {
-        console.log('Initialize cplace version');
-        CplaceVersion.initialize();
-        console.log(`cplace version detected: ${CplaceVersion.toString()}`);
-
-        if (CplaceVersion.compareTo({major: 5, minor: 4, patch: 0}) < 0) {
-            console.log('Merge skeleton works only for cplace versions 5.4 or higher');
-            throw new Error('Merge skeleton works only for cplace versions 5.4 or higher');
-        }
-    }
-
-    private async acceptOursAndContinue(repo: Repository): Promise<void> {
-        console.log('Accept any files specified with ours');
-        for (const our of this.ours) {
-            console.log(`Accepting our ${our}`);
-            await repo.rawWrapper(['checkout', '--ours', our]);
-            await repo.rawWrapper(['add', '--ignore-errors', '-A', '-f', '--', our]);
-        }
-
-        console.log('Try to continue merge');
-        await repo.rawWrapper(['-c', 'core.editor=true', 'merge', '--continue'])
-            .catch((err) => console.log('Cannot merge because of merge conflicts'));
     }
 
     private validateRepoClean(repo: Repository): Promise<Repository> {
@@ -168,26 +160,28 @@ export class MergeSkeleton extends AbstractReposCommand {
             .then(() => repo);
     }
 
+    private validateCplaceVersion(): void {
+        console.log('Initialize cplace version');
+        CplaceVersion.initialize();
+        console.log(`cplace version detected: ${CplaceVersion.toString()}`);
+
+        if (CplaceVersion.compareTo({major: 5, minor: 4, patch: 0}) < 0) {
+            throw new Error('Merge skeleton works only for cplace versions 5.4 or higher');
+        }
+    }
+
     private async checkoutTargetBranch(repo: Repository): Promise<void> {
         if (this.targetBranch) {
             console.log(`Checking out branch ${this.targetBranch}`);
             try {
-                console.log(`Try to checkout branch ${this.targetBranch} as new branch`);
                 await repo.checkoutBranch(['-b', this.targetBranch]);
-                this.targetBranchIsNew = true;
                 console.log('Target branch checked out as new branch');
             } catch (err) {
-                console.log(`Try to checkout existing branch ${this.targetBranch}`);
                 await repo.checkoutBranch(this.targetBranch);
                 console.log('Target branch checked out');
             }
         }
         Promise.resolve();
-    }
-
-    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string): Promise<Repository> {
-        console.log(`Merging skeleton branch ${skeletonBranch}`);
-        return repo.merge(skeletonBranch, {noEdit: true});
     }
 
     private getSkeletonBranchToMerge(repo: Repository): string {
@@ -204,20 +198,42 @@ export class MergeSkeleton extends AbstractReposCommand {
         return `${skeletonVerion}`;
     }
 
-    private async createPullRequest(repo: Repository, skeletonBranch: string, baseBranch: string): Promise<void> {
-        if (this.createPullRequest) {
-            if (!this.targetBranchIsNew) {
-                console.log('SKIPPING PR: Pull request can be created only if target branch is new.');
-            } else {
-                const title: string = `Merge skeleton ${skeletonBranch} to ${baseBranch}`;
-                const body: string = `Merge skeleton repo ${skeletonBranch} to ${baseBranch}`;
+    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string): Promise<Repository> {
+        console.log(`Merging skeleton branch ${skeletonBranch}`);
+        return repo.merge(skeletonBranch, {noEdit: true});
+    }
 
-                console.log('Push target branch to remote since pull request is requested.');
-                await repo.rawWrapper(['push', '--set-upstream', 'origin', this.targetBranch]);
+    private async acceptOursAndContinueMerge(repo: Repository): Promise<void> {
+        console.log('Accept any files specified with ours');
+        for (const our of this.ours) {
+            console.log(`Accepting our ${our}`);
+            await repo.rawWrapper(['checkout', '--ours', our]);
+            await repo.rawWrapper(['add', '--ignore-errors', '-A', '-f', '--', our]);
+        }
 
-                console.log('Creating pull request');
-                execSync(`gh pr create --repo "collaborationFactory/${repo.repoName}" --title "${title}" --body "${body}" --base "${baseBranch}" --assignee @me`);
-            }
+        console.log('Try to continue merge');
+        await repo.rawWrapper(['-c', 'core.editor=true', 'merge', '--continue'])
+            .catch((err) => {
+                throw new Error('Cannot merge because of merge conflicts');
+            });
+    }
+
+    private async pushBranch(repo: Repository, currentBranch: string): Promise<void> {
+        console.log('Pushing changes to remote');
+        await repo.rawWrapper(['push', '--set-upstream', 'origin', currentBranch]);
+        return Promise.resolve();
+    }
+
+    private async createPullRequest(repo: Repository, skeletonBranch: string, baseBranch: string, currentBranch: string): Promise<void> {
+        if (this.targetBranchIsTracked) {
+            console.log('SKIPPING PR: Pull request can be created only if the target branch is not already pushed.');
+        } else {
+            await this.pushBranch(repo, currentBranch);
+
+            console.log('Creating pull request');
+            const title: string = `Merge skeleton ${skeletonBranch} to ${baseBranch}`;
+            const body: string = `Merge skeleton repo ${skeletonBranch} to ${baseBranch}`;
+            execSync(`gh pr create --repo "collaborationFactory/${repo.repoName}" --title "${title}" --body "${body}" --base "${baseBranch}" --assignee @me`);
         }
         return Promise.resolve();
     }
