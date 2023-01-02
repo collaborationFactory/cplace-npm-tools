@@ -33,7 +33,7 @@ export class CloneRepos extends AbstractReposCommand {
                 repoProperties.latestTagForRelease = latestTag;
                 return Repository.clone(toPath, repoName, repoProperties, depth);
             })
-            .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
+            .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
     }
 
     private checkRepoMissing(rootDir: string, repoName: string): boolean {

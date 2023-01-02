@@ -66,7 +66,8 @@ export const basicTestSetupData: ITestSetupData = {
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_2: {
-        repoName: 'test-2', releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
+        repoName: 'test-2',
+        releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     }
 };
 
