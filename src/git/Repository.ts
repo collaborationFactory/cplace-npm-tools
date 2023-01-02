@@ -14,6 +14,7 @@ export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
+    private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)$/);
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
@@ -54,6 +55,26 @@ export class Repository {
                 console.log(`[${repoName}]: will clone the tag ${refToCheckout} with depth ${depth} as configured.`);
             } else if (repoProperties.latestTagForRelease) {
                 refToCheckout = repoProperties.latestTagForRelease;
+
+                if (repoProperties.tagMarker && repoProperties.tagMarker !== repoProperties.latestTagForRelease) {
+
+                    const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
+                    const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
+                    if (!tagMatches) {
+                        throw new Error(`[${repoName}]: Resolved latest tag for release ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                    }
+                    if (!tagMarkerMatches) {
+                        throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                    }
+
+                    if (tagMatches.groups.major < tagMarkerMatches.groups.major
+                        || tagMatches.groups.minor < tagMarkerMatches.groups.minor
+                        || tagMatches.groups.patch < tagMarkerMatches.groups.patch
+                    ) {
+                        throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher version then the latest available tag ${repoProperties.latestTagForRelease}!`);
+                    }
+                }
+
                 refIsTag = true;
                 console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout} with depth ${depth}.`);
             }
