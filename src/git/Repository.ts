@@ -44,7 +44,7 @@ export class Repository {
 
             if (repoProperties.useSnapshot) {
                 refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} with depth ${depth} because useSnapshot is true.`);
+                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because useSnapshot is true.`);
             } else if (repoProperties.commit) {
                 refToCheckout = repoProperties.branch;
                 console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.
@@ -61,7 +61,7 @@ export class Repository {
                     const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
                     const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
                     if (!tagMatches) {
-                        throw new Error(`[${repoName}]: Resolved latest tag for release ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                        throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
                     }
                     if (!tagMarkerMatches) {
                         throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
@@ -76,14 +76,16 @@ export class Repository {
                 }
 
                 refIsTag = true;
-                console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout} with depth ${depth}.`);
+                console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout}, depth ${depth}.`);
+            } else if (repoProperties.branch) {
+                refToCheckout = repoProperties.branch;
+                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because no latestTagForRelease was found and only a branch is configured.`);
+            } else {
+                console.log(`[${repoName}]: will clone the latest HEAD of the default branch with depth ${depth} because not even a branch is configured.`);
             }
 
             if (refToCheckout) {
-                Global.isVerbose() && console.log(`[${repoName}]:`, 'cloning tag or branch', refToCheckout, 'from', repoProperties.url, 'to', toPath);
                 options.push('--branch', refToCheckout);
-            } else {
-                Global.isVerbose() && console.log(`[${repoName}]:`, 'cloning default branch from', repoProperties.url, 'to', toPath);
             }
             if (depth > 0 && !repoProperties.commit) {
                 options.push('--depth', depth.toString(10));
