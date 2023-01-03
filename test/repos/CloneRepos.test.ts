@@ -11,17 +11,21 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
 /*
  * Tests several behaviours cloning the parent repositories.
  * Scenarios and expectations:
- * 1) - only branches are configured
+ * A) only branches are configured and there are no remote tag
+ *    -> use the latest remote HEAD of the branch
+ * B) only branches are configured
  *    -> clone the latest tag
- * 2) - only tags are configured
+ * C) - only tags are configured
  *    -> clone the specified tags
- * 3) - branches and tags are mixed
+ * D) branches and tags are mixed
  *   -> in case of only a branch, clone the latest tag
  *   -> in case of tag, clone the tag
- * 4) in case of 'useSnapshot'
+ * E) in case of 'useSnapshot'
  *   -> use the latest remote HEAD of the branch
- * 5) in case of a tagMarker but no tag:
+ * F) in case of a tagMarker but no tag:
  *   -> use the latest tag and validate that the version matches at least the tag marker
+ * G) only the repo url is configured
+ *   -> use the latest HEAD of the default branch
  */
 
 // tslint:disable-next-line:variable-name
@@ -122,12 +126,12 @@ async function testWithParentRepos(rootDir: string, parentRepos?: IReposDescript
 
 describe('cloning the parent repos', () => {
 
-    test('1) using the initial parent-repos.json with branches configured', async () => {
+    test('B) using the initial parent-repos.json with branches configured', async () => {
         const testCloningTheParentRepos = async (rootDir: string): Promise<string> => {
             return testWithParentRepos(rootDir);
         };
 
-        const assertCloningTheParentReposBranchesOnly = async (testResult: string): Promise<void> => {
+        const assertCloningTheParentReposOnTheLatestTag = async (testResult: string): Promise<void> => {
             const files = fs.readdirSync(path.resolve(testResult, '..'));
             expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
             // is expected to be on the latest tag, that is 22.2.0
@@ -136,10 +140,10 @@ describe('cloning the parent repos', () => {
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposBranchesOnly);
+            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposOnTheLatestTag);
     });
 
-    test('2) when tags are configured', async () => {
+    test('C) when tags are configured', async () => {
         const testCloningTheParentRepos = async (rootDir: string): Promise<string> => {
             const parentRepos = catParentReposJson(rootDir);
             Object.keys(parentRepos).forEach((repo) => {
@@ -161,7 +165,7 @@ describe('cloning the parent repos', () => {
             .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposTagsOnly);
     });
 
-    test('3) & 4) when tags and branches with useSnapshot are configured', async () => {
+    test('D) & E) when tags and branches with useSnapshot are configured', async () => {
         const testCloningTheParentReposWithTagsAndBranches = async (rootDir: string): Promise<string> => {
             const parentRepos = catParentReposJson(rootDir);
             parentRepos.main.tag = 'version/22.2.0';
@@ -194,10 +198,57 @@ describe('cloning the parent repos', () => {
             .withBranchUnderTest('release/22.2')
             .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
     });
+
+    test('G) only the repo url is configured, tags do not exist on master', async () => {
+        const testCloningTheParentRepos = async (rootDir: string): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            Object.keys(parentRepos).forEach((repo) => {
+                parentRepos[repo].branch = null;
+            });
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposBranchesOnly = async (testResult: string): Promise<void> => {
+            const files = fs.readdirSync(path.resolve(testResult, '..'));
+            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+
+            const parentRepos = catParentReposJson(testResult);
+            Object.keys(parentRepos).forEach((repo) => {
+                const repoFolder = path.resolve(testResult, '..', repo);
+                assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder, 'master');
+            });
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('master')
+            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposBranchesOnly);
+    });
 });
+
 describe('cloning the parent repos for a complex setup', () => {
 
-    test('2) when tags are configured with diverging versions', async () => {
+    test('A) using the initial parent-repos.json with branches configured but without any remote tags', async () => {
+        const testCloningTheParentRepos = async (rootDir: string): Promise<string> => {
+            return testWithParentRepos(rootDir);
+        };
+
+        const assertCloningTheParentReposBranchesOnly = async (testResult: string): Promise<void> => {
+            const files = fs.readdirSync(path.resolve(testResult, '..'));
+            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+
+            const parentRepos = catParentReposJson(testResult);
+            Object.keys(parentRepos).forEach((repo) => {
+                const repoFolder = path.resolve(testResult, '..', repo);
+                assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder, 'release/5.20');
+            });
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/5.20')
+            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposBranchesOnly);
+    });
+
+    test('C) when tags are configured with diverging versions', async () => {
         let expectedParentJson: IReposDescriptor;
         const tags = {
             main: 'version/22.3.2',
@@ -244,7 +295,7 @@ describe('cloning the parent repos for a complex setup', () => {
             .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposTagsOnly);
     });
 
-    test('3) & 4) when tags, branches and useSnapshot are configured', async () => {
+    test('D) & E) when tags, branches and useSnapshot are configured', async () => {
         const testCloningTheParentReposWithTagsAndBranches = async (rootDir: string): Promise<string> => {
             const parentRepos = catParentReposJson(rootDir);
             parentRepos.main.tag = 'version/22.3.1';
@@ -275,7 +326,7 @@ describe('cloning the parent repos for a complex setup', () => {
             .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
     });
 
-    test('5) fails when a wrong tagMarker is configured', async () => {
+    test('F) fails when a wrong tagMarker is configured', async () => {
 
         const testCloningTheParentReposWithTagMarkersFails = async (rootDir: string): Promise<boolean> => {
             const parentRepos = catParentReposJson(rootDir);

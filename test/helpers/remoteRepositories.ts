@@ -116,6 +116,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
     private readonly testSetupData: ITestSetupData;
     private branchUnderTest: string;
     private readonly branchesToCheckout: string[] = [];
+    private readonly defaultBranch: string = 'master';
 
     constructor(testSetupData: ITestSetupData) {
         this.testSetupData = testSetupData;
@@ -212,6 +213,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
                 this.commitSomeChanges(remote, 'latest_change.txt');
             });
+            this.branchOff(remote, this.defaultBranch);
+            this.commitSomeChanges(remote, 'latest_change.txt');
             this.cloneRepo(remotePath, remote.url, true);
             remote.url += '.git';
         }

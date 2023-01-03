@@ -123,7 +123,7 @@ export class Repository {
 
     public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            if (repoProperties.branch.startsWith('release/')) {
+            if (repoProperties.branch?.startsWith('release/')) {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
 
