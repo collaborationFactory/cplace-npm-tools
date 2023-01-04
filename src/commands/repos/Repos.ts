@@ -8,6 +8,7 @@ import {UpdateRepos} from './UpdateRepos';
 import {WriteRepos} from './WriteRepos';
 import {BranchRepos} from './BranchRepos';
 import {AddDependency} from './add-dependency/AddDependency';
+import {MergeSkeleton} from './MergeSkeleton';
 
 export class Repos implements ICommand {
     public static readonly PARAMETER_BRANCH: string = 'branch';
@@ -20,6 +21,8 @@ export class Repos implements ICommand {
     public static readonly PARAMETER_CLONE_SHORT: string = 'c';
     public static readonly PARAMETER_ADD_DEPENDENCY: string = 'add-dependency';
     public static readonly PARAMETER_ADD_DEPENDENCY_SHORT: string = 'd';
+    public static readonly PARAMETER_MERGE_SKELETON: string = 'mergeSkeleton';
+    public static readonly PARAMETER_MERGE_SKELETON_SHORT: string = 'm';
 
     private cmd: ICommand;
 
@@ -34,6 +37,8 @@ export class Repos implements ICommand {
             this.cmd = new BranchRepos();
         } else if (params[Repos.PARAMETER_ADD_DEPENDENCY] || params[Repos.PARAMETER_ADD_DEPENDENCY_SHORT]) {
             this.cmd = new AddDependency();
+        } else if (params[Repos.PARAMETER_MERGE_SKELETON] || params[Repos.PARAMETER_MERGE_SKELETON_SHORT]) {
+            this.cmd = new MergeSkeleton();
         } else {
             console.error('Error: Unknown or missing repos subcommand!');
             return false;
