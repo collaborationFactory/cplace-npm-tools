@@ -55,25 +55,7 @@ export class Repository {
                 console.log(`[${repoName}]: will clone the tag ${refToCheckout} with depth ${depth} as configured.`);
             } else if (repoProperties.latestTagForRelease) {
                 refToCheckout = repoProperties.latestTagForRelease;
-
-                if (repoProperties.tagMarker && repoProperties.tagMarker !== repoProperties.latestTagForRelease) {
-
-                    const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
-                    const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
-                    if (!tagMatches) {
-                        throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
-                    }
-                    if (!tagMarkerMatches) {
-                        throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
-                    }
-
-                    if (tagMatches.groups.major < tagMarkerMatches.groups.major
-                        || tagMatches.groups.minor < tagMarkerMatches.groups.minor
-                        || tagMatches.groups.patch < tagMarkerMatches.groups.patch
-                    ) {
-                        throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher version then the latest available tag ${repoProperties.latestTagForRelease}!`);
-                    }
-                }
+                this.validateTagMarker(repoProperties, repoName);
 
                 refIsTag = true;
                 console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout}, depth ${depth}.`);
@@ -107,6 +89,27 @@ export class Repository {
                 }
             });
         });
+    }
+
+    public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
+        if (repoProperties.tagMarker && repoProperties.tagMarker !== repoProperties.latestTagForRelease) {
+
+            const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
+            const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
+            if (!tagMatches) {
+                throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+            }
+            if (!tagMarkerMatches) {
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+            }
+
+            if (tagMatches.groups.major < tagMarkerMatches.groups.major
+                || tagMatches.groups.minor < tagMarkerMatches.groups.minor
+                || tagMatches.groups.patch < tagMarkerMatches.groups.patch
+            ) {
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher version then the latest available tag ${repoProperties.latestTagForRelease}!`);
+            }
+        }
     }
 
     public static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
