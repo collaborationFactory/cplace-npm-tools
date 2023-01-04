@@ -105,7 +105,8 @@ export const multiBranchTestSetupData: ITestSetupData = {
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: []},
             {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2']},
-            {branchName: 'release/22.4', releases: ['version/22.4.0']}
+            {branchName: 'release/22.4', releases: ['version/22.4.0']},
+            {branchName: 'customer/22.4-A-2', releases: ['custom/22.4.0-A-2']}
         ]
     }
 };

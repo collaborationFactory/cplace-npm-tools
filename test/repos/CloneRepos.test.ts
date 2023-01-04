@@ -26,6 +26,10 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
  *   -> use the latest tag and validate that the version matches at least the tag marker
  * G) only the repo url is configured
  *   -> use the latest HEAD of the default branch
+ * H) A tag that does not exist is configured
+ *   -> Cloning should fail at this point
+ * I) A tag with another format is configured
+ *   -> should be cloned properly
  */
 
 // tslint:disable-next-line:variable-name
@@ -90,6 +94,13 @@ function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, 
         throw e;
     }
 }
+
+const assertVoid = (testResult: boolean): Promise<void> => {
+    if (!testResult === true) {
+        throw new Error('This test is expected to fail and should not reach the assertion!');
+    }
+    return;
+};
 
 async function testWithParentRepos(rootDir: string, parentRepos?: IReposDescriptor): Promise<string> {
     if (parentRepos) {
@@ -223,6 +234,25 @@ describe('cloning the parent repos', () => {
             .withBranchUnderTest('master')
             .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposBranchesOnly);
     });
+
+    test('H) A tag that does not exist is configured', async () => {
+        const testCloningTheParentRepos = async (rootDir: string): Promise<boolean> => {
+            const parentRepos = catParentReposJson(rootDir);
+            parentRepos.main.tag = 'version/22.2.99';
+            await testWithParentRepos(rootDir, parentRepos)
+                .catch((e) => {
+                    // expected to fail
+                    if (!e.includes('Error: [main]: failed to handle repo due to') || e.includes('[test_1]') || e.includes('[test_2]')) {
+                        throw new Error('Did not to fail with the expected reason!');
+                    }
+                });
+            return true;
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('master')
+            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertVoid);
+    });
 });
 
 describe('cloning the parent repos for a complex setup', () => {
@@ -345,15 +375,38 @@ describe('cloning the parent repos for a complex setup', () => {
             return true;
         };
 
-        const assertVoid = (testResult: boolean): Promise<void> => {
-            if (!testResult === true) {
-                throw new Error('This test is expected to fail and should not reach the assertion!');
-            }
-            return;
-        };
-
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/22.3')
             .evaluateWithRemoteRepos(testCloningTheParentReposWithTagMarkersFails, assertVoid);
+    });
+
+    test('I) A tag with another format is configured', async () => {
+        const testCloningTheParentReposWithTagsAndBranches = async (rootDir: string): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            parentRepos.test_2.tag = 'custom/22.4.0-A-2';
+
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
+            const files = fs.readdirSync(path.resolve(testResult, '..'));
+            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+
+            let repoFolder = path.resolve(testResult, '..', 'main');
+            let tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.0-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_1');
+            tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.1-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_2');
+            tagDescription = gitDescribe(repoFolder);
+            expect(/^custom\/22.4.0-A-2-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/22.4')
+            .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
     });
 });
