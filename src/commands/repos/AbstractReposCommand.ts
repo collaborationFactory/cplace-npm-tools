@@ -25,10 +25,10 @@ export abstract class AbstractReposCommand implements ICommand {
     protected parentReposConfigPath: string;
     protected rootDir: string;
 
-    public prepareAndMayExecute(params: ICommandParameters, rootDir: string = './'): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir?: string): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
 
-        this.rootDir = rootDir;
+        this.rootDir = rootDir ? rootDir : process.cwd();
 
         this.force = !!params[AbstractReposCommand.PARAMETER_FORCE];
         if (this.force) {
@@ -52,7 +52,7 @@ export abstract class AbstractReposCommand implements ICommand {
             Global.isVerbose() && console.log('running with depth for cloning = ' + this.depth);
         }
 
-        this.parentReposConfigPath = path.join(rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+        this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         if (!fs.existsSync(this.parentReposConfigPath)) {
             console.error('Cannot find repo description', this.parentReposConfigPath);
             return false;
