@@ -253,6 +253,7 @@ export class Repository {
                 tag ? options.push('tag', tag) : options.push(branch);
             } else {
                 options.push('--all');
+                options.push('--tags');
             }
 
             Global.isVerbose() && console.log(`fetching repo ${this.repoName} with options ${options}`);
