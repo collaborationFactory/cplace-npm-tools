@@ -1,9 +1,11 @@
 import {ICommandParameters} from '../../src/commands/models';
 import {CloneRepos} from '../../src/commands/repos/CloneRepos';
-import {basicTestSetupData, catParentReposJson, multiBranchTestSetupData, testWith, writeParentReposJson} from '../helpers/remoteRepositories';
+import {
+    basicTestSetupData, multiBranchTestSetupData,
+    catParentReposJson, testWith, writeAndCommitParentRepos, gitDescribe, assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent
+} from '../helpers/remoteRepositories';
 import {AbstractReposCommand} from '../../src/commands/repos/AbstractReposCommand';
 import * as child_process from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
 import {Global} from '../../src/Global';
 import {IReposDescriptor} from '../../src/commands/repos/models';
@@ -34,28 +36,6 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
 
 // tslint:disable-next-line:variable-name
 const expectedTagFormat_22_2_0 = /^version\/22.2.0-0-\w+\n$/;
-
-function gitDescribe(repoFolder: string): string {
-    let tagDescription: Buffer;
-    try {
-        tagDescription = child_process.execSync(
-            'git describe --long',
-            {
-                cwd: repoFolder,
-                shell: 'bash'
-            }
-        );
-    } catch (e) {
-        console.log(`Git describe failed in ${repoFolder} due to:
-        ${e.status}
-        ${e.message}
-        ${e.stderr?.toString()}
-        ${e.stdout?.toString()}
-    `);
-        throw e;
-    }
-    return tagDescription.toString();
-}
 
 function assertThatTheParentsWorkingCopyIsOnTheExpectedTag(rootDir: string, expectedTagFormat: RegExp = expectedTagFormat_22_2_0): void {
     const parentRepos = catParentReposJson(rootDir);
@@ -104,33 +84,15 @@ const assertVoid = (testResult: boolean): Promise<void> => {
 
 async function testWithParentRepos(rootDir: string, parentRepos?: IReposDescriptor): Promise<string> {
     if (parentRepos) {
-        writeParentReposJson(rootDir, parentRepos);
-
-        try {
-            child_process.execSync(
-                'git commit -a -m "updates parent repos" && git push',
-                {
-                    cwd: rootDir,
-                    shell: 'bash'
-                }
-            );
-        } catch (e) {
-            console.log(`Git commit or push failed in ${rootDir} due to:
-        ${e.status}
-        ${e.message}
-        ${e.stderr?.toString()}
-        ${e.stdout?.toString()}
-         `);
-            throw e;
-        }
+        writeAndCommitParentRepos(parentRepos, rootDir);
     }
     const params: ICommandParameters = {};
     params[AbstractReposCommand.PARAMETER_CLONE_DEPTH] = 1;
     params[Global.PARAMETER_VERBOSE] = true;
     Global.parseParameters(params);
-    const cl = new CloneRepos();
-    cl.prepareAndMayExecute(params, rootDir);
-    await cl.execute();
+    const cr = new CloneRepos();
+    cr.prepareAndMayExecute(params, rootDir);
+    await cr.execute();
 
     return rootDir;
 }
@@ -143,8 +105,7 @@ describe('cloning the parent repos', () => {
         };
 
         const assertCloningTheParentReposOnTheLatestTag = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
             // is expected to be on the latest tag, that is 22.2.0
             assertThatTheParentsWorkingCopyIsOnTheExpectedTag(testResult);
         };
@@ -164,9 +125,7 @@ describe('cloning the parent repos', () => {
         };
 
         const assertCloningTheParentReposTagsOnly = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
-
+            assertAllFoldersArePresent(testResult);
             // is expected to be on the configured tag, that is 22.2.0
             assertThatTheParentsWorkingCopyIsOnTheExpectedTag(testResult);
         };
@@ -192,8 +151,7 @@ describe('cloning the parent repos', () => {
         };
 
         const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             let repoFolder = path.resolve(testResult, '..', 'test_2');
             assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder, 'release/22.2');
@@ -220,8 +178,7 @@ describe('cloning the parent repos', () => {
         };
 
         const assertCloningTheParentReposBranchesOnly = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             const parentRepos = catParentReposJson(testResult);
             Object.keys(parentRepos).forEach((repo) => {
@@ -263,8 +220,7 @@ describe('cloning the parent repos for a complex setup', () => {
         };
 
         const assertCloningTheParentReposBranchesOnly = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             const parentRepos = catParentReposJson(testResult);
             Object.keys(parentRepos).forEach((repo) => {
@@ -299,25 +255,11 @@ describe('cloning the parent repos for a complex setup', () => {
         };
 
         const assertCloningTheParentReposTagsOnly = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             expect(JSON.stringify(catParentReposJson(testResult))).toEqual(JSON.stringify(expectedParentJson));
 
-            let failed = false;
-            Object.keys(tags).forEach((repo) => {
-                const repoFolder = path.resolve(testResult, '..', repo);
-                const tagDescription = gitDescribe(repoFolder);
-                const regex = new RegExp(`${tags[repo]}-0-\\w+\\n$`);
-                try {
-                    expect(regex.test(tagDescription)).toBeTruthy();
-                } catch (e) {
-                    failed = true;
-                    console.log(`Failed for ${repo}: expected tag = ${tags[repo]}, got description ${tagDescription}`);
-                }
-
-                expect(failed).toBeFalsy();
-            });
+            assertThatTheParentReposAreCheckedOutToTheExpectedTags(tags, testResult);
         };
 
         await testWith(multiBranchTestSetupData)
@@ -336,8 +278,7 @@ describe('cloning the parent repos for a complex setup', () => {
         };
 
         const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             let repoFolder = path.resolve(testResult, '..', 'main');
             let tagDescription = gitDescribe(repoFolder);
@@ -389,8 +330,7 @@ describe('cloning the parent repos for a complex setup', () => {
         };
 
         const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
-            const files = fs.readdirSync(path.resolve(testResult, '..'));
-            expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+            assertAllFoldersArePresent(testResult);
 
             let repoFolder = path.resolve(testResult, '..', 'main');
             let tagDescription = gitDescribe(repoFolder);

@@ -71,7 +71,7 @@ export class UpdateRepos extends AbstractReposCommand {
 
         repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
 
-        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const pathToRepo = path.join(this.rootDir, '..', repoName);
 
         const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
@@ -93,7 +93,7 @@ export class UpdateRepos extends AbstractReposCommand {
             throw new Error(`[${repoName}]: Internal error: handleRepo was called for ${repoName} despite rejection in prepareRepo!`);
         }
 
-        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const pathToRepo = path.join(this.rootDir, '..', repoName);
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);

@@ -17,6 +17,71 @@ export function writeParentReposJson(rootDir: string, parentRepos: IReposDescrip
     fs.writeFileSync(path.join(rootDir, 'parent-repos.json'), JSON.stringify(parentRepos, null, 2), 'utf8');
 }
 
+export function writeAndCommitParentRepos(checkoutParentRepos: IReposDescriptor, rootDir: string): void {
+    writeParentReposJson(rootDir, checkoutParentRepos);
+    try {
+        child_process.execSync(
+            'git commit -a -m "updates parent repos" && git push',
+            {
+                cwd: rootDir,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git commit or push failed in ${rootDir} due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+         `);
+        throw e;
+    }
+}
+
+export function gitDescribe(repoFolder: string): string {
+    let tagDescription: Buffer;
+    try {
+        tagDescription = child_process.execSync(
+            'git describe --long',
+            {
+                cwd: repoFolder,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git describe failed in ${repoFolder} due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+    `);
+        throw e;
+    }
+    return tagDescription.toString();
+}
+
+export function assertThatTheParentReposAreCheckedOutToTheExpectedTags(tags: { main?: string; test_1?: string; test_2?: string }, rootDir: string): void {
+    let failed = false;
+    Object.keys(tags).forEach((repo) => {
+        const repoFolder = path.resolve(rootDir, '..', repo);
+        const tagDescription = gitDescribe(repoFolder);
+        const regex = new RegExp(`${tags[repo]}-0-\\w+\\n$`);
+        try {
+            expect(regex.test(tagDescription)).toBeTruthy();
+        } catch (e) {
+            failed = true;
+            console.log(`Failed for ${repo}: expected tag = ${tags[repo]}, got description ${tagDescription}`);
+        }
+
+        expect(failed).toBeFalsy();
+    });
+}
+
+export function assertAllFoldersArePresent(testResult: string): void {
+    const files = fs.readdirSync(path.resolve(testResult, '..'));
+    expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+}
+
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
 
