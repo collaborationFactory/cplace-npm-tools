@@ -23,7 +23,7 @@ export class Repository {
         try {
             this.git = simpleGit(repoPath);
         } catch (e) {
-            console.log(`Error at initialising a new Repository for ${repoPath}!`, e);
+            console.log(`[${this.repoName}]:`, `Error at initialising a new Repository for ${repoPath}!`, e);
             throw e;
         }
         if (Global.isVerbose()) {
@@ -298,12 +298,13 @@ export class Repository {
     public checkoutBranch(branch: string | string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch ${branch}`);
+            // FIXME fails if previously checked out on a tag with depth == 1
             this.git.checkout(branch, (err) => {
                 if (err) {
-                    Global.isVerbose() && console.error(`failed to checkout ${this.repoName}/${branch}`, err);
+                    console.error(`[${this.repoName}]: failed to checkout branch ${branch}`, err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} is now in branch ${branch}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} is now in branch ${branch}`);
                     resolve();
                 }
             });
@@ -316,13 +317,13 @@ export class Repository {
     // Unfortunately this is not possible in simpleGit, so instead we call git.checkoutLocalBranch in createBranchForTag
     public checkoutTag(tag: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`checkout ${this.repoName}, in tag ${tag}`);
+            Global.isVerbose() && console.log(`[${this.repoName}]: checkout ${this.repoName}, in tag ${tag}`);
             this.git.checkout('tags/' + tag, (err) => {
                 if (err) {
-                    Global.isVerbose() && console.error(`failed to checkout ${this.repoName}/${tag}`, err);
+                    console.error(`[${this.repoName}]: failed to checkout tag ${this.repoName}/${tag}`, err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} is now at tag ${tag}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} is now at tag ${tag}`);
                     resolve();
                 }
             });
@@ -336,7 +337,7 @@ export class Repository {
             Global.isVerbose() && console.log(`[${repoName}]: Creating branch ${branchName} for tag ${tag}`);
             this.git.checkout(['-B', branchName], (err) => {
                 if (err) {
-                    Global.isVerbose() && console.error(`[${repoName}]:failed to create branch ${branchName} for tag ${tag}`, err);
+                    console.error(`[${repoName}]:failed to create branch ${branchName} for tag ${tag}`, err);
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`[${repoName}]: Created branch ${branchName} for tag ${tag}`);
@@ -348,12 +349,12 @@ export class Repository {
 
     public deleteBranch(branch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`deleting branch`, branch);
+            Global.isVerbose() && console.log(`[${this.repoName}]: deleting branch`, branch);
             this.git.branch(['-D', branch], (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`deleted branch`, branch);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: deleted branch`, branch);
                     resolve();
                 }
             });
@@ -363,7 +364,7 @@ export class Repository {
     public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean }): Promise<void> {
         opts = opts || {};
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`merge ${this.repoName}, otherBranch `, otherBranch);
+            Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
             const options = [otherBranch];
             opts.noFF && options.push('--no-ff');
             opts.ffOnly && options.push('--ff-only');
@@ -374,17 +375,17 @@ export class Repository {
                 } else if (data.conflicts.length > 0) {
                     // abort if merge failed
                     this.git.mergeFromTo('--abort', undefined, (err2) => {
-                        console.log('error during merge:', err2);
+                        console.log('[${this.repoName}]: error during merge:', err2);
                         reject(data);
                     });
                 } else {
-                    Global.isVerbose() && console.log(`merged ${otherBranch} into ${this.repoName}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: merged ${otherBranch} into ${this.repoName}`);
                     if (opts.listFiles) {
                         if (data.files.length > 0) {
-                            console.log('The following files have been merged: ');
+                            console.log('[${this.repoName}]: The following files have been merged: ');
                             data.files.forEach((file) => console.log(file));
                         } else {
-                            console.log('Nothing to merge.');
+                            console.log('[${this.repoName}]:  Nothing to merge.');
                         }
                     }
                     resolve();
@@ -396,12 +397,12 @@ export class Repository {
     public push(remote: string, remoteBranchName?: string): Promise<void> {
         const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`pushing to ${remote}/${remoteBranchName}`);
+            Global.isVerbose() && console.log(`[${this.repoName}]: pushing to ${remote}/${remoteBranchName}`);
             this.git.push(remote, remoteBranch, (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`pushed to ${remote}/${remoteBranchName}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: pushed to ${remote}/${remoteBranchName}`);
                     resolve();
                 }
             });
@@ -413,16 +414,16 @@ export class Repository {
             return new Promise<void>((resolve, reject) => {
                 this.git.checkout(commit, (err) => {
                     if (err) {
-                        Global.isVerbose() && console.error(`failed to checkout commit ${commit} in ${this.repoName}`, err);
+                        console.error(`failed to checkout commit ${commit} in ${this.repoName}`, err);
                         reject(err);
                     } else {
-                        Global.isVerbose() && console.log(`repo ${this.repoName} is now in commit`, commit);
+                        Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} is now in commit`, commit);
                         resolve();
                     }
                 });
             });
         } else {
-            Global.isVerbose() && console.log('no commit given');
+            Global.isVerbose() && console.log('[${this.repoName}]: no commit given');
             return Promise.resolve();
         }
     }
@@ -431,7 +432,7 @@ export class Repository {
         return this.getUpstreamBranchOrOriginBranch()
             .then((tracking) => {
                 if (tracking != null) {
-                    Global.isVerbose() && console.log(`doing a pull --ff-only in ${this.repoName} from ${tracking}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: doing a pull --ff-only in ${this.repoName} from ${tracking}`);
                     const i = tracking.indexOf('/');
                     if (i < 0) {
                         throw new Error(`cannot determine remote and branch for ${tracking}`);
@@ -440,7 +441,7 @@ export class Repository {
                     const remote = tracking.substring(0, i);
                     const trackingBranch = tracking.substr(i + 1);
 
-                    Global.isVerbose() && console.log(`pulling branch ${branch} from remote ${trackingBranch}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: pulling branch ${branch} from remote ${trackingBranch}`);
                     return new Promise((resolve, reject) => {
                         this.git.pull(remote, trackingBranch, {'--ff-only': true}, (err) => {
                             if (err) {
@@ -490,7 +491,7 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} has been reset`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} has been reset`);
                     resolve();
                 }
             });
@@ -504,7 +505,7 @@ export class Repository {
                     reject(err);
                 } else {
                     commit = commit.trim();
-                    Global.isVerbose() && console.log('current HEAD commit', commit);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: current HEAD commit`, commit);
                     resolve(commit);
                 }
             });
@@ -542,7 +543,7 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of git branch -r', result);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: result of git branch -r`, result);
                     const lines: string[] = result.match(/[^\r\n]+/g);
                     const trimmedLines: string[] = [];
                     lines.forEach((l) => {
@@ -552,7 +553,7 @@ export class Repository {
                         }
                     });
 
-                    Global.isVerbose() && console.log('remote branches', trimmedLines);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: remote branches`, trimmedLines);
                     resolve(trimmedLines);
                 }
             });
@@ -565,15 +566,15 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of git for-each-ref', result);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'result of git for-each-ref', result);
                     const lines: string[] = result.match(/[^\r\n]+/g);
                     const branchesAndCommits: IGitBranchAndCommit[] = [];
 
                     lines.forEach((l) => {
                         const trimmed = l.trim();
-                        Global.isVerbose() && console.log('trimmed: ' + trimmed);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'trimmed: ' + trimmed);
                         const matched = /([a-z0-9]+)\s*commit\s*refs\/remotes\/origin\/(\S*)/.exec(trimmed);
-                        Global.isVerbose() && console.log('matched', matched);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'matched', matched);
                         if (matched && matched.length === 3) {
                             const branch = matched[2];
                             const commit = matched[1];
@@ -584,7 +585,7 @@ export class Repository {
                         }
                     });
 
-                    Global.isVerbose() && console.log('all branches and commits before filtering', branchesAndCommits);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'all branches and commits before filtering', branchesAndCommits);
 
                     // filter out branches that are on the same commit
                     const filteredBranchesAndCommits = branchesAndCommits.filter((branchAndCommit: IGitBranchAndCommit) => {
@@ -598,7 +599,7 @@ export class Repository {
                             return true;
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
-                                console.log('WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
+                                console.log(`[${this.repoName}]:`, 'WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
                                                 ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
@@ -607,7 +608,7 @@ export class Repository {
                         }
                     });
 
-                    Global.isVerbose() && console.log('all branches and commits after filtering', filteredBranchesAndCommits);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'all branches and commits after filtering', filteredBranchesAndCommits);
 
                     resolve(filteredBranchesAndCommits);
                 }
@@ -621,15 +622,15 @@ export class Repository {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log('result of git branch -a --contains ' + commit, result);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'result of git branch -a --contains ' + commit, result);
                     const lines: string[] = result.match(/[^\r\n]+/g);
                     const branches: string[] = [];
 
                     lines.forEach((l) => {
                         const trimmed = l.trim();
-                        Global.isVerbose() && console.log('trimmed: ' + trimmed);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'trimmed: ' + trimmed);
                         const matched = /remotes\/origin\/(\S*)/.exec(trimmed);
-                        Global.isVerbose() && console.log('matched', matched);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'matched', matched);
                         if (matched && matched.length === 2) {
                             if (Repository.includeBranch(matched[1], branchRegexForExclusion, branchRegexForInclusion)) {
                                 branches.push(matched[1]);
@@ -637,7 +638,7 @@ export class Repository {
                         }
                     });
 
-                    Global.isVerbose() && console.log('branches', branches);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'branches', branches);
                     resolve(branches);
                 }
             });
@@ -646,7 +647,7 @@ export class Repository {
 
     public add(filename: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`Adding file ${filename}`);
+            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Adding file ${filename}`);
             this.git.add(filename, (err) => {
                 if (err) {
                     reject(err);
@@ -659,13 +660,13 @@ export class Repository {
 
     public commit(message: string, files: string[] | string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`Committing branch ${this.baseDir} with message ${message}`);
+            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committing branch ${this.baseDir} with message ${message}`);
             // Git.prototype.commit = function (message, files, options, then) {
             this.git.commit(message, files, {}, (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`Committed branch ${this.baseDir}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committed branch ${this.baseDir}`);
                     resolve();
                 }
             });
@@ -674,7 +675,7 @@ export class Repository {
 
     public getOriginUrl(): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            Global.isVerbose() && console.log(`Retrieving origin remote URL...`);
+            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Retrieving origin remote URL...`);
             this.git.raw(['remote', 'get-url', 'origin'], (err, result) => {
                 if (err || !result) {
                     reject(err);
@@ -689,7 +690,7 @@ export class Repository {
         return new Promise<void>((resolve, reject) => {
             this.git.checkIsRepo((err) => {
                 if (err) {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} not a git repo`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `repo ${this.repoName} not a git repo`);
                     reject(err);
                 } else {
                     resolve();
