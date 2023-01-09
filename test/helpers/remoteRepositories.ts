@@ -111,6 +111,13 @@ export function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: s
     }
 }
 
+export const assertVoid = (testResult: boolean): Promise<void> => {
+    if (!testResult === true) {
+        throw new Error('This test is expected to fail and should not reach the assertion!');
+    }
+    return;
+};
+
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
 

@@ -3,7 +3,7 @@ import {CloneRepos} from '../../src/commands/repos/CloneRepos';
 import {
     basicTestSetupData, multiBranchTestSetupData,
     catParentReposJson, testWith, writeAndCommitParentRepos, gitDescribe,
-    assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent, assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch
+    assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent, assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch, assertVoid
 } from '../helpers/remoteRepositories';
 import {AbstractReposCommand} from '../../src/commands/repos/AbstractReposCommand';
 import * as path from 'path';
@@ -13,11 +13,11 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
 /*
  * Tests several behaviours cloning the parent repositories.
  * Scenarios and expectations:
- * A) only branches are configured and there are no remote tag
+ * A) only branches are configured and there are no remote tags
  *    -> use the latest remote HEAD of the branch
  * B) only branches are configured
  *    -> clone the latest tag
- * C) - only tags are configured
+ * C) only tags are configured
  *    -> clone the specified tags
  * D) branches and tags are mixed
  *   -> in case of only a branch, clone the latest tag
@@ -31,7 +31,11 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
  * H) A tag that does not exist is configured
  *   -> Cloning should fail at this point
  * I) A tag with another format is configured
- *   -> should be cloned properly
+ *   -> should be cloned to the custom tag
+ * J) A customer branch with useSnapshot is configured
+ *   -> should be cloned on the latest HEAD of the customer branch
+ * K) A customer branch is configured
+ *   -> should be cloned on the latest HEAD of the customer branch as remote tags are only resolved for release branches
  */
 
 // tslint:disable-next-line:variable-name
@@ -45,13 +49,6 @@ function assertThatTheParentsWorkingCopyIsOnTheExpectedTag(rootDir: string, expe
         expect(expectedTagFormat.test(tagDescription)).toBeTruthy();
     });
 }
-
-const assertVoid = (testResult: boolean): Promise<void> => {
-    if (!testResult === true) {
-        throw new Error('This test is expected to fail and should not reach the assertion!');
-    }
-    return;
-};
 
 async function testWithParentRepos(rootDir: string, parentRepos?: IReposDescriptor): Promise<string> {
     if (parentRepos) {
@@ -268,7 +265,36 @@ describe('cloning the parent repos for a complex setup', () => {
             .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
     });
 
-    test('F) fails when a wrong tagMarker is configured', async () => {
+    test('F) in case of a tagMarker but no tag', async () => {
+        const tagMarker = {
+            main: 'version/22.3.1',
+            test_1: 'version/22.3.3',
+            test_2: 'version/22.3.1'
+        };
+        const expectedTags = {
+            main: 'version/22.3.2',
+            test_1: 'version/22.3.4',
+            test_2: 'version/22.3.2'
+        };
+        const testCloningTheParentRepos = async (rootDir: string): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            Object.keys(tagMarker).forEach((repo) => {
+                parentRepos[repo].tagMarker = tagMarker[repo];
+            });
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposTagsOnly = async (testResult: string): Promise<void> => {
+            assertAllFoldersArePresent(testResult);
+            assertThatTheParentReposAreCheckedOutToTheExpectedTags(expectedTags, testResult);
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/22.3')
+            .evaluateWithRemoteRepos(testCloningTheParentRepos, assertCloningTheParentReposTagsOnly);
+    });
+
+    test('F) in case of a tagMarker but no tag fails when a wrong tagMarker is configured', async () => {
 
         const testCloningTheParentReposWithTagMarkersFails = async (rootDir: string): Promise<boolean> => {
             const parentRepos = catParentReposJson(rootDir);
@@ -314,6 +340,63 @@ describe('cloning the parent repos for a complex setup', () => {
             repoFolder = path.resolve(testResult, '..', 'test_2');
             tagDescription = gitDescribe(repoFolder);
             expect(/^custom\/22.4.0-A-2-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/22.4')
+            .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
+    });
+
+    test('J) A customer branch with useSnapshot is configured', async () => {
+        const testCloningTheParentReposWithTagsAndBranches = async (rootDir: string): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            parentRepos.test_2.branch = 'customer/22.4-A-2';
+            parentRepos.test_2.useSnapshot = true;
+
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
+            assertAllFoldersArePresent(testResult);
+
+            let repoFolder = path.resolve(testResult, '..', 'main');
+            let tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.0-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_1');
+            tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.1-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_2');
+            assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder, 'customer/22.4-A-2');
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/22.4')
+            .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
+    });
+
+    test('K) A customer branch is configured', async () => {
+        const testCloningTheParentReposWithTagsAndBranches = async (rootDir: string): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            parentRepos.test_2.branch = 'customer/22.4-A-2';
+
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
+            assertAllFoldersArePresent(testResult);
+
+            let repoFolder = path.resolve(testResult, '..', 'main');
+            let tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.0-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_1');
+            tagDescription = gitDescribe(repoFolder);
+            expect(/^version\/22.4.1-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+
+            repoFolder = path.resolve(testResult, '..', 'test_2');
+            assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder, 'customer/22.4-A-2');
         };
 
         await testWith(multiBranchTestSetupData)
