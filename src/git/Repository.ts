@@ -296,7 +296,7 @@ export class Repository {
     }
 
     /**
-     * If the repo is a shallow clone, the requeted branch will be fetched from the remote to allow checking it out.
+     * If the repo is a shallow clone, the requested branch will be fetched from the remote to allow checking it out.
      * The fetch will be done with a depth of 1.
      * @param branch the branch to fetch from the remote
      */
@@ -307,7 +307,13 @@ export class Repository {
                     reject(err);
                 } else if (data?.trim() === 'true') {
                     Global.isVerbose() && console.log(`[${this.repoName}]: pre-fetching branch ${branch} for shallow cloned repo.`);
-                    this.git.remote(['set-branches', 'origin', branch]);
+                    /*
+                    set-branches
+                    Changes the list of branches tracked by the named remote. This can be used to track a subset of the available remote branches after the initial setup for a remote.
+                    The named branches will be interpreted as if specified with the -t option on the git remote add command line.
+                    With --add, instead of replacing the list of currently tracked branches, adds to that list.
+                     */
+                    this.git.remote(['set-branches', '--add', 'origin', branch]);
                     this.git.fetch(['--depth', '1']);
                     resolve();
                 } else {
