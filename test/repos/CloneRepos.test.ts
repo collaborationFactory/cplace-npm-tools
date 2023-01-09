@@ -2,10 +2,10 @@ import {ICommandParameters} from '../../src/commands/models';
 import {CloneRepos} from '../../src/commands/repos/CloneRepos';
 import {
     basicTestSetupData, multiBranchTestSetupData,
-    catParentReposJson, testWith, writeAndCommitParentRepos, gitDescribe, assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent
+    catParentReposJson, testWith, writeAndCommitParentRepos, gitDescribe,
+    assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent, assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch
 } from '../helpers/remoteRepositories';
 import {AbstractReposCommand} from '../../src/commands/repos/AbstractReposCommand';
-import * as child_process from 'child_process';
 import * as path from 'path';
 import {Global} from '../../src/Global';
 import {IReposDescriptor} from '../../src/commands/repos/models';
@@ -44,35 +44,6 @@ function assertThatTheParentsWorkingCopyIsOnTheExpectedTag(rootDir: string, expe
         const tagDescription = gitDescribe(repoFolder);
         expect(expectedTagFormat.test(tagDescription)).toBeTruthy();
     });
-}
-
-function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, branch: string): void {
-    const gitUpdateCommand = `git remote update`;
-    const gitDiffCommand = `git diff --exit-code origin/${branch}`;
-    child_process.execSync(
-        gitUpdateCommand,
-        {
-            cwd: repoFolder,
-            shell: 'bash'
-        }
-    );
-    try {
-        child_process.execSync(
-            gitDiffCommand,
-            {
-                cwd: repoFolder,
-                shell: 'bash'
-            }
-        );
-    } catch (e) {
-        console.log(`Git diff failed due to:
-        ${e.status}
-        ${e.message}
-        ${e.stderr?.toString()}
-        ${e.stdout?.toString()}
-    `);
-        throw e;
-    }
 }
 
 const assertVoid = (testResult: boolean): Promise<void> => {

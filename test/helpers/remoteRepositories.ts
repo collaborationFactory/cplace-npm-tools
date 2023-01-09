@@ -82,6 +82,35 @@ export function assertAllFoldersArePresent(testResult: string): void {
     expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
 }
 
+export function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, branch: string): void {
+    const gitUpdateCommand = `git remote update`;
+    const gitDiffCommand = `git diff --exit-code origin/${branch}`;
+    child_process.execSync(
+        gitUpdateCommand,
+        {
+            cwd: repoFolder,
+            shell: 'bash'
+        }
+    );
+    try {
+        child_process.execSync(
+            gitDiffCommand,
+            {
+                cwd: repoFolder,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git diff failed due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+    `);
+        throw e;
+    }
+}
+
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
 

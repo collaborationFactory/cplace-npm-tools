@@ -295,10 +295,31 @@ export class Repository {
         });
     }
 
+    /**
+     * If the repo is a shallow clone, the requeted branch will be fetched from the remote to allow checking it out.
+     * The fetch will be done with a depth of 1.
+     * @param branch the branch to fetch from the remote
+     */
+    public prefetchBranchForShallowClone(branch: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.git.revparse(['--is-shallow-repository'], (err, data) => {
+                if (err) {
+                    reject(err);
+                } else if (data?.trim() === 'true') {
+                    Global.isVerbose() && console.log(`[${this.repoName}]: pre-fetching branch ${branch} for shallow cloned repo.`);
+                    this.git.remote(['set-branches', 'origin', branch]);
+                    this.git.fetch(['--depth', '1']);
+                    resolve();
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
     public checkoutBranch(branch: string | string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`checkout ${this.repoName}, in branch ${branch}`);
-            // FIXME fails if previously checked out on a tag with depth == 1
+            Global.isVerbose() && console.log(`[${this.repoName}]: checkout ${this.repoName}, in branch ${branch}`);
             this.git.checkout(branch, (err) => {
                 if (err) {
                     console.error(`[${this.repoName}]: failed to checkout branch ${branch}`, err);
@@ -600,7 +621,7 @@ export class Repository {
                         } else {
                             if (branches[0] === branchAndCommit.branch) {
                                 console.log(`[${this.repoName}]:`, 'WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
-                                                ', ignoring branch ' + branchAndCommit.branch);
+                                    ', ignoring branch ' + branchAndCommit.branch);
                                 return true;
                             } else {
                                 return false;

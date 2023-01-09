@@ -156,6 +156,7 @@ export class UpdateRepos extends AbstractReposCommand {
     private async checkoutBranch(repo: Repository, repoProperties: IRepoStatus): Promise<void> {
         // checkout branch
         await repo.resetHard();
+        await repo.prefetchBranchForShallowClone(repoProperties.branch);
         await repo.checkoutBranch(repoProperties.branch);
         if (this.resetToRemote) {
             await repo.resetHard(repoProperties.branch);
