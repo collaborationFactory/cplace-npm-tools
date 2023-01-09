@@ -190,12 +190,12 @@ export class Repository {
         return this.git._baseDir;
     }
 
-    public checkRepoHasPathInBranch(options: { branch: string, pathname: string }): Promise<boolean> {
+    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): Promise<boolean> {
         const pathname = options.pathname;
-        const branch = options.branch;
-        Global.isVerbose() && console.log(`check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${branch}`);
+        const ref = options.ref;
+        Global.isVerbose() && console.log(`check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
         return util.promisify(exec)(
-            `git ls-tree --name-only "${branch}" "${pathname}"`, {
+            `git ls-tree --name-only "${ref}" "${pathname}"`, {
                 cwd: path.join(this.baseDir)
             }
         ).then(({stdout}) => {

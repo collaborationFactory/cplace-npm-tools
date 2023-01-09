@@ -97,12 +97,12 @@ export class UpdateRepos extends AbstractReposCommand {
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
-        const targetBranch = await this.getTargetBranch(repo, repoProperties);
+        const targetRef = await this.getTargetRef(repo, repoProperties);
 
-        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
+        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
         Global.isVerbose() && console.log(`[${repoName}]:`, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
-        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: targetBranch, pathname: AbstractReposCommand.NODE_MODULES});
-        Global.isVerbose() && console.log(`[${repoName}]:`, 'target branch ', targetBranch, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
+        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: targetRef, pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(`[${repoName}]:`, 'target branch ', targetRef, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
 
         if (!startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {
             console.log(`[${repoName}]: Removing untracked ${AbstractReposCommand.NODE_MODULES} folder because it is checked in in the target branch.\n` +
@@ -167,18 +167,18 @@ export class UpdateRepos extends AbstractReposCommand {
         }
     }
 
-    private async getTargetBranch(repo: Repository, repoProperties: IRepoStatus): Promise<string> {
-        let targetBranch: string;
+    private async getTargetRef(repo: Repository, repoProperties: IRepoStatus): Promise<string> {
+        let targetRef: string;
 
         if (repoProperties.commit) {
-            targetBranch = repoProperties.commit;
+            targetRef = repoProperties.commit;
         } else if (repoProperties.tag) {
-            targetBranch = repoProperties.tag;
+            targetRef = repoProperties.tag;
         } else if (repoProperties.latestTagForRelease) {
-            targetBranch = repoProperties.latestTagForRelease;
+            targetRef = repoProperties.latestTagForRelease;
         } else if (repoProperties.branch) {
             if (this.resetToRemote) {
-                targetBranch = `origin/${repoProperties.branch}`;
+                targetRef = `origin/${repoProperties.branch}`;
             } else if (this.noFetch) {
                 let branchExists: boolean;
                 try {
@@ -187,12 +187,12 @@ export class UpdateRepos extends AbstractReposCommand {
                 } catch (e) {
                     branchExists = false;
                 }
-                targetBranch = branchExists ? repoProperties.branch : `origin/${repoProperties.branch}`;
+                targetRef = branchExists ? repoProperties.branch : `origin/${repoProperties.branch}`;
             } else {
                 // we did fetch, so the current remote branch is very likely the same as the one we may pull later
-                targetBranch = `origin/${repoProperties.branch}`;
+                targetRef = `origin/${repoProperties.branch}`;
             }
         }
-        return targetBranch;
+        return targetRef;
     }
 }
