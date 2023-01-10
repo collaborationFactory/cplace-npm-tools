@@ -70,32 +70,33 @@ export class WriteRepos extends AbstractReposCommand {
         } else if (this.useTags) {
             return Repository.getActiveTagOfReleaseBranch(repoName, this.parentRepos[repoName])
                 .then((activeTag) => {
-                    const current = this.parentRepos[repoName];
-                    const status: IRepoStatus = {
-                        url: current.url,
-                        branch: current.branch,
-                        description: current.description ? current.description : repoName
-                    };
                     if (activeTag) {
+                        const current = this.parentRepos[repoName];
+                        const status: IRepoStatus = {
+                            url: current.url,
+                            branch: current.branch,
+                            description: current.description ? current.description : repoName
+                        };
                         status.tag = activeTag;
                         status.tagMarker = activeTag;
                         Global.isVerbose() && console.log(`[${repoName}]: using tag ${status.tag}`);
+                        return ({repoName, status});
                     } else {
                         Global.isVerbose() && console.log(`[${repoName}]: no tag found for ${repoName}`);
-                        if (current.commit) {
-                            Global.isVerbose() && console.log(`[${repoName}]: preserving commit`);
-                            status.commit = current.commit;
-                        }
+                        return this.updateCommitStatus(repoName);
                     }
-                    return ({repoName, status});
                 });
         } else {
-            const repo = new Repository(path.join(this.rootDir, '..', repoName));
-            return repo.status()
-                .then((status) => this.checkRepoClean(repo, status))
-                .then((status) => this.mapCommitStatus(repo, status))
-                .then((status) => ({repoName, status}));
+            return this.updateCommitStatus(repoName);
         }
+    }
+
+    private updateCommitStatus(repoName: string): Promise<{ repoName: string; status: IRepoStatus }> {
+        const repo = new Repository(path.join(this.rootDir, '..', repoName));
+        return repo.status()
+            .then((status) => this.checkRepoClean(repo, status))
+            .then((status) => this.mapCommitStatus(repo, status))
+            .then((status) => ({repoName, status}));
     }
 
     private mapCommitStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
