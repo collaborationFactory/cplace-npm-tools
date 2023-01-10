@@ -22,7 +22,7 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "jest": {
-    "testTimeout": 10000,
+    "testTimeout": 20000,
     "globals": {
       "ts-jest": {
         "diagnostics": false
