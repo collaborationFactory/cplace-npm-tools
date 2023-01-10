@@ -2,11 +2,13 @@ import {IReposDescriptor, IRepoStatus} from '../../src/commands/repos/models';
 import {ICommandParameters} from '../../src/commands/models';
 import {WriteRepos} from '../../src/commands/repos/WriteRepos';
 import {basicTestSetupData, multiBranchTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
+import {Global} from '../../src/Global';
 
 const testUsingTags = async (rootDir: string): Promise<IReposDescriptor> => {
     const params: ICommandParameters = {};
-    params[WriteRepos.PARAMETER_FREEZE] = true;
-    params[WriteRepos.PARAMETER_USE_TAGS] = true;
+    params[Global.PARAMETER_VERBOSE] = true;
+    params[WriteRepos.PARAMETER_USE_LATEST_TAG] = true;
+    Global.parseParameters(params);
 
     const wr = new WriteRepos();
     wr.prepareAndMayExecute(params, rootDir);
@@ -16,7 +18,9 @@ const testUsingTags = async (rootDir: string): Promise<IReposDescriptor> => {
 
 const testUsingCommits = async (rootDir: string): Promise<IReposDescriptor> => {
     const params: ICommandParameters = {};
+    params[Global.PARAMETER_VERBOSE] = true;
     params[WriteRepos.PARAMETER_FREEZE] = true;
+    Global.parseParameters(params);
 
     const wr = new WriteRepos();
     wr.prepareAndMayExecute(params, rootDir);
@@ -91,7 +95,7 @@ describe('writing the parent repos json for a basic setup', () => {
         const testUnFreeze = async (rootDir: string): Promise<IReposDescriptor> => {
             const prepareParams: ICommandParameters = {};
             prepareParams[WriteRepos.PARAMETER_FREEZE] = true;
-            prepareParams[WriteRepos.PARAMETER_USE_TAGS] = true;
+            prepareParams[WriteRepos.PARAMETER_USE_LATEST_TAG] = true;
 
             const prepareWr = new WriteRepos();
             prepareWr.prepareAndMayExecute(prepareParams, rootDir);
