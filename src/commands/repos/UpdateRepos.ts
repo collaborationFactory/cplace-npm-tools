@@ -68,7 +68,7 @@ export class UpdateRepos extends AbstractReposCommand {
         if (!repoProperties.branch && !repoProperties.tag) {
             return Promise.reject(`[${repoName}]: No branch or tag given in parent-repos.json for repo ${repoName}`);
         }
-        if (!repoProperties.tag) {
+        if (!repoProperties.tag && !repoProperties.useSnapshot) {
             repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
         }
 
