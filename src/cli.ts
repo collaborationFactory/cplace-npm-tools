@@ -80,30 +80,64 @@ const cli = meow(
                   "tag": "yourTag"
                 },
                 Please note: When using tags branches are created locally to avoid detached-head state. Those are
-                not removed automatically.
+                not removed automatically. The branch name starts with 'release-version/' followed by the version.
                 If --force is set, then the update will take place even if the working copies of the parent repos are
-                not clean.
+                    not clean.
                     WARNING: Uncommitted changes WILL BE LOST.
                 If --reset-to-remote is set, then the update will do a hard reset in order to make sure the local copy
-                matches the remote repository state.
+                    matches the remote repository state.
                     WARNING: Committed but not pushed changes WILL BE LOST.
                 If --nofetch is set, then the repositories will not be fetched, meaning that the current version of each
-                branch will be checked out.
+                    branch will be checked out.
                 If --sequential is set, then the repositories will be updated one after another,
-                which takes longer but makes the verbose log easier to read.
+                    which takes longer but makes the verbose log easier to read.
+                Update behavior:
+                1. If a tag is configured for the parent repository it is updated to that tag,
+                2. Else if a commit hash is configured, the repository is updated to that commit.
+                3. Else if on a release branch (where the name follows the pattern 'release/$MAJOR.$MINOR)',
+                   the latest tag associated with that branch will be looked up in the remote repository and it will be updated to that latest tag.
+                   Note: if a 'tagMarker' is configured, the version of the latest tag must be newer (greater) or equal to the tag marker.
+                4. Else if there is no such tag or if on a feature/customer branch, it is updated to the HEAD of the remote branch.
+                5. If 'useSnapshot' is true for the parent repository, it is updated to the HEAD of the remote branch.
+                6. If no branch and no tag is configured the update will fail.
 
-            --write|-w [--freeze]:
-                Write the states of the parent repos to parent-repos.json.
+            --write|-w [--freeze] [--un-freeze] [--latest-tag]:
+                Write the states of the parent repos to parent-repos.json. If a commit has been configured it will be updated
+                to the current state of the parent repostory.
                 If --freeze is set, then the exact commit hashes of the currently checked out parent repos will
-                be written regardless whether there already was a commit hash in the descriptor or not.
-                If --force is set, then the update will take place even if the working copies of the parent repos
-                are not clean.
+                    be written regardless whether there already was a commit hash in the descriptor or not.
+                If --un-freeze is set, the parent-repos.json will be cleaned up. That is: configured tags, tagMarkers or commit hashes are removed.
+                    Other command flags will be ignored.
+                If --force is set, then an update to the commit hashes (as with --freeze) will take place even if the working copies of the parent repos
+                    are not clean.
+                If --latest-tag is set, the cplace-cli will update the parent repositories as follows: 
+                   1. If a tag was already configured for the repository it will be preserved.
+                   2. Else if the checked out branch name starts with 'release-version/' (the pattern for the local tag branch name),
+                      the tag will be derived from the branch name.
+                   3. Else if on a release branch (where the name follows the pattern 'release/$MAJOR.$MINOR)',
+                      the latest tag associated with that branch will be looked up in the remote repository.
+                      Additionally, a 'tagMarker' will be added to define the included lower bound of the version. 
+                   4. Else if there is no such tag or if on a feature/customer branch:
+                      a) If a commit hash is already configurd it will be updated to the currently checked out parent repositories commit hash .
+                      b) Else the parent repository will only have the branch configured.
+                If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
+                    the commit hash will always be added.
 
             --clone|-c [--depth <depth>] :
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
                 The --force setting has no effect for this command.
+                Clone behavior:
+                1. If a tag is configured for the parent repository it is cloned on that tag,
+                2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked
+                   out with the cplace-cli update command. --depth is ignored in that case.
+                3. Else if on a release branch (where the name follows the pattern 'release/$MAJOR.$MINOR)',
+                   the latest tag associated with that branch will be looked up in the remote repository and checked out.
+                   Note: if a 'tagMarker' is configured, the version of the latest tag must be newer (greater) or equal to the tag marker.
+                4. Else if there is no such tag or if on a feature/customer branch, the HEAD of the branch is cloned.
+                5. If 'useSnapshot' is true for the parent repository, the HEAD of the branch is cloned regradless of any other configuration.
+                6. If no branch is configured (not recommended), the default branch will be cloned.
 
             --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
                 Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will
