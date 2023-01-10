@@ -28,12 +28,16 @@ export class CloneRepos extends AbstractReposCommand {
     }
 
     private handleRepo(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<void> {
-        return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
-            .then((latestTag) => {
-                repoProperties.latestTagForRelease = latestTag;
-                return Repository.clone(toPath, repoName, repoProperties, depth);
-            })
-            .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
+        if (!repoProperties.tag) {
+            return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+                .then((latestTag) => {
+                    repoProperties.latestTagForRelease = latestTag;
+                    return Repository.clone(toPath, repoName, repoProperties, depth);
+                })
+                .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
+        } else {
+            return Repository.clone(toPath, repoName, repoProperties, depth);
+        }
     }
 
     private checkRepoMissing(rootDir: string, repoName: string): boolean {

@@ -167,7 +167,7 @@ describe('cloning the parent repos', () => {
             await testWithParentRepos(rootDir, parentRepos)
                 .catch((e) => {
                     // expected to fail
-                    if (!e.includes('Error: [main]: failed to handle repo due to') || e.includes('[test_1]') || e.includes('[test_2]')) {
+                    if (!e.includes('version/22.2.99')) {
                         throw new Error('Did not to fail with the expected reason!');
                     }
                 });

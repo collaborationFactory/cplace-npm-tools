@@ -68,8 +68,9 @@ export class UpdateRepos extends AbstractReposCommand {
         if (!repoProperties.branch && !repoProperties.tag) {
             return Promise.reject(`[${repoName}]: No branch or tag given in parent-repos.json for repo ${repoName}`);
         }
-
-        repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
+        if (!repoProperties.tag) {
+            repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
+        }
 
         const pathToRepo = path.join(this.rootDir, '..', repoName);
 
