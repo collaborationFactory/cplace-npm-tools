@@ -101,7 +101,7 @@ $  cplace-cli --help
 
             --write|-w [--freeze] [--un-freeze] [--latest-tag]:
                 Write the states of the parent repos to parent-repos.json. If a commit has been configured it will be updated
-                to the current state of the parent repostory.
+                to the current state of the parent repository.
                 If --freeze is set, then the exact commit hashes of the currently checked out parent repos will
                     be written regardless whether there already was a commit hash in the descriptor or not.
                 If --un-freeze is set, the parent-repos.json will be cleaned up. That is: configured tags, tagMarkers or commit hashes are removed.
