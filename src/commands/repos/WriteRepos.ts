@@ -75,10 +75,10 @@ export class WriteRepos extends AbstractReposCommand {
                         const status: IRepoStatus = {
                             url: current.url,
                             branch: current.branch,
-                            description: current.description ? current.description : repoName
+                            description: current.description ? current.description : repoName,
+                            tag: activeTag,
+                            tagMarker: activeTag
                         };
-                        status.tag = activeTag;
-                        status.tagMarker = activeTag;
                         Global.isVerbose() && console.log(`[${repoName}]: using tag ${status.tag}`);
                         return ({repoName, status});
                     } else {
