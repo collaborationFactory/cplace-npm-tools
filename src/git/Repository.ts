@@ -103,11 +103,14 @@ export class Repository {
                 throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
             }
 
-            if (tagMatches.groups.major < tagMarkerMatches.groups.major
-                || tagMatches.groups.minor < tagMarkerMatches.groups.minor
-                || tagMatches.groups.patch < tagMarkerMatches.groups.patch
-            ) {
-                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher version then the latest available tag ${repoProperties.latestTagForRelease}!`);
+            if (tagMatches.groups.major !== tagMarkerMatches.groups.major) {
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the major version of the latest available tag ${repoProperties.latestTagForRelease}
+                for the release branch ${repoProperties.branch}! For consistency the tagMarker must have the same major and minor version as the release branch and the tag.`);
+            } else if (tagMatches.groups.minor !== tagMarkerMatches.groups.minor) {
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the minor version of the latest available tag ${repoProperties.latestTagForRelease}
+                 for the release branch ${repoProperties.branch}! For consistency the tagMarker must have the same major and minor version as the release branch and the tag.`);
+            } else if (tagMatches.groups.patch < tagMarkerMatches.groups.patch) {
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher patch version then the latest available tag ${repoProperties.latestTagForRelease}!`);
             }
         }
     }

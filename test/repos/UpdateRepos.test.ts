@@ -306,7 +306,7 @@ describe('updating the parent repos for a complex setup', () => {
             await testWithParentRepos(rootDir, {checkout: checkoutParentRepos, update: updateParentRepos})
                 .catch((e) => {
                     // expected to fail
-                    if (!e?.message?.endsWith('[test_2]: Configured tagMarker version/22.3.3 has a higher version then the latest available tag version/22.3.2!')) {
+                    if (!e?.message?.endsWith('[test_2]: Configured tagMarker version/22.3.3 has a higher patch version then the latest available tag version/22.3.2!')) {
                         throw new Error('Did not to fail due to "[test_2]: Configured tagMarker version/22.3.3 has a higher version then the latest available tag version/22.3.2!"!');
                     }
                 });
