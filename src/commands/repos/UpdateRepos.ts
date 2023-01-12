@@ -63,15 +63,16 @@ export class UpdateRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log('branch', repoProperties.branch);
         Global.isVerbose() && console.log('tag', repoProperties.tag);
         Global.isVerbose() && console.log('tagMarker', repoProperties.tagMarker);
+        Global.isVerbose() && console.log('useSnapshot', repoProperties.useSnapshot);
 
         if (!repoProperties.branch && !repoProperties.tag) {
-            return Promise.reject('No branch or tag given in parent-repos.json for repo: ' + repoName);
+            return Promise.reject(`[${repoName}]: No branch or tag given in parent-repos.json for repo ${repoName}`);
+        }
+        if (!repoProperties.tag && !repoProperties.useSnapshot) {
+            repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
         }
 
-        const latestTagOfRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties);
-        repoProperties.latestTagForRelease = latestTagOfRelease;
-
-        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const pathToRepo = path.join(this.rootDir, '..', repoName);
 
         const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
@@ -81,28 +82,28 @@ export class UpdateRepos extends AbstractReposCommand {
         const status = await repo.status();
         await this.checkRepoClean(repo, status);
 
-        Global.isVerbose() && console.log('prepare repo', repoName, 'OK');
+        Global.isVerbose() && console.log(`[${repoName}]: prepare repo ${repoName} OK`);
     }
 
     private async handleRepo(repoName: string): Promise<void> {
-        Global.isVerbose() && console.log('update repo', repoName);
+        Global.isVerbose() && console.log(`[${repoName}]: update repo ${repoName}`);
 
         const repoProperties = this.parentRepos[repoName];
 
         if (!repoProperties.branch && !repoProperties.tag) {
-            throw new Error(`Internal error: handleRepo was called for ${repoName} despite rejection in prepareRepo!`);
+            throw new Error(`[${repoName}]: Internal error: handleRepo was called for ${repoName} despite rejection in prepareRepo!`);
         }
 
-        const pathToRepo = path.join(process.cwd(), '..', repoName);
+        const pathToRepo = path.join(this.rootDir, '..', repoName);
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
-        const targetBranch = await this.getTargetBranch(repo, repoProperties);
+        const targetRef = await this.getTargetRef(repo, repoProperties);
 
-        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
-        Global.isVerbose() && console.log(repoName, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
-        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({branch: targetBranch, pathname: AbstractReposCommand.NODE_MODULES});
-        Global.isVerbose() && console.log(repoName, 'target branch ', targetBranch, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
+        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(`[${repoName}]:`, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
+        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: targetRef, pathname: AbstractReposCommand.NODE_MODULES});
+        Global.isVerbose() && console.log(`[${repoName}]:`, 'target branch ', targetRef, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
 
         if (!startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {
             console.log(`[${repoName}]: Removing untracked ${AbstractReposCommand.NODE_MODULES} folder because it is checked in in the target branch.\n` +
@@ -126,42 +127,59 @@ export class UpdateRepos extends AbstractReposCommand {
     }
 
     private async checkout(repo: Repository, repoName: string, repoProperties: IRepoStatus): Promise<void> {
-        if (repoProperties.commit) {
-            Global.isVerbose() && console.log(repoName, 'checking out commit', repoProperties.commit);
+        if (repoProperties.useSnapshot) {
+            console.log(`[${repoName}]: will update to the latest HEAD of remote branch ${repoProperties.branch} because useSnapshot is true.`);
+            await this.checkoutBranch(repo, repoProperties);
+        } else if (repoProperties.commit) {
+            Global.isVerbose() && console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
             await repo.fetch({branch: repoProperties.branch});
             await repo.checkoutCommit(repoProperties.commit);
-        } else if (repoProperties.tag || repoProperties.latestTagForRelease) {
-            const tagToCheckout = repoProperties.tag || repoProperties.latestTagForRelease;
-            await repo.resetHard();
-            await repo.fetch({tag: tagToCheckout});
-            await repo.checkoutTag(tagToCheckout);
-            await repo.createBranchForTag(tagToCheckout);
+        } else if (repoProperties.tag) {
+            console.log(`[${repoName}]: will update to the tag ${repoProperties.tag}.`);
+            await this.checkoutTag(repo, repoName, repoProperties.tag);
+        } else if (repoProperties.latestTagForRelease) {
+            console.log(`[${repoName}]: will update to the latestTagForRelease ${repoProperties.latestTagForRelease}.`);
+            Repository.validateTagMarker(repoProperties, repoName);
+            await this.checkoutTag(repo, repoName, repoProperties.latestTagForRelease);
         } else {
-            // checkout branch
-            await repo.resetHard();
-            await repo.checkoutBranch(repoProperties.branch);
-            if (this.resetToRemote) {
-                await repo.resetHard(repoProperties.branch);
-            } else if (this.noFetch) {
-                // don't update to the remote branch, but stay at the current local branch
-            } else {
-                await repo.pullOnlyFastForward(repoProperties.branch);
-            }
+            console.log(`[${repoName}]: will update to the latest HEAD of remote branch ${repoProperties.branch} because no latestTagForRelease was found and only a branch is configured.`);
+            await this.checkoutBranch(repo, repoProperties);
         }
     }
 
-    private async getTargetBranch(repo: Repository, repoProperties: IRepoStatus): Promise<string> {
-        let targetBranch: string;
+    private async checkoutTag(repo: Repository, repoName: string, tagToCheckout: string): Promise<void> {
+        await repo.resetHard();
+        await repo.fetch({tag: tagToCheckout});
+        await repo.checkoutTag(tagToCheckout);
+        await repo.createBranchForTag(repoName, tagToCheckout);
+    }
+
+    private async checkoutBranch(repo: Repository, repoProperties: IRepoStatus): Promise<void> {
+        // checkout branch
+        await repo.resetHard();
+        await repo.prefetchBranchForShallowClone(repoProperties.branch);
+        await repo.checkoutBranch(repoProperties.branch);
+        if (this.resetToRemote) {
+            await repo.resetHard(repoProperties.branch);
+        } else if (this.noFetch) {
+            // don't update to the remote branch, but stay at the current local branch
+        } else {
+            await repo.pullOnlyFastForward(repoProperties.branch);
+        }
+    }
+
+    private async getTargetRef(repo: Repository, repoProperties: IRepoStatus): Promise<string> {
+        let targetRef: string;
 
         if (repoProperties.commit) {
-            targetBranch = repoProperties.commit;
+            targetRef = repoProperties.commit;
         } else if (repoProperties.tag) {
-            targetBranch = repoProperties.tag;
+            targetRef = repoProperties.tag;
         } else if (repoProperties.latestTagForRelease) {
-            targetBranch = repoProperties.latestTagForRelease;
+            targetRef = repoProperties.latestTagForRelease;
         } else if (repoProperties.branch) {
             if (this.resetToRemote) {
-                targetBranch = `origin/${repoProperties.branch}`;
+                targetRef = `origin/${repoProperties.branch}`;
             } else if (this.noFetch) {
                 let branchExists: boolean;
                 try {
@@ -170,12 +188,12 @@ export class UpdateRepos extends AbstractReposCommand {
                 } catch (e) {
                     branchExists = false;
                 }
-                targetBranch = branchExists ? repoProperties.branch : `origin/${repoProperties.branch}`;
+                targetRef = branchExists ? repoProperties.branch : `origin/${repoProperties.branch}`;
             } else {
                 // we did fetch, so the current remote branch is very likely the same as the one we may pull later
-                targetBranch = `origin/${repoProperties.branch}`;
+                targetRef = `origin/${repoProperties.branch}`;
             }
         }
-        return targetBranch;
+        return targetRef;
     }
 }

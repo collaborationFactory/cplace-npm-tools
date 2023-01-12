@@ -1,6 +1,6 @@
 {
   "name": "@cplace/cli",
-  "version": "0.19.16",
+  "version": "0.19.17",
   "description": "",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -22,7 +22,7 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "jest": {
-    "testTimeout": 10000,
+    "testTimeout": 20000,
     "globals": {
       "ts-jest": {
         "diagnostics": false

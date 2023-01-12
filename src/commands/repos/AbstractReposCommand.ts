@@ -11,10 +11,11 @@ import * as path from 'path';
 import * as rimraf from 'rimraf';
 
 export abstract class AbstractReposCommand implements ICommand {
-    protected static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
+    public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
+    public static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
+
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
-    protected static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
     protected static readonly NODE_MODULES: string = 'node_modules';
 
     protected parentRepos: IReposDescriptor;
@@ -24,10 +25,10 @@ export abstract class AbstractReposCommand implements ICommand {
     protected parentReposConfigPath: string;
     protected rootDir: string;
 
-    public prepareAndMayExecute(params: ICommandParameters, rootDir: string = './'): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir?: string): boolean {
         Global.isVerbose() && console.log('running in verbose mode');
 
-        this.rootDir = rootDir;
+        this.rootDir = rootDir ? rootDir : process.cwd();
 
         this.force = !!params[AbstractReposCommand.PARAMETER_FORCE];
         if (this.force) {
@@ -51,7 +52,7 @@ export abstract class AbstractReposCommand implements ICommand {
             Global.isVerbose() && console.log('running with depth for cloning = ' + this.depth);
         }
 
-        this.parentReposConfigPath = path.join(rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+        this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         if (!fs.existsSync(this.parentReposConfigPath)) {
             console.error('Cannot find repo description', this.parentReposConfigPath);
             return false;

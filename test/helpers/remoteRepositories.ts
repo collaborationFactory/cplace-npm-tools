@@ -2,12 +2,121 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {withTempDirectory} from './directories';
 import * as child_process from 'child_process';
-import { enforceNewline } from '../../src/util';
-import { IReposDescriptor } from '../../src/commands/repos/models';
+import {enforceNewline} from '../../src/util';
+import {IReposDescriptor} from '../../src/commands/repos/models';
 
 export function testWith(testSetupData: ITestSetupData): ITestRun {
     return new EvaluateWithRemoteRepos(testSetupData);
 }
+
+export function catParentReposJson(rootDir: string): IReposDescriptor {
+    return JSON.parse(fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString());
+}
+
+export function writeParentReposJson(rootDir: string, parentRepos: IReposDescriptor): void {
+    fs.writeFileSync(path.join(rootDir, 'parent-repos.json'), JSON.stringify(parentRepos, null, 2), 'utf8');
+}
+
+export function writeAndCommitParentRepos(checkoutParentRepos: IReposDescriptor, rootDir: string): void {
+    writeParentReposJson(rootDir, checkoutParentRepos);
+    try {
+        child_process.execSync(
+            'git commit -a -m "updates parent repos" && git push',
+            {
+                cwd: rootDir,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git commit or push failed in ${rootDir} due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+         `);
+        throw e;
+    }
+}
+
+export function gitDescribe(repoFolder: string): string {
+    let tagDescription: Buffer;
+    try {
+        tagDescription = child_process.execSync(
+            'git describe --long',
+            {
+                cwd: repoFolder,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git describe failed in ${repoFolder} due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+    `);
+        throw e;
+    }
+    return tagDescription.toString();
+}
+
+export function assertThatTheParentReposAreCheckedOutToTheExpectedTags(tags: { main?: string; test_1?: string; test_2?: string }, rootDir: string): void {
+    let failed = false;
+    Object.keys(tags).forEach((repo) => {
+        const repoFolder = path.resolve(rootDir, '..', repo);
+        const tagDescription = gitDescribe(repoFolder);
+        const regex = new RegExp(`${tags[repo]}-0-\\w+\\n$`);
+        try {
+            expect(regex.test(tagDescription)).toBeTruthy();
+        } catch (e) {
+            failed = true;
+            console.log(`Failed for ${repo}: expected tag = ${tags[repo]}, got description ${tagDescription}`);
+        }
+
+        expect(failed).toBeFalsy();
+    });
+}
+
+export function assertAllFoldersArePresent(testResult: string): void {
+    const files = fs.readdirSync(path.resolve(testResult, '..'));
+    expect(files).toEqual(['main', 'rootRepo', 'test_1', 'test_2']);
+}
+
+export function assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch(repoFolder: string, branch: string): void {
+    const gitUpdateCommand = `git remote update`;
+    const gitDiffCommand = `git diff --exit-code origin/${branch}`;
+    child_process.execSync(
+        gitUpdateCommand,
+        {
+            cwd: repoFolder,
+            shell: 'bash'
+        }
+    );
+    try {
+        child_process.execSync(
+            gitDiffCommand,
+            {
+                cwd: repoFolder,
+                shell: 'bash'
+            }
+        );
+    } catch (e) {
+        console.log(`Git diff failed due to:
+        ${e.status}
+        ${e.message}
+        ${e.stderr?.toString()}
+        ${e.stdout?.toString()}
+    `);
+        throw e;
+    }
+}
+
+export const assertVoid = (testResult: boolean): Promise<void> => {
+    if (!testResult === true) {
+        throw new Error('This test is expected to fail and should not reach the assertion!');
+    }
+    return;
+};
 
 export interface ITestRun {
     withBranchUnderTest(branchUnderTest: string): ITestRun;
@@ -16,7 +125,9 @@ export interface ITestRun {
 
     withDebug(debug: boolean): ITestRun;
 
-    evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void>;
+    evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
+
+    evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
 }
 
 export interface ITestSetupData {
@@ -56,7 +167,8 @@ export const basicTestSetupData: ITestSetupData = {
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_2: {
-        repoName: 'test-2', releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
+        repoName: 'test-2',
+        releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     }
 };
 
@@ -94,7 +206,8 @@ export const multiBranchTestSetupData: ITestSetupData = {
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: []},
             {branchName: 'release/22.3', releases: ['version/22.3.0', 'version/22.3.1', 'version/22.3.2']},
-            {branchName: 'release/22.4', releases: ['version/22.4.0']}
+            {branchName: 'release/22.4', releases: ['version/22.4.0']},
+            {branchName: 'customer/22.4-A-2', releases: ['custom/22.4.0-A-2']}
         ]
     }
 };
@@ -105,6 +218,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
     private readonly testSetupData: ITestSetupData;
     private branchUnderTest: string;
     private readonly branchesToCheckout: string[] = [];
+    private readonly defaultBranch: string = 'master';
 
     constructor(testSetupData: ITestSetupData) {
         this.testSetupData = testSetupData;
@@ -137,8 +251,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
-    public evaluate(testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.createRemoteRepos, testCase, assertion).then(
+    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -148,7 +262,43 @@ class EvaluateWithRemoteRepos implements ITestRun {
             });
     }
 
-    private createRemoteRepos = async (dir: string, testCase: (rootDir: string) => Promise<void>, assertion: (parentRepos: string) => Promise<void>) => {
+    public evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
+            () => Promise.resolve(),
+            (e) => {
+                console.log('Failed assertion or error while evaluating a test!', e);
+                // fail in case of an exception
+                expect(e).toBeUndefined();
+                Promise.reject(e);
+            });
+    }
+
+    private testWithRemoteRepos = async <T>(dir: string, testCase: (workingDir: string, remoteRepos: ILocalRepoData[]) => Promise<T>, assertion: (result: T) => Promise<void>) => {
+        const remoteRepos = this.createRemoteRepos(dir);
+        const rootDir = this.createLocalRepos(dir, remoteRepos, false);
+        try {
+            const testResult = await testCase(rootDir, remoteRepos);
+            await assertion(testResult);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
+    }
+
+    private testWithRemoteAndLocalRepos = async <T>(dir: string, testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>) => {
+        const remoteRepos = this.createRemoteRepos(dir);
+        const rootDir = this.createLocalRepos(dir, remoteRepos, true);
+
+        try {
+            const testResult = await testCase(rootDir);
+            await assertion(testResult);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
+    }
+
+    private createRemoteRepos(dir: string): ILocalRepoData[] {
         const remotePath = path.join(dir, 'remote');
         fs.mkdirSync(remotePath);
         const remoteRepos = this.createRepositories(Object.keys(this.testSetupData), remotePath);
@@ -157,18 +307,23 @@ class EvaluateWithRemoteRepos implements ITestRun {
             throw new Error('Failed to create test setup!');
         }
 
-        const workingDir = path.join(dir, 'working');
-        fs.mkdirSync(workingDir);
-
         // set up remotes
         for (const remote of remoteRepos) {
             this.testSetupData[remote.name].releaseBranches.forEach((releaseBranch) => {
                 this.debugLog(`setting up remote repository ${remote.name}`);
                 this.branchOff(remote, releaseBranch.branchName);
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
+                this.commitSomeChanges(remote, 'latest_change.txt');
             });
+            this.branchOff(remote, this.defaultBranch);
+            this.commitSomeChanges(remote, 'latest_change.txt');
+            this.cloneRepo(remotePath, remote.url, true);
+            remote.url += '.git';
         }
+        return remoteRepos;
+    }
 
+    private createLocalRepos(dir: string, remoteRepos: ILocalRepoData[], setupParentRepos: boolean): string {
         const remoteRootRepo = remoteRepos.find((repo) => repo.name === this.testSetupData.rootRepo.repoName);
         if (!remoteRootRepo) {
             // tslint:disable-next-line:max-line-length
@@ -176,6 +331,9 @@ class EvaluateWithRemoteRepos implements ITestRun {
         }
 
         // set up rootRepo
+        const workingDir = path.join(dir, 'working');
+        fs.mkdirSync(workingDir);
+
         const rootDir = path.join(workingDir, ROOT_REPO);
         this.cloneRepo(workingDir, remoteRootRepo.url);
         for (const branch of this.branchesToCheckout) {
@@ -184,27 +342,19 @@ class EvaluateWithRemoteRepos implements ITestRun {
         this.checkoutBranch(path.join(workingDir, ROOT_REPO), this.branchUnderTest);
         const repos = this.initParentRepos(rootDir, remoteRepos, this.branchUnderTest);
 
-        // set up working copy
-        for (const remote of remoteRepos) {
-            if (remote.name !== ROOT_REPO) {
-                this.cloneRepo(workingDir, repos[remote.name].url);
-                this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
+        if (setupParentRepos) {
+            for (const remote of remoteRepos) {
+                if (remote.name !== ROOT_REPO) {
+                    this.cloneRepo(workingDir, repos[remote.name].url);
+                    this.checkoutBranch(path.join(workingDir, remote.name), this.branchUnderTest);
+                }
             }
         }
 
         if (this.debug) {
-            this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')));
+            this.debugLog(`initial parent repos`, fs.readFileSync(path.join(rootDir, 'parent-repos.json')).toString());
         }
-
-        try {
-            await testCase(rootDir);
-        } catch (e) {
-            this.debugLog('Unexpected error during test evaluation!', e);
-            throw e;
-        }
-
-        const result = fs.readFileSync(path.join(rootDir, 'parent-repos.json'));
-        await assertion(result.toString());
+        return rootDir;
     }
 
     private createRelease(localRepoData: ILocalRepoData, tag: string): void {
@@ -216,7 +366,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
         const repos: IReposDescriptor = {};
         repoData.forEach((localRepoData) => {
             repos[localRepoData.name] = {
-                url: `file://${localRepoData.url}/.git`,
+                url: `file://${localRepoData.url}`,
                 branch: branchName
             };
         });
@@ -227,7 +377,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
 
     private branchOff(localRepoData: ILocalRepoData, releaseBranch: string): void {
         this.commitSomeChanges(localRepoData);
-        this.checkoutBranch(localRepoData.url, releaseBranch);
+        this.checkoutBranch(localRepoData.url, releaseBranch, true);
     }
 
     private commitSomeChanges(localRepoData: ILocalRepoData, fileName: string = 'test.txt'): void {
@@ -273,8 +423,9 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return data;
     }
 
-    private checkoutBranch(pathToRepo: string, branch: string): void {
-        const command = `git checkout -B "${branch}"`;
+    private checkoutBranch(pathToRepo: string, branch: string, createNew?: boolean): void {
+        const command = `git checkout ${createNew ? '-B ' : ''}"${branch}"`;
+        // const command = `git checkout -B "${branch}"`;
         this.debugLog(`checkout branch in ${pathToRepo}: ${command}`);
         this.execSync(pathToRepo, command);
     }
@@ -291,8 +442,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         this.execSync(pathToRepo, command);
     }
 
-    private cloneRepo(pathToRepo: string, repoUrl: string): void {
-        const command = `git clone "${repoUrl}"`;
+    private cloneRepo(pathToRepo: string, repoUrl: string, bare?: boolean): void {
+        const command = `git clone ${bare ? '--bare ' : ''}${repoUrl}`;
         this.debugLog(`cloning repo ${repoUrl} in ${pathToRepo}`);
         this.execSync(pathToRepo, command);
     }

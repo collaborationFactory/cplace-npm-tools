@@ -12,7 +12,7 @@ import * as path from 'path';
 export class WriteRepos extends AbstractReposCommand {
     public static readonly PARAMETER_FREEZE: string = 'freeze';
     public static readonly PARAMETER_UN_FREEZE: string = 'unFreeze';
-    public static readonly PARAMETER_USE_TAGS: string = 'useTags';
+    public static readonly PARAMETER_USE_LATEST_TAG: string = 'latestTag';
     private static readonly RELEASE_VERSION_BRANCH_PATTERN: RegExp = new RegExp(/^release-version\/(\d+).(\d+)/);
 
     private freeze: boolean = false;
@@ -37,16 +37,16 @@ export class WriteRepos extends AbstractReposCommand {
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         this.freeze = params[WriteRepos.PARAMETER_FREEZE] as boolean;
         this.unFreeze = params[WriteRepos.PARAMETER_UN_FREEZE] as boolean;
-        this.useTags = params[WriteRepos.PARAMETER_USE_TAGS] as boolean;
+        this.useTags = params[WriteRepos.PARAMETER_USE_LATEST_TAG] as boolean;
 
         Global.isVerbose() && this.freeze && console.log(`Freezing repo states, using tags: ${this.useTags}.`);
         return true;
     }
 
     private handleRepo(repoName: string): Promise<{ repoName: string; status: IRepoStatus }> {
-        Global.isVerbose() && console.log('repo', repoName);
+        Global.isVerbose() && console.log(`[${repoName}]: starting writing the parent-repos.json`);
         const repoProperties = this.parentRepos[repoName];
-        Global.isVerbose() && console.log('repoProperties', repoProperties);
+        Global.isVerbose() && console.log(`[${repoName}]:`, 'repoProperties', repoProperties);
 
         if (this.unFreeze) {
             return new Promise<IRepoStatus>((resolve) => {
@@ -67,35 +67,36 @@ export class WriteRepos extends AbstractReposCommand {
                 };
                 resolve({repoName, status});
             });
-        } else if (this.freeze && this.useTags) {
+        } else if (this.useTags) {
             return Repository.getActiveTagOfReleaseBranch(repoName, this.parentRepos[repoName])
                 .then((activeTag) => {
-                    const current = this.parentRepos[repoName];
-                    const status: IRepoStatus = {
-                        url: current.url,
-                        branch: current.branch,
-                        description: current.description ? current.description : repoName
-                    };
                     if (activeTag) {
-                        status.tag = activeTag;
-                        status.tagMarker = activeTag;
-                        Global.isVerbose() && console.log(`using tag ${status.tag}`);
+                        const current = this.parentRepos[repoName];
+                        const status: IRepoStatus = {
+                            url: current.url,
+                            branch: current.branch,
+                            description: current.description ? current.description : repoName,
+                            tag: activeTag,
+                            tagMarker: activeTag
+                        };
+                        Global.isVerbose() && console.log(`[${repoName}]: using tag ${status.tag}`);
+                        return ({repoName, status});
                     } else {
-                        Global.isVerbose() && console.log(`no tag found for ${repoName}`);
-                        if (current.commit) {
-                            Global.isVerbose() && console.log('preserving commit');
-                            status.commit = current.commit;
-                        }
+                        Global.isVerbose() && console.log(`[${repoName}]: no tag found for ${repoName}`);
+                        return this.updateCommitStatus(repoName);
                     }
-                    return ({repoName, status});
                 });
         } else {
-            const repo = new Repository(path.join(this.rootDir, '..', repoName));
-            return repo.status()
-                .then((status) => this.checkRepoClean(repo, status))
-                .then((status) => this.mapCommitStatus(repo, status))
-                .then((status) => ({repoName, status}));
+            return this.updateCommitStatus(repoName);
         }
+    }
+
+    private updateCommitStatus(repoName: string): Promise<{ repoName: string; status: IRepoStatus }> {
+        const repo = new Repository(path.join(this.rootDir, '..', repoName));
+        return repo.status()
+            .then((status) => this.checkRepoClean(repo, status))
+            .then((status) => this.mapCommitStatus(repo, status))
+            .then((status) => ({repoName, status}));
     }
 
     private mapCommitStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
@@ -110,7 +111,7 @@ export class WriteRepos extends AbstractReposCommand {
                 };
                 if (this.freeze || current.commit) {
                     result.commit = commit;
-                    Global.isVerbose() && console.log(`using HEAD commit ${result.commit}`);
+                    Global.isVerbose() && console.log(`[${repo.repoName}]: using HEAD commit ${result.commit}`);
                 }
                 return result;
             });

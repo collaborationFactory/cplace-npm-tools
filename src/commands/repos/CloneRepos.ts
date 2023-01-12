@@ -15,36 +15,35 @@ export class CloneRepos extends AbstractReposCommand {
     public execute(): Promise<void> {
         const promises = Object
             .keys(this.parentRepos)
-            .filter(this.checkRepoMissing)
+            .filter((repoName) => this.checkRepoMissing(this.rootDir, repoName))
             .map((repoName) => {
-                Global.isVerbose() && console.log('cloning repository', repoName);
+                Global.isVerbose() && console.log(`[${repoName}]:`, 'starting to clone repository');
                 const repoProperties = this.parentRepos[repoName];
-                const toPath = path.resolve('..', repoName);
+                const toPath = path.resolve(this.rootDir, '..', repoName);
                 return this.handleRepo(toPath, repoName, repoProperties, this.depth);
             });
 
         return promiseAllSettledParallel(promises)
-            .then(
-                () => {
-                    // pass
-                },
-                (err) => Promise.reject('failed to clone repos: ' + err)
-            );
+            .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
     }
 
     private handleRepo(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<void> {
-        return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
-            .then((latestTag) => {
-                repoProperties.latestTagForRelease = latestTag;
-                return Repository.clone(toPath, repoProperties, this.depth);
-            })
-            .catch((err) => Promise.reject('failed to clone repos: ' + err));
+        if (!repoProperties.tag && !repoProperties.useSnapshot) {
+            return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+                .then((latestTag) => {
+                    repoProperties.latestTagForRelease = latestTag;
+                    return Repository.clone(toPath, repoName, repoProperties, depth);
+                })
+                .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
+        } else {
+            return Repository.clone(toPath, repoName, repoProperties, depth);
+        }
     }
 
-    private checkRepoMissing(repoName: string): boolean {
-        const pathToRepo = path.resolve('..', repoName);
+    private checkRepoMissing(rootDir: string, repoName: string): boolean {
+        const pathToRepo = path.resolve(rootDir, '..', repoName);
         const exists = fs.existsSync(pathToRepo);
-        Global.isVerbose() && console.log('repository', repoName, 'already exists:', exists);
+        Global.isVerbose() && console.log(`[${repoName}]:`, 'repository already exists:', exists);
         return !exists;
     }
 }
