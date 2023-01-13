@@ -116,10 +116,10 @@ $  cplace-cli --help
                       the latest tag associated with that branch will be looked up in the remote repository.
                       Additionally, a 'tagMarker' will be added to define the included lower bound of the version. 
                    4. Else if there is no such tag or if on a feature/customer branch:
-                      a) If a commit hash is already configurd it will be updated to the currently checked out parent repositories commit hash .
+                      a) If a commit hash is already configured it will be preserved.
                       b) Else the parent repository will only have the branch configured.
                 If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
-                    the commit hash will always be added.
+                    the commit hash will be added if the repository is checked out.
 
             --clone|-c [--depth <depth>] :
                 Clones all parent repos if missing.
