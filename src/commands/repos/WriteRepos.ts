@@ -5,6 +5,7 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
 import {ICommandParameters} from '../models';
 import * as path from 'path';
+import {fs} from '../../p/fs';
 
 /**
  * General write-repos-state command
@@ -83,7 +84,27 @@ export class WriteRepos extends AbstractReposCommand {
                         return ({repoName, status});
                     } else {
                         Global.isVerbose() && console.log(`[${repoName}]: no tag found for ${repoName}`);
-                        return this.updateCommitStatus(repoName);
+                        const current = this.parentRepos[repoName];
+                        if (this.freeze && fs.existsSync(path.join(this.rootDir, '..', repoName))) {
+                            return this.updateCommitStatus(repoName);
+                        } else if (current.commit) {
+                            const status: IRepoStatus = {
+                                url: current.url,
+                                branch: current.branch,
+                                description: current.description ? current.description : repoName,
+                                commit: current.commit
+                            };
+                            Global.isVerbose() && console.log(`[${repoName}]: preserving configured commit ${status.commit}`);
+                            return ({repoName, status});
+                        } else {
+                            const status: IRepoStatus = {
+                                url: current.url,
+                                branch: current.branch,
+                                description: current.description ? current.description : repoName
+                            };
+                            Global.isVerbose() && console.log(`[${repoName}]: using the branch as no further information is found.`);
+                            return ({repoName, status});
+                        }
                     }
                 });
         } else {
