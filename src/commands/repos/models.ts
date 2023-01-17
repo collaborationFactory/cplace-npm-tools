@@ -10,6 +10,7 @@ export interface IRepoStatus {
     url: string;
     branch: string;
     useSnapshot?: boolean;
+    artifactGroup?: string;
     tag?: string;
     tagMarker?: string;
     latestTagForRelease?: string;
