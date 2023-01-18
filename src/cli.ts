@@ -178,6 +178,24 @@ const cli = meow(
                                  already tracked.
                 --push - if specified, the changes will be pushed to the target branch if the merge was successful
 
+            --migrate-artifact-groups
+                The command makes several changes to the 'build.gradle' file and 'parent-repos.json', needed for
+                migrating to automatic versions calculation and patch releases.
+                1.  The property 'artifactGroup' will be added in the 'parent-repos.json' file for each repository.
+                    The artifact groups are read from the root 'build.gradle' file. The 'build.gradle' file should
+                    have a propper format of the 'cplaceRepositories' block for the command to be successfull:
+                        cplaceRepositories {
+                            repoName1 {
+                                artifactGroup = 'group.id1'
+                            }
+                            repoName2 {
+                                artifactGroup = 'group.id2'
+                            }
+                            ...
+                        }
+                2.  The 'useSnapshots' property will be added in the 'parent-repos.json' for each repository. 
+                3.  The 'cplace' and 'cplaceRepositories' blocks will be removed from the 'build.gradle' file
+
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
             The output is a .dot file.

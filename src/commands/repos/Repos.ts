@@ -9,6 +9,7 @@ import {WriteRepos} from './WriteRepos';
 import {BranchRepos} from './BranchRepos';
 import {AddDependency} from './add-dependency/AddDependency';
 import {MergeSkeleton} from './MergeSkeleton';
+import { MigrateArtifactGroup } from './MigrateArtifactGroup';
 
 export class Repos implements ICommand {
     public static readonly PARAMETER_BRANCH: string = 'branch';
@@ -23,6 +24,7 @@ export class Repos implements ICommand {
     public static readonly PARAMETER_ADD_DEPENDENCY_SHORT: string = 'd';
     public static readonly PARAMETER_MERGE_SKELETON: string = 'mergeSkeleton';
     public static readonly PARAMETER_MERGE_SKELETON_SHORT: string = 'm';
+    public static readonly PARAMETER_MIGRATE_ARTIFACT_GROUP: string = 'migrateArtifactGroups';
 
     private cmd: ICommand;
 
@@ -39,6 +41,8 @@ export class Repos implements ICommand {
             this.cmd = new AddDependency();
         } else if (params[Repos.PARAMETER_MERGE_SKELETON] || params[Repos.PARAMETER_MERGE_SKELETON_SHORT]) {
             this.cmd = new MergeSkeleton();
+        } else if (params[Repos.PARAMETER_MIGRATE_ARTIFACT_GROUP]) {
+            this.cmd = new MigrateArtifactGroup();
         } else {
             console.error('Error: Unknown or missing repos subcommand!');
             return false;
