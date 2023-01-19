@@ -66,7 +66,6 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
         Global.isVerbose() && console.log(`[${repoName}]:`, 'repoProperties', repoProperties);
 
         const status: IRepoStatus = this.parentRepos[repoName];
-        status.useSnapshot = true;
 
         const normalizedRepoName = repoName.replace(/-/g, '').toLowerCase();
         let calculatedArtifactGroup: string;
@@ -83,6 +82,7 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
             Global.isVerbose() && console.log(`[${repoName}]:`, 'artifact group not found in build.gradle');
             this.notUpdatedRepos.push(repoName);
         }
+        status.useSnapshot = true;
 
         let cleanedBuildGradle: string[] = this.deleteBlockFromBuildFile(this.buildFileContent, 'cplace');
         cleanedBuildGradle = this.deleteBlockFromBuildFile(cleanedBuildGradle, 'cplaceRepositories');
