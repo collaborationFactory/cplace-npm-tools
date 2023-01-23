@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 
 export class MergeSkeleton extends AbstractReposCommand {
 
+    protected static readonly PARAMETER_BASE_BRANCH: string = 'baseBranch';
     protected static readonly PARAMETER_TARGET_BRANCH: string = 'targetBranch';
     protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
     protected static readonly PARAMETER_PULL_REQUEST: string = 'pullRequest';
@@ -42,7 +43,7 @@ export class MergeSkeleton extends AbstractReposCommand {
 
     protected selectedSkeletonBranch: string;
     protected targetBranchIsTracked: boolean = false;
-    protected baseBranch: string = '';
+    protected baseBranch: string;
     protected status: IGitStatus;
     protected mergeSuccess: boolean = true;
 
@@ -51,13 +52,14 @@ export class MergeSkeleton extends AbstractReposCommand {
         const repo = new Repository(pathToRepo);
 
         await repo.checkIsRepo();
-        this.status = await repo.status();
-        // get current branch to use it as base branch for a pull request if needed
-        this.baseBranch = this.status.current;
 
         console.log(`Merging skeleton in repo ${repo.repoName}`);
         await this.addSkeletonAsRemote(repo);
-        await this.checkoutTargetBranch(repo);
+
+        // checkout branch if repo is not in merging state
+        this.status = await repo.status();
+        const isRepoMerging = await repo.isRepoMerging();
+        await this.prepareBranch(repo, isRepoMerging);
         this.status = await repo.status();
         this.targetBranchIsTracked = this.status.tracking != null;
 
@@ -65,10 +67,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         this.validateCplaceVersion();
         this.selectedSkeletonBranch = this.getSkeletonBranchToMerge(repo);
 
-        const isRepoMerging = await repo.isRepoMerging();
         if (!isRepoMerging) {
-            await this.validateRepoClean(repo);
-
             if (this.targetBranchIsTracked) {
                 await repo.pullOnlyFastForward(this.status.current)
                     .catch((err) => console.log(`Error when pulling target branch ${err}`));
@@ -76,19 +75,14 @@ export class MergeSkeleton extends AbstractReposCommand {
             await this.mergeSkeletonBranch(repo, `${MergeSkeleton.SKELETON_REMOTE_NAME}/${this.selectedSkeletonBranch}`)
                 .catch((err) => {
                     console.log(`Cannot merge skeleton branch: ${err}`);
-                    this.mergeSuccess = false;
                 });
         }
 
-        this.status = await repo.status();
-        if (this.status.conflicted.length !== 0) {
-            this.mergeSuccess = true;
-            await this.acceptOursAndContinueMerge(repo)
-                .catch((err) => {
-                    this.mergeSuccess = false;
-                    return Promise.reject('Cannot merge skeleton because of merge conflicts. Fix conflicts manually and rerun the same command.');
-                });
-        }
+        await this.acceptOursAndContinueMerge(repo)
+            .catch((err) => {
+                this.mergeSuccess = false;
+                return Promise.reject('Cannot merge skeleton because of merge conflicts. Fix conflicts manually and rerun the same command.');
+            });
 
         if (this.mergeSuccess) {
             if (this.pullRequest) {
@@ -104,6 +98,16 @@ export class MergeSkeleton extends AbstractReposCommand {
     }
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
+        const baseBranch = params[MergeSkeleton.PARAMETER_BASE_BRANCH];
+        if (typeof baseBranch === 'string') {
+            Global.isVerbose() && console.log(`Using base branch ${baseBranch}`);
+            this.baseBranch = baseBranch;
+        }
+        if (!baseBranch) {
+            console.error('--base-branch is mandatory parameter');
+            return false;
+        }
+
         const targetBranch = params[MergeSkeleton.PARAMETER_TARGET_BRANCH];
         if (typeof targetBranch === 'string') {
             Global.isVerbose() && console.log(`Using target branch ${targetBranch}`);
@@ -148,6 +152,17 @@ export class MergeSkeleton extends AbstractReposCommand {
         return true;
     }
 
+    private async prepareBranch(repo: Repository, isRepoMerging: boolean): Promise<void> {
+        if (!isRepoMerging) {
+            await this.validateRepoClean(repo);
+
+            await this.checkoutBaseBranch(repo);
+            await this.checkoutTargetBranch(repo);
+        }
+
+        Promise.resolve();
+    }
+
     private async addSkeletonAsRemote(repo: Repository): Promise<void> {
         console.log('Add skeleton repo as remote');
         await repo.addRemote(MergeSkeleton.SKELETON_REMOTE_NAME, MergeSkeleton.SKELETON_REMOTE)
@@ -171,9 +186,21 @@ export class MergeSkeleton extends AbstractReposCommand {
         }
     }
 
+    private async checkoutBaseBranch(repo: Repository): Promise<void> {
+        console.log(`Checking out base branch ${this.baseBranch}`);
+        try {
+            await repo.checkoutBranch(this.baseBranch);
+        } catch (err) {
+            console.log('Base branch cannot be checked out');
+            Promise.reject();
+        }
+
+        Promise.resolve();
+    }
+
     private async checkoutTargetBranch(repo: Repository): Promise<void> {
         if (this.targetBranch) {
-            console.log(`Checking out branch ${this.targetBranch}`);
+            console.log(`Checking out target branch ${this.targetBranch}`);
             try {
                 await repo.checkoutBranch(['-b', this.targetBranch]);
                 console.log('Target branch checked out as new branch');
