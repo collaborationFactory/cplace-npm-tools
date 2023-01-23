@@ -157,26 +157,37 @@ const cli = meow(
                 corresponding IDEA module among all currently known referenced repositories.
                 If --all is set, then all dependencies of the plugin will also be added as dependencies.
 
-            --merge-skeleton|-m [--target-branch=<target-branch-name>] [--skeleton-branch=<skeleton-branch-name]
-                                [--ours=<file-name>] [--pull-request] [--push]:
-                Merges a branch from the skeleton repo to the current branch or to the specified target branch.
-                If no options are specified, the current branch is used as a target branch. A skeleteon branch 
-                will be selected automatically based on the cplace version. If the merge is successful, 
-                the changes will be committed, but not pushed.
+            --merge-skeleton|-m --base-branch=<base-branch> [--target-branch=<target-branch>] 
+                                [--skeleton-branch=<skeleton-branch-name] [--ours=<file-name>] 
+                                [--pull-request] [--push]:
+                Merges a branch from the skeleton repo to the specified base branch, or to a specified target branch
+                that will be branched from the base branch. A skeleton branch will be selected automatically based on 
+                the cplace version. 
+                If the merge is successful, the changes will be committed, but not pushed.
+                If the merge was unsuccessful, fix the merge conflicts, add the changes with 'git add .' (without 
+                commiting them) and run the same command again. The command will try to continue the merge.
                 
-                --target-branch - if specified, this branch will be checked out and the skeleton will be merged 
-                                  in it. The skeleton branch will be selected based on the cplace version from
-                                  this branch.
+                --base-branch - specifies to which base branch of the repo to merge the skeleton (ex: release/23.1). 
+                --target-branch - if specified, this branch will be checked out from the base branch, and the skeleton 
+                                  will be merged in it instead of the base branch. 
+                                  The skeleton branch will be selected based on the cplace version from this branch.
                 --skeleton-branch - if specified (ex. '--skeleton-branch=version/7.0'), this skeleton branch will
-                                    be merged to the selected target branch, bypassing the automatic selection and 
+                                    be merged to the selected base/target branch, bypassing the automatic selection and 
                                     ignoring the compatibility with the current cplace version.
                 --ours - specify a file to be automatically accepted as ours in case of a merge conflict.
                          For multiple files, use the parameter once per file 
                          ex: '--ours=README.md --ours=version.gradle'.
-                --pull-request - creates a pull request if the merge was successful. This is only possible if the 
-                                 target branch (currently checked out or specified with --target-branch) is not 
+                --pull-request - creates a pull request if the merge was successful. This is only possible if a 
+                                 target branch is specified with --target-branch and if that branch is not 
                                  already tracked.
                 --push - if specified, the changes will be pushed to the target branch if the merge was successful
+
+                ex: cplace-cli repos --merge-skeleton --base-branch=release/23.1 --push 
+                    (merge auto detected skeleton version to release/23.1 and push to remote)
+
+                    cplace-cli repos --merge-skeleton --base-branch=release/23.1 --target-branch=merge-skeleton --pull-request
+                    (will checkout 'release/23.1', then checkout 'merge-skeleton' branch, merge auto detected skeleton version
+                    and create a pull request if it was succesfull and 'merge-skeleton' is not a tracked branch)
 
             --migrate-artifact-groups
                 The command makes several changes to the 'build.gradle' file and 'parent-repos.json', needed for
