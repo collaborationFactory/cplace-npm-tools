@@ -49,7 +49,6 @@ export class MergeSkeleton extends AbstractReposCommand {
     public async execute(): Promise<void> {
         const pathToRepo = path.join(process.cwd());
         const repo = new Repository(pathToRepo);
-        this.mergeSuccess = true;
 
         await repo.checkIsRepo();
 
