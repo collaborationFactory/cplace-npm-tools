@@ -11,6 +11,7 @@ export interface IRepoStatus {
     branch: string;
     useSnapshot?: boolean;
     artifactGroup?: string;
+    artifactVersion?: string;
     tag?: string;
     tagMarker?: string;
     latestTagForRelease?: string;

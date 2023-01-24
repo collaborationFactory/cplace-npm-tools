@@ -64,7 +64,10 @@ export class WriteRepos extends AbstractReposCommand {
                 const status = {
                     url: current.url,
                     branch: currentBranch,
-                    description: current.description ? current.description : repoName
+                    description: current.description ? current.description : repoName,
+                    artifactGroup: current.artifactGroup,
+                    artifactVersion: current.artifactVersion,
+                    useSnapshot: current.useSnapshot
                 };
                 resolve({repoName, status});
             });
@@ -77,6 +80,8 @@ export class WriteRepos extends AbstractReposCommand {
                             url: current.url,
                             branch: current.branch,
                             description: current.description ? current.description : repoName,
+                            artifactGroup: current.artifactGroup,
+                            artifactVersion: current.artifactVersion,
                             tag: activeTag,
                             tagMarker: activeTag
                         };
@@ -92,6 +97,8 @@ export class WriteRepos extends AbstractReposCommand {
                                 url: current.url,
                                 branch: current.branch,
                                 description: current.description ? current.description : repoName,
+                                artifactGroup: current.artifactGroup,
+                                artifactVersion: current.artifactVersion,
                                 commit: current.commit
                             };
                             Global.isVerbose() && console.log(`[${repoName}]: preserving configured commit ${status.commit}`);
@@ -100,7 +107,9 @@ export class WriteRepos extends AbstractReposCommand {
                             const status: IRepoStatus = {
                                 url: current.url,
                                 branch: current.branch,
-                                description: current.description ? current.description : repoName
+                                description: current.description ? current.description : repoName,
+                                artifactGroup: current.artifactGroup,
+                                artifactVersion: current.artifactVersion
                             };
                             Global.isVerbose() && console.log(`[${repoName}]: using the branch as no further information is found.`);
                             return ({repoName, status});
@@ -128,7 +137,9 @@ export class WriteRepos extends AbstractReposCommand {
                 const result: IRepoStatus = {
                     url: current.url,
                     branch: status.current,
-                    description: current.description ? current.description : repo.repoName
+                    description: current.description ? current.description : repo.repoName,
+                    artifactGroup: current.artifactGroup,
+                    artifactVersion: current.artifactVersion
                 };
                 if (this.freeze || current.commit) {
                     result.commit = commit;
