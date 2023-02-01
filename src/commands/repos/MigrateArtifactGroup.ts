@@ -6,7 +6,6 @@ import {ICommandParameters} from '../models';
 import * as path from 'path';
 import {fs} from '../../p/fs';
 import { cwd } from 'process';
-import { EOL } from 'os';
 
 /**
  * For each repository:
@@ -148,8 +147,8 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
         const result: string[] = [];
 
         let blockStartFound: boolean = false;
-        let blockEndFound: boolean = false;
         let bracketLevel: number = 0;
+        let blockStartIndex: number = 0;
 
         const blockReplace: string = `${blockName}\\s*\\{`;
         const blockRegex: RegExp = new RegExp(blockReplace, 'g');
@@ -157,9 +156,10 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
         while (this.currentReadIndex < buildFileContent.length) {
             const line = buildFileContent[this.currentReadIndex];
 
-            if (!blockStartFound || blockEndFound) {
+            if (!blockStartFound) {
                 if (line.trim().match(blockRegex)) {
                     blockStartFound = true;
+                    blockStartIndex = this.currentReadIndex;
                     bracketLevel++;
                 } else {
                     result.push(line);
@@ -173,7 +173,14 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
                 }
 
                 if (bracketLevel === 0) {
-                    blockEndFound = true;
+                    // reset, for a possible second block
+                    blockStartFound = false;
+
+                    // skip one line if there are empty lines before and after the block, so we don't end up with two empty lines
+                    if (result.length > 0 && this.currentReadIndex < buildFileContent.length - 1 &&
+                        result[result.length - 1].trim() === '' && buildFileContent[this.currentReadIndex + 1].trim() === '') {
+                        this.currentReadIndex++;
+                    }
                 }
             }
 
@@ -184,14 +191,7 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
     }
 
     private createStringFromContentArray(content: string[]): string {
-        let lineEnding = '\n';
-        const isWindows = process.platform === 'win32';
-        if (process.platform === 'win32') {
-           lineEnding = '\r\n';
-        }
-
-        let result: string = '';
-        content.forEach((line) => result += line + lineEnding);
-        return result;
+        const result: string = content.join('\n');
+        return this.convertLineEndings(result);
     }
 }
