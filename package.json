@@ -1,6 +1,6 @@
 {
   "name": "@cplace/cli",
-  "version": "0.19.20",
+  "version": "0.19.21",
   "description": "cplace cli tools",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -48,6 +48,7 @@
   "dependencies": {
     "bluebird": "^3.4.7",
     "cpr": "^3.0.1",
+    "eol-converter-cli": "^1.0.8",
     "meow": "^7.0.1",
     "randomatic": "^3.1.1",
     "rimraf": "^2.6.2",

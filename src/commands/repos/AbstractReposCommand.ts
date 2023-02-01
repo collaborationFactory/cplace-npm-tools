@@ -9,6 +9,7 @@ import {IGitStatus, Repository} from '../../git';
 import {enforceNewline} from '../../util';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
+import * as eol from 'eol';
 
 export abstract class AbstractReposCommand implements ICommand {
     public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -101,10 +102,19 @@ export abstract class AbstractReposCommand implements ICommand {
     }
 
     protected writeNewParentRepos(newParentRepos: IReposDescriptor): Promise<void> {
-        const newParentReposContent = enforceNewline(JSON.stringify(newParentRepos, null, 2));
+        const jsonContent = JSON.stringify(newParentRepos, null, 2);
+        const newParentReposContent = this.convertLineEndings(`${jsonContent}\n`);
         Global.isVerbose() && console.log('new repo description', newParentReposContent);
         fs.writeFileSync(this.parentReposConfigPath, newParentReposContent, 'utf8');
         this.parentRepos = newParentRepos;
         return Promise.resolve();
+    }
+
+    protected convertLineEndings(content: string): string {
+        const isWindows = process.platform === 'win32';
+        if (isWindows) {
+            return eol.crlf(content);
+        }
+        return content;
     }
 }
