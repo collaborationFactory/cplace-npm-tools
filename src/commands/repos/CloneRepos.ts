@@ -29,7 +29,7 @@ export class CloneRepos extends AbstractReposCommand {
 
     private handleRepo(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<void> {
         if (!repoProperties.tag && !repoProperties.useSnapshot) {
-            return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+            return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, this.rootDir)
                 .then((latestTag) => {
                     repoProperties.latestTagForRelease = latestTag;
                     return Repository.clone(toPath, repoName, repoProperties, depth);

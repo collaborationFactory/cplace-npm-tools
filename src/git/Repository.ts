@@ -127,13 +127,13 @@ export class Repository {
         }
     }
 
-    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.branch?.startsWith('release/')) {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
 
-                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`)
+                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir)
                     .then((latestTag) => {
                         Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
                         resolve(latestTag);
@@ -145,7 +145,7 @@ export class Repository {
         });
     }
 
-    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.tag) {
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
@@ -155,7 +155,7 @@ export class Repository {
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
                 resolve(currentReleaseVersion);
             } else {
-                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir)
                     .then((latestTag) => {
                         if (latestTag) {
                             Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
@@ -167,12 +167,21 @@ export class Repository {
         });
     }
 
-    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string): Promise<string> {
+    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
-            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', repoUrl, tagPattern], (err, result: string) => {
+            let useRepoUrl = repoUrl;
+            if (repoUrl.startsWith('git@')) {
+                const localOriginUrl = this.getLocalOriginUrl(repoName, rootDir);
+                if (localOriginUrl.startsWith('https:')) {
+                    const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<path>.*)$/.exec(repoUrl);
+                    useRepoUrl = `https://${host}/${orgPath}`;
+                    Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is using https.`);
+                }
+            }
+            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', useRepoUrl, tagPattern], (err, result: string) => {
                 if (err) {
-                    Global.isVerbose() && console.log(`[${repoName}]:`, repoUrl, ': ls-remote failed!\n', err);
+                    Global.isVerbose() && console.log(`[${repoName}]:`, useRepoUrl, ': ls-remote failed!\n', err);
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
@@ -186,6 +195,17 @@ export class Repository {
                     }
                 }
             });
+        });
+    }
+
+    public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
+        return simpleGit(rootDir).remote('get-url', 'origin', (err, result: string) => {
+            if (err) {
+                Global.isVerbose() && console.log(`[${repoName}]:`, ': git remote get-url failed!\n', err);
+                throw err;
+            } else {
+                return result;
+            }
         });
     }
 

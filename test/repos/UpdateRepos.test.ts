@@ -38,7 +38,7 @@ import * as path from 'path';
  * J) A customer branch with useSnapshot is configured
  *   -> should be updated on the latest HEAD of the customer branch
  *   -> NOTE: will fail if shallow cloned
-  * K) A customer branch is configured
+ * K) A customer branch is configured
  *   -> should be updated on the latest HEAD of the customer branch as remote tags are only resolved for release branches
  */
 
