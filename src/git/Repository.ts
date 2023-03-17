@@ -170,42 +170,56 @@ export class Repository {
     public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
-            let useRepoUrl = repoUrl;
-            if (repoUrl.startsWith('git@')) {
-                const localOriginUrl = this.getLocalOriginUrl(repoName, rootDir);
-                if (localOriginUrl.startsWith('https:')) {
-                    const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<path>.*)$/.exec(repoUrl);
-                    useRepoUrl = `https://${host}/${orgPath}`;
-                    Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is using https.`);
-                }
-            }
-            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', useRepoUrl, tagPattern], (err, result: string) => {
-                if (err) {
-                    Global.isVerbose() && console.log(`[${repoName}]:`, useRepoUrl, ': ls-remote failed!\n', err);
-                    reject(err);
-                } else {
-                    Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
-                    const lines: string[] = result.match(/[^\r\n]+/g);
-                    if (lines) {
-                        const lastLine = lines.slice(-1)[0];
-                        const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
-                        resolve(tagMatch ? tagMatch[0] : null);
+            Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir).then((remoteOriginUrl) => {
+                simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
+                    if (err) {
+                        Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
+                        reject(err);
                     } else {
-                        resolve(null);
+                        Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
+                        const lines: string[] = result.match(/[^\r\n]+/g);
+                        if (lines) {
+                            const lastLine = lines.slice(-1)[0];
+                            const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
+                            resolve(tagMatch ? tagMatch[0] : null);
+                        } else {
+                            resolve(null);
+                        }
                     }
-                }
+                });
             });
         });
     }
 
-    public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
-        return simpleGit(rootDir).remote('get-url', 'origin', (err, result: string) => {
-            if (err) {
-                Global.isVerbose() && console.log(`[${repoName}]:`, ': git remote get-url failed!\n', err);
-                throw err;
+    public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string): Promise<string> {
+        return new Promise<string>((resolve) => {
+            if (repoUrl.startsWith('git@')) {
+                Repository.getLocalOriginUrl(repoName, rootDir)
+                    .then((localOriginUrl) => {
+                        let useRepoUrl = repoUrl;
+                        if (localOriginUrl.startsWith('https:')) {
+                            const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
+                            useRepoUrl = `https://${host}/${orgPath}`;
+                            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is using https.`);
+                        }
+                        resolve(useRepoUrl);
+                    });
             } else {
-                return result;
+                resolve(repoUrl);
             }
+        });
+    }
+
+    public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
+                if (err) {
+                    Global.isVerbose() && console.log(`[${repoName}]:`, ': git remote get-url failed!\n', err);
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
         });
     }
 
