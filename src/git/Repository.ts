@@ -37,7 +37,7 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<Repository> {
+    public static clone(repoName: string, repoProperties: IRepoStatus, rootDir: string, toPath: string, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             const options = [];
 
@@ -74,21 +74,23 @@ export class Repository {
             if (depth > 0 && !repoProperties.commit) {
                 options.push('--depth', depth.toString(10));
             }
-            simpleGit().clone(repoProperties.url, toPath, options, (err) => {
 
-                if (err) {
-                    reject(err);
-                } else {
-                    const newRepo = new Repository(toPath);
-                    if (refIsTag) {
-                        newRepo.createBranchForTag(repoName, refToCheckout)
-                            .then(() => {
-                                resolve(newRepo);
-                            });
+            Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
+                simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
+                    if (err) {
+                        reject(err);
                     } else {
-                        resolve(newRepo);
+                        const newRepo = new Repository(toPath);
+                        if (refIsTag) {
+                            newRepo.createBranchForTag(repoName, refToCheckout)
+                                .then(() => {
+                                    resolve(newRepo);
+                                });
+                        } else {
+                            resolve(newRepo);
+                        }
                     }
-                }
+                });
             });
         });
     }
@@ -195,6 +197,13 @@ export class Repository {
 
     /**
      * Translates the repoUrl to the expected protocol defined by the local root repository to avoid authentication problems.
+     *
+     * | local root-repo | remote parent-repo | uses protocol |
+     * |-----------|-------------|-------|
+     * | https     | https       | https |
+     * | https     | git         | https |
+     * | git       | git         | git   |
+     * | git       | https       | git   |
      *
      * @param repoName The name of the repository
      * @param repoUrl The URL of the remote repository
