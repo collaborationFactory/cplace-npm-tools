@@ -14,6 +14,7 @@ async function remoteSetUrl(rootDir: string, remoteUri: string): Promise<void> {
         }
     });
 }
+
 describe('testing the repository helpers', () => {
 
     test('test that the correct remote url is returned by getLocalOriginUrl', async () => {
@@ -55,6 +56,27 @@ describe('testing the repository helpers', () => {
             .evaluateWithRemoteAndLocalRepos(testGetRemoteOriginUrl, assertThatAValidRemoteIsGiven);
     });
 
+    test('test getRemoteOriginUrl, local: https, remote: https -> https', async () => {
+        const testGetRemoteOriginUrl = async (rootDir: string): Promise<string> => {
+            // rewrite the remote url to git via https
+            await remoteSetUrl(rootDir, GIT_VIA_HTTPS_URI);
+
+            // assume the url in the parent repos would be for git via ssh
+            const result = await Repository.getRemoteOriginUrl(ROOT_REPO, GIT_VIA_HTTPS_URI, rootDir);
+            console.log(result);
+            return result;
+        };
+
+        const assertThatAValidRemoteIsGiven = async (localOriginUrl: string): Promise<void> => {
+            expect(localOriginUrl).toBeDefined();
+            expect(localOriginUrl.trim()).toEqual(GIT_VIA_HTTPS_URI);
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithRemoteAndLocalRepos(testGetRemoteOriginUrl, assertThatAValidRemoteIsGiven);
+    });
+
     test('test getRemoteOriginUrl, local: https, remote: ssh -> https', async () => {
         const testGetRemoteOriginUrl = async (rootDir: string): Promise<string> => {
             // rewrite the remote url to git via https
@@ -76,7 +98,7 @@ describe('testing the repository helpers', () => {
             .evaluateWithRemoteAndLocalRepos(testGetRemoteOriginUrl, assertThatAValidRemoteIsGiven);
     });
 
-    test('test getRemoteOriginUrl, local: ssh, remote: https -> https', async () => {
+    test('test getRemoteOriginUrl, local: ssh, remote: https -> ssh', async () => {
         const testGetRemoteOriginUrl = async (rootDir: string): Promise<string> => {
             // rewrite the remote url to git via ssh
             await remoteSetUrl(rootDir, GIT_VIA_SSH_URI);
@@ -89,7 +111,7 @@ describe('testing the repository helpers', () => {
 
         const assertThatAValidRemoteIsGiven = async (localOriginUrl: string): Promise<void> => {
             expect(localOriginUrl).toBeDefined();
-            expect(localOriginUrl.trim()).toEqual(GIT_VIA_HTTPS_URI);
+            expect(localOriginUrl.trim()).toEqual(GIT_VIA_SSH_URI);
         };
 
         await testWith(basicTestSetupData)

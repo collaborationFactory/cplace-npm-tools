@@ -15,6 +15,8 @@ export class Repository {
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
     private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)$/);
+    private static readonly GIT_PROTOCOL: string = 'git@';
+    private static readonly HTTPS_PROTOCOL: string = 'https:';
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
@@ -191,22 +193,29 @@ export class Repository {
         });
     }
 
+    /**
+     * Translates the repoUrl to the expected protocol defined by the local root repository to avoid authentication problems.
+     *
+     * @param repoName The name of the repository
+     * @param repoUrl The URL of the remote repository
+     * @param rootDir The directory of the local root repository
+     */
     public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string): Promise<string> {
         return new Promise<string>((resolve) => {
-            if (repoUrl.startsWith('git@')) {
-                Repository.getLocalOriginUrl(repoName, rootDir)
-                    .then((localOriginUrl) => {
-                        let useRepoUrl = repoUrl;
-                        if (localOriginUrl.startsWith('https:')) {
-                            const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
-                            useRepoUrl = `https://${host}/${orgPath}`;
-                            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is using https.`);
-                        }
-                        resolve(useRepoUrl);
-                    });
-            } else {
-                resolve(repoUrl);
-            }
+            Repository.getLocalOriginUrl(repoName, rootDir)
+                .then((localOriginUrl) => {
+                    let useRepoUrl = repoUrl;
+                    if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
+                        const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
+                        useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
+                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
+                    } else if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
+                        const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
+                        useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
+                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
+                    }
+                    resolve(useRepoUrl);
+                });
         });
     }
 
