@@ -15,6 +15,8 @@ export class Repository {
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
     private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)$/);
+    private static readonly GIT_PROTOCOL: string = 'git@';
+    private static readonly HTTPS_PROTOCOL: string = 'https:';
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
@@ -35,7 +37,7 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(toPath: string, repoName: string, repoProperties: IRepoStatus, depth: number): Promise<Repository> {
+    public static clone(repoName: string, repoProperties: IRepoStatus, rootDir: string, toPath: string, depth: number): Promise<Repository> {
         return new Promise<Repository>((resolve, reject) => {
             const options = [];
 
@@ -72,21 +74,23 @@ export class Repository {
             if (depth > 0 && !repoProperties.commit) {
                 options.push('--depth', depth.toString(10));
             }
-            simpleGit().clone(repoProperties.url, toPath, options, (err) => {
 
-                if (err) {
-                    reject(err);
-                } else {
-                    const newRepo = new Repository(toPath);
-                    if (refIsTag) {
-                        newRepo.createBranchForTag(repoName, refToCheckout)
-                            .then(() => {
-                                resolve(newRepo);
-                            });
+            Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
+                simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
+                    if (err) {
+                        reject(err);
                     } else {
-                        resolve(newRepo);
+                        const newRepo = new Repository(toPath);
+                        if (refIsTag) {
+                            newRepo.createBranchForTag(repoName, refToCheckout)
+                                .then(() => {
+                                    resolve(newRepo);
+                                });
+                        } else {
+                            resolve(newRepo);
+                        }
                     }
-                }
+                });
             });
         });
     }
@@ -127,13 +131,13 @@ export class Repository {
         }
     }
 
-    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.branch?.startsWith('release/')) {
                 const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
 
-                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`)
+                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir)
                     .then((latestTag) => {
                         Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
                         resolve(latestTag);
@@ -145,7 +149,7 @@ export class Repository {
         });
     }
 
-    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus): Promise<string> {
+    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             if (repoProperties.tag) {
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
@@ -155,7 +159,7 @@ export class Repository {
                 Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
                 resolve(currentReleaseVersion);
             } else {
-                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties)
+                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir)
                     .then((latestTag) => {
                         if (latestTag) {
                             Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
@@ -167,23 +171,71 @@ export class Repository {
         });
     }
 
-    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string): Promise<string> {
+    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
-            simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', repoUrl, tagPattern], (err, result: string) => {
+            Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir).then((remoteOriginUrl) => {
+                simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
+                    if (err) {
+                        Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
+                        reject(err);
+                    } else {
+                        Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
+                        const lines: string[] = result.match(/[^\r\n]+/g);
+                        if (lines) {
+                            const lastLine = lines.slice(-1)[0];
+                            const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
+                            resolve(tagMatch ? tagMatch[0] : null);
+                        } else {
+                            resolve(null);
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Translates the repoUrl to the expected protocol defined by the local root repository to avoid authentication problems.
+     *
+     * | local root-repo | remote parent-repo | uses protocol |
+     * |-----------|-------------|-------|
+     * | https     | https       | https |
+     * | https     | git         | https |
+     * | git       | git         | git   |
+     * | git       | https       | git   |
+     *
+     * @param repoName The name of the repository
+     * @param repoUrl The URL of the remote repository
+     * @param rootDir The directory of the local root repository
+     */
+    public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string): Promise<string> {
+        return new Promise<string>((resolve) => {
+            Repository.getLocalOriginUrl(repoName, rootDir)
+                .then((localOriginUrl) => {
+                    let useRepoUrl = repoUrl;
+                    if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
+                        const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
+                        useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
+                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
+                    } else if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
+                        const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
+                        useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
+                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
+                    }
+                    resolve(useRepoUrl);
+                });
+        });
+    }
+
+    public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
                 if (err) {
-                    Global.isVerbose() && console.log(`[${repoName}]:`, repoUrl, ': ls-remote failed!\n', err);
+                    Global.isVerbose() && console.log(`[${repoName}]:`, ': git remote get-url failed!\n', err);
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
-                    const lines: string[] = result.match(/[^\r\n]+/g);
-                    if (lines) {
-                        const lastLine = lines.slice(-1)[0];
-                        const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
-                        resolve(tagMatch ? tagMatch[0] : null);
-                    } else {
-                        resolve(null);
-                    }
+                    resolve(result);
                 }
             });
         });
