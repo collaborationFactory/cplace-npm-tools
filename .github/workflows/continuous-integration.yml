@@ -6,10 +6,11 @@ jobs:
     name: Run unit tests with Jest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: "18.11.0"
+          cache: 'npm-18'
       - name: Setup GIT for testing
         run: git config --global user.email "cplace-npm-tools@cplace.io" && git config --global user.name "cplace-npm-tools GitHub Action"
       - name: Install modules
