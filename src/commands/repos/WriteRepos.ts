@@ -72,7 +72,7 @@ export class WriteRepos extends AbstractReposCommand {
                 resolve({repoName, status});
             });
         } else if (this.useTags) {
-            return Repository.getActiveTagOfReleaseBranch(repoName, this.parentRepos[repoName])
+            return Repository.getActiveTagOfReleaseBranch(repoName, this.parentRepos[repoName], this.rootDir)
                 .then((activeTag) => {
                     if (activeTag) {
                         const current = this.parentRepos[repoName];
