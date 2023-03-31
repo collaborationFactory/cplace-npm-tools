@@ -35,6 +35,61 @@ describe('testing the repository helpers', () => {
             .evaluateWithRemoteAndLocalRepos(testGetLocalOriginUrl, assertThatAValidRemoteIsGiven);
     });
 
+    test('test that getLocalOriginUrl does not fail if no remote urls are configured', async () => {
+        const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
+            await simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
+                if (err) {
+                    throw err;
+                } else {
+                    console.log('remote set-utl result:', execResult);
+                }
+            });
+
+            const result = await Repository.getLocalOriginUrl(ROOT_REPO, rootDir);
+            console.log(result);
+            return result;
+        };
+
+        const assertThatAValidRemoteIsGiven = async (localOriginUrl: string): Promise<void> => {
+            expect(localOriginUrl).toBe('');
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithRemoteAndLocalRepos(testGetLocalOriginUrl, assertThatAValidRemoteIsGiven);
+    });
+
+    test('test that getLocalOriginUrl does not fail for unexpected origins', async () => {
+        const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
+            await simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
+                if (err) {
+                    throw err;
+                } else {
+                    console.log('remote set-utl result:', execResult);
+                }
+            });
+            await simpleGit(rootDir).remote(['add', 'uncommon', GIT_VIA_SSH_URI], (err, execResult: string) => {
+                if (err) {
+                    throw err;
+                } else {
+                    console.log('remote set-utl result:', execResult);
+                }
+            });
+
+            const result = await Repository.getLocalOriginUrl(ROOT_REPO, rootDir);
+            console.log(result);
+            return result;
+        };
+
+        const assertThatAValidRemoteIsGiven = async (localOriginUrl: string): Promise<void> => {
+            expect(localOriginUrl).toBe('');
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithRemoteAndLocalRepos(testGetLocalOriginUrl, assertThatAValidRemoteIsGiven);
+    });
+
     test('test getRemoteOriginUrl, local: ssh, remote: ssh -> ssh', async () => {
         const testGetRemoteOriginUrl = async (rootDir: string): Promise<string> => {
             // rewrite the remote url to git via https
