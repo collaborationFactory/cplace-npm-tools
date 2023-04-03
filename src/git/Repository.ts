@@ -113,7 +113,7 @@ export class Repository {
             } else if (tagMatches.groups.minor !== tagMarkerMatches.groups.minor) {
                 throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the minor version of the latest available tag ${repoProperties.latestTagForRelease}
                  for the release branch ${repoProperties.branch}! For consistency the tagMarker must have the same major and minor version as the release branch and the tag.`);
-            } else if (tagMatches.groups.patch < tagMarkerMatches.groups.patch) {
+            } else if (parseInt(tagMatches.groups.patch, 10) < parseInt(tagMarkerMatches.groups.patch, 10)) {
                 throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} has a higher patch version then the latest available tag ${repoProperties.latestTagForRelease}!`);
             }
         }
