@@ -229,11 +229,11 @@ export class Repository {
     }
 
     public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<string>((resolve) => {
             simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
                 if (err) {
-                    Global.isVerbose() && console.log(`[${repoName}]:`, ': git remote get-url failed!\n', err);
-                    reject(err);
+                    console.log(`[${repoName}]:`, 'git remote get-url failed! Has the root parent repository the remote added as "origin"?\n', err);
+                    resolve('');
                 } else {
                     resolve(result);
                 }
