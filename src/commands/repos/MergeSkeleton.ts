@@ -30,7 +30,8 @@ export class MergeSkeleton extends AbstractReposCommand {
             [{major: 5, minor: 19, patch: 0}, 'version/6.0'],
             [{major: 22, minor: 3, patch: 0}, 'version/7.0'],
             [{major: 23, minor: 1, patch: 0}, 'version/8.0'],
-            [{major: 23, minor: 2, patch: 0}, 'version/9.0']
+            [{major: 23, minor: 2, patch: 0}, 'version/9.0'],
+            [{major: 23, minor: 3, patch: 0}, 'version/10.0']
         ]
     );
 
