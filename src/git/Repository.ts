@@ -86,6 +86,12 @@ export class Repository {
                                 .then(() => {
                                     resolve(newRepo);
                                 });
+                        } else if (repoProperties.commit) {
+                            Global.isVerbose() && console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+                            newRepo.checkoutCommit(repoProperties.commit)
+                                .then(() => {
+                                    resolve(newRepo);
+                                });
                         } else {
                             resolve(newRepo);
                         }
@@ -505,7 +511,7 @@ export class Repository {
                 });
             });
         } else {
-            Global.isVerbose() && console.log('[${this.repoName}]: no commit given');
+            Global.isVerbose() && console.log(`[${this.repoName}]: no commit given`);
             return Promise.resolve();
         }
     }

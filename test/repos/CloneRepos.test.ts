@@ -3,12 +3,13 @@ import {CloneRepos} from '../../src/commands/repos/CloneRepos';
 import {
     basicTestSetupData, multiBranchTestSetupData,
     catParentReposJson, testWith, writeAndCommitParentRepos, gitDescribe,
-    assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent, assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch, assertVoid
+    assertThatTheParentReposAreCheckedOutToTheExpectedTags, assertAllFoldersArePresent, assertThatTheWorkingCopyHasNoDiffToTheRemoteBranch, assertVoid, ILocalRepoData
 } from '../helpers/remoteRepositories';
 import {AbstractReposCommand} from '../../src/commands/repos/AbstractReposCommand';
 import * as path from 'path';
 import {Global} from '../../src/Global';
 import {IReposDescriptor} from '../../src/commands/repos/models';
+import * as child_process from 'child_process';
 
 /*
  * Tests several behaviours cloning the parent repositories.
@@ -36,6 +37,8 @@ import {IReposDescriptor} from '../../src/commands/repos/models';
  *   -> should be cloned on the latest HEAD of the customer branch
  * K) A customer branch is configured
  *   -> should be cloned on the latest HEAD of the customer branch as remote tags are only resolved for release branches
+ * l) Tags and commit hashes are configured
+ *   -> should be cloned to the tag (shallow clone) and - in case of the commits - to the branch, checked out to the commit (full clone).
  */
 
 // tslint:disable-next-line:variable-name
@@ -402,5 +405,45 @@ describe('cloning the parent repos for a complex setup', () => {
         await testWith(multiBranchTestSetupData)
             .withBranchUnderTest('release/22.4')
             .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndBranches, assertCloningTheParentReposTagsAndBranches);
+    });
+
+    test('l) Tags and commit hashes are configured', async () => {
+        const testCloningTheParentReposWithTagsAndCommitHashes = async (rootDir: string, remoteRepos?: ILocalRepoData[]): Promise<string> => {
+            const parentRepos = catParentReposJson(rootDir);
+            // parent-repos scenario:
+            // main -> tag
+            // test1 -> commit, not HEAD
+            // test2 -> commit, not HEAD
+            parentRepos.main.tag = 'version/22.3.1';
+            remoteRepos.forEach((remote) => {
+                console.log(`${remote.name}: ${remote.url}`);
+
+                if (remote.name === 'test_1' || remote.name === 'test_2') {
+                    const commits = child_process.execSync(
+                        'git log -2 --pretty=format:"%h" release/22.3',
+                        {
+                            cwd: remote.url,
+                            shell: 'bash'
+                        }
+                    ).toString()
+                        .split('\n');
+                    console.log(commits);
+                    parentRepos[remote.name].commit = commits[1];
+                }
+            });
+            return testWithParentRepos(rootDir, parentRepos);
+        };
+
+        const assertCloningTheParentReposTagsAndBranches = async (testResult: string): Promise<void> => {
+            assertAllFoldersArePresent(testResult);
+            // assertion scenario:
+            // main -> tag === 'version/22.3.1'
+            // test1 -> commit, HEAD == HEAD^(remote)
+            // test2 -> commit, not HEAD == HEAD^(remote)
+        };
+
+        await testWith(multiBranchTestSetupData)
+            .withBranchUnderTest('release/22.3')
+            .evaluateWithRemoteRepos(testCloningTheParentReposWithTagsAndCommitHashes, assertCloningTheParentReposTagsAndBranches);
     });
 });
