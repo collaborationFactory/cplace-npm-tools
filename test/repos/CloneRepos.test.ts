@@ -408,6 +408,55 @@ describe('cloning the parent repos for a complex setup', () => {
     });
 
     test('l) Tags and commit hashes are configured', async () => {
+
+        /**
+         * Returns the difference of commits between the current HEAD and the remote branch.
+         * @param repoFolder the path to the repo folder
+         */
+        function gitGetCommitDiffToOrigin(repoFolder: string): string {
+            let count: Buffer;
+            try {
+                count = child_process.execSync(
+                    'git rev-list --count origin/release/22.3 ^HEAD',
+                    {
+                        cwd: repoFolder,
+                        shell: 'bash'
+                    }
+                );
+            } catch (e) {
+                console.log(`Git describe failed in ${repoFolder} due to:
+                ${e.status}
+                ${e.message}
+                ${e.stderr?.toString()}
+                ${e.stdout?.toString()}
+            `);
+                throw e;
+            }
+            return count.toString().trim();
+        }
+
+        function gitIsShallowRepository(repoFolder: string): string {
+            let result: Buffer;
+            try {
+                result = child_process.execSync(
+                    'git rev-parse --is-shallow-repository',
+                    {
+                        cwd: repoFolder,
+                        shell: 'bash'
+                    }
+                );
+            } catch (e) {
+                console.log(`Git describe failed in ${repoFolder} due to:
+                ${e.status}
+                ${e.message}
+                ${e.stderr?.toString()}
+                ${e.stdout?.toString()}
+            `);
+                throw e;
+            }
+            return result.toString().trim();
+        }
+
         const testCloningTheParentReposWithTagsAndCommitHashes = async (rootDir: string, remoteRepos?: ILocalRepoData[]): Promise<string> => {
             const parentRepos = catParentReposJson(rootDir);
             // parent-repos scenario:
@@ -420,6 +469,7 @@ describe('cloning the parent repos for a complex setup', () => {
 
                 if (remote.name === 'test_1' || remote.name === 'test_2') {
                     const commits = child_process.execSync(
+                        // get the latest 2 commit hashes
                         'git log -2 --pretty=format:"%h" release/22.3',
                         {
                             cwd: remote.url,
@@ -428,6 +478,7 @@ describe('cloning the parent repos for a complex setup', () => {
                     ).toString()
                         .split('\n');
                     console.log(commits);
+                    // use the older commit
                     parentRepos[remote.name].commit = commits[1];
                 }
             });
@@ -440,6 +491,16 @@ describe('cloning the parent repos for a complex setup', () => {
             // main -> tag === 'version/22.3.1'
             // test1 -> commit, HEAD == HEAD^(remote)
             // test2 -> commit, not HEAD == HEAD^(remote)
+
+            const tagDescription = gitDescribe(path.resolve(testResult, '..', 'main'));
+            expect(/^version\/22.3.1-0-\w+\n$/.test(tagDescription)).toBeTruthy();
+            expect(gitIsShallowRepository(path.resolve(testResult, '..', 'main'))).toEqual('true');
+
+            expect(gitGetCommitDiffToOrigin(path.resolve(testResult, '..', 'test_1'))).toEqual('1');
+            expect(gitIsShallowRepository(path.resolve(testResult, '..', 'test_1'))).toEqual('false');
+
+            expect(gitGetCommitDiffToOrigin(path.resolve(testResult, '..', 'test_2'))).toEqual('1');
+            expect(gitIsShallowRepository(path.resolve(testResult, '..', 'test_2'))).toEqual('false');
         };
 
         await testWith(multiBranchTestSetupData)
