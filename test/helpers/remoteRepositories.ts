@@ -146,7 +146,7 @@ export interface IRepoReleaseTestSetupData {
     releaseBranches: IBranchReleaseTestSetupData[];
 }
 
-interface ILocalRepoData {
+export interface ILocalRepoData {
     name: string;
     url: string;
 }
@@ -251,7 +251,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
-    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
         return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
@@ -273,7 +273,7 @@ class EvaluateWithRemoteRepos implements ITestRun {
             });
     }
 
-    private testWithRemoteRepos = async <T>(dir: string, testCase: (workingDir: string, remoteRepos: ILocalRepoData[]) => Promise<T>, assertion: (result: T) => Promise<void>) => {
+    private testWithRemoteRepos = async <T>(dir: string, testCase: (workingDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (result: T) => Promise<void>) => {
         const remoteRepos = this.createRemoteRepos(dir);
         const rootDir = this.createLocalRepos(dir, remoteRepos, false);
         try {
