@@ -17,11 +17,13 @@ export abstract class AbstractReposCommand implements ICommand {
 
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
+    protected static readonly PARAMETER_CONCURRENCY: string = 'concurrency';
     protected static readonly NODE_MODULES: string = 'node_modules';
 
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
     protected sequential: boolean;
+    protected concurrency: number = 15;
     protected depth: number;
     protected parentReposConfigPath: string;
     protected rootDir: string;
@@ -41,8 +43,6 @@ export abstract class AbstractReposCommand implements ICommand {
             Global.isVerbose() && console.log('running in sequential mode');
         }
 
-        this.depth = parseInt(params[AbstractReposCommand.PARAMETER_CLONE_DEPTH] as string, 10);
-
         const depth = params[AbstractReposCommand.PARAMETER_CLONE_DEPTH];
         if (typeof depth === 'number' && !isNaN(depth)) {
             this.depth = depth;
@@ -51,6 +51,16 @@ export abstract class AbstractReposCommand implements ICommand {
         }
         if (this.depth > 0) {
             Global.isVerbose() && console.log('running with depth for cloning = ' + this.depth);
+        }
+
+        const concurrency = params[AbstractReposCommand.PARAMETER_CONCURRENCY];
+        if (typeof concurrency === 'number' && !isNaN(concurrency)) {
+            this.concurrency = concurrency;
+        } else {
+            this.concurrency = -1;
+        }
+        if (this.concurrency > 0) {
+            Global.isVerbose() && console.log('running with concurrency for parallel execution = ' + this.concurrency);
         }
 
         this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
