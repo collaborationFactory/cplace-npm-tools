@@ -4,8 +4,6 @@ weight: "20"
 type: "section"
 ---
 
-## Help and List of Available Commands
-
 To get a list of all available commands and help, enter the following command:
 
 ```bash
