@@ -26,7 +26,8 @@ export class CloneRepos extends AbstractReposCommand {
                     const toPath = path.resolve(this.rootDir, '..', repoName);
                     return this.handleRepo(repoName, repoProperties, toPath, this.depth);
                 },
-                sequential: this.sequential
+                sequential: this.sequential,
+                concurrency: this.concurrency
             })
             .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
     }
