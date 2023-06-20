@@ -23,7 +23,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected parentRepos: IReposDescriptor;
     protected force: boolean;
     protected sequential: boolean;
-    protected concurrency: number = 15;
+    protected concurrency: number;
     protected depth: number;
     protected parentReposConfigPath: string;
     protected rootDir: string;
@@ -57,7 +57,7 @@ export abstract class AbstractReposCommand implements ICommand {
         if (typeof concurrency === 'number' && !isNaN(concurrency)) {
             this.concurrency = concurrency;
         } else {
-            this.concurrency = -1;
+            this.concurrency = 15;
         }
         if (this.concurrency > 0) {
             Global.isVerbose() && console.log('running with concurrency for parallel execution = ' + this.concurrency);
