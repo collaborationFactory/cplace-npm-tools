@@ -17,7 +17,7 @@ This package provides some CLI tools for working with cplace code.
 
 ## Usage
 
-The user documentation for the cplace CLI is located [in the Knowledge Base.](/cplace-cli/)
+The user documentation for the cplace CLI is located [in the Knowledge Base.](https://docs.cplace.io/cplace-cli/)
 
 ## Development
 
