@@ -7,23 +7,28 @@ import {fs} from '../../p/fs';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
-import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import {promiseAllSettled} from '../../promiseAllSettled';
 import {IRepoStatus} from './models';
 
 export class CloneRepos extends AbstractReposCommand {
 
     public execute(): Promise<void> {
-        const promises = Object
+        const missingRepoNames = Object
             .keys(this.parentRepos)
-            .filter((repoName) => this.checkRepoMissing(repoName, this.rootDir))
-            .map((repoName) => {
-                Global.isVerbose() && console.log(`[${repoName}]:`, 'starting to clone repository');
-                const repoProperties = this.parentRepos[repoName];
-                const toPath = path.resolve(this.rootDir, '..', repoName);
-                return this.handleRepo(repoName, repoProperties, toPath, this.depth);
-            });
+            .filter((repoName) => this.checkRepoMissing(repoName, this.rootDir));
 
-        return promiseAllSettledParallel(promises)
+        return promiseAllSettled(
+            {
+                keys: missingRepoNames,
+                promiseFactory: (repoName) => {
+                    const repoProperties = this.parentRepos[repoName];
+                    Global.isVerbose() && console.log(`[${repoName}]:`, 'starting to clone repository ', repoProperties.url);
+                    const toPath = path.resolve(this.rootDir, '..', repoName);
+                    return this.handleRepo(repoName, repoProperties, toPath, this.depth);
+                },
+                sequential: this.sequential,
+                concurrency: this.concurrency
+            })
             .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
     }
 
@@ -40,7 +45,7 @@ export class CloneRepos extends AbstractReposCommand {
         }
     }
 
-    private checkRepoMissing(repoName: string, rootDir: string ): boolean {
+    private checkRepoMissing(repoName: string, rootDir: string): boolean {
         const pathToRepo = path.resolve(rootDir, '..', repoName);
         const exists = fs.existsSync(pathToRepo);
         Global.isVerbose() && console.log(`[${repoName}]:`, 'repository already exists:', exists);

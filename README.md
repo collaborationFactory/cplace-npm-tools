@@ -89,6 +89,10 @@ $  cplace-cli --help
                     branch will be checked out.
                 If --sequential is set, then the repositories will be updated one after another,
                     which takes longer but makes the verbose log easier to read.
+                If --concurrency is set to a positive integer (> 0) only that batch of parallel executed 'processes' are run at the same time.
+                    This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
+                    Ignored if If '--sequential' is set.
+                    Default is 15.
                 Update behavior:
                 1. If a tag is configured for the parent repository it is updated to that tag,
                 2. Else if a commit hash is configured, the repository is updated to that commit.
@@ -126,6 +130,12 @@ $  cplace-cli --help
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
                 The --force setting has no effect for this command.
+                If --sequential is set, then the repositories will be cloned one after another,
+                    which takes longer but makes the verbose log easier to read.
+                If --concurrency is set to a positive integer (> 0) only that batch of parallel executed 'processes' are run at the same time.
+                    This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
+                    Ignored if If '--sequential' is set.
+                    Default is 15.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked

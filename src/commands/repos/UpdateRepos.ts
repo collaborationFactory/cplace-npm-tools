@@ -23,7 +23,8 @@ export class UpdateRepos extends AbstractReposCommand {
             {
                 keys: Object.keys(this.parentRepos),
                 promiseFactory: (repoName) => (this.prepareRepo(repoName)),
-                sequential: this.sequential
+                sequential: this.sequential,
+                concurrency: this.concurrency
             });
 
         Global.isVerbose() && console.log('update repos - handle');
@@ -31,7 +32,8 @@ export class UpdateRepos extends AbstractReposCommand {
             {
                 keys: Object.keys(this.parentRepos),
                 promiseFactory: (repoName) => (this.handleRepo(repoName)),
-                sequential: this.sequential
+                sequential: this.sequential,
+                concurrency: this.concurrency
             });
 
         Global.isVerbose() && console.log('all repositories successfully updated');

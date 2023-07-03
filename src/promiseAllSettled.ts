@@ -49,11 +49,13 @@ class PromiseAllSettled<K, T> {
 
     private error: string;
     private results: T[];
+    private concurrency: number;
 
-    constructor(keys: K[], promiseFactory: (key: K) => Promise<T>, sequential: boolean) {
+    constructor(keys: K[], promiseFactory: (key: K) => Promise<T>, sequential: boolean, concurrency: number = -1) {
         this.sequential = sequential;
         this.promiseFactory = promiseFactory;
         this.keys = keys;
+        this.concurrency = concurrency;
     }
 
     public async run(): Promise<T[]> {
@@ -65,16 +67,32 @@ class PromiseAllSettled<K, T> {
                 await this.handle(promise);
             }
         } else {
-            const promises = this.keys
-                .map((key) => this.makePromise(key));
-            for (const promise of promises) {
-                await this.handle(promise);
+            if (this.concurrency > 0) {
+                let startIdx = 0;
+                let slice = 1;
+
+                while (startIdx < this.keys.length) {
+                    await this.handleSlice(this.keys.slice(startIdx, this.concurrency * slice));
+
+                    startIdx += this.concurrency;
+                    slice++;
+                }
+            } else {
+                await this.handleSlice(this.keys);
             }
         }
         if (this.error) {
             throw new Error(this.error);
         }
         return this.results;
+    }
+
+    private async handleSlice(keys: K[]): Promise<void> {
+        const promises = keys
+            .map((key) => this.makePromise(key));
+        for (const promise of promises) {
+            await this.handle(promise);
+        }
     }
 
     private makePromise(key: K): Promise<PromiseSettledResult<T>> {
@@ -125,11 +143,13 @@ class PromiseAllSettled<K, T> {
  * @param options.keys An array of keys to iterate over and call the promiseFactory with.
  * @param options.promiseFactory A factory creating a promise for each key.
  * @param options.sequential Whether the promises should be produced and awaited sequentially, or all produced and then awaited in parallel.
+ * @param options.concurrency Optional. Limits the concurrency of the parallel promise execution to batches of the size of specified positive integer. 0 or negative values mean no limit.
+ * If options.sequential is true any limit is ignored.
  * @return an array of results, if all promises resolved
  * @throws an Error containing details about all rejected promises, if any promise was rejected
  */
-export function promiseAllSettled<K, T>(options: { keys: K[], promiseFactory: ((key: K) => Promise<T>), sequential: boolean }): Promise<T[]> {
-    return new PromiseAllSettled(options.keys, options.promiseFactory, options.sequential).run();
+export function promiseAllSettled<K, T>(options: { keys: K[], promiseFactory: ((key: K) => Promise<T>), sequential: boolean, concurrency?: number }): Promise<T[]> {
+    return new PromiseAllSettled(options.keys, options.promiseFactory, options.sequential, options.concurrency).run();
 }
 
 /**
