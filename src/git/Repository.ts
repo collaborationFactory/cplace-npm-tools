@@ -86,6 +86,12 @@ export class Repository {
                                 .then(() => {
                                     resolve(newRepo);
                                 });
+                        } else if (repoProperties.commit) {
+                            Global.isVerbose() && console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+                            newRepo.checkoutCommit(repoProperties.commit)
+                                .then(() => {
+                                    resolve(newRepo);
+                                });
                         } else {
                             resolve(newRepo);
                         }
@@ -166,7 +172,11 @@ export class Repository {
                         }
                         resolve(latestTag);
                     })
-                    .catch((error) => reject(error));
+                    .catch((error) => {
+                               console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
+                               reject(error);
+                           }
+                    );
             }
         });
     }
@@ -210,11 +220,14 @@ export class Repository {
      * @param rootDir The directory of the local root repository
      */
     public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve) => {
+        return new Promise<string>((resolve, reject) => {
             Repository.getLocalOriginUrl(repoName, rootDir)
                 .then((localOriginUrl) => {
                     let useRepoUrl = repoUrl;
-                    if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
+                    if (!repoUrl) {
+                        console.log(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
+                        reject(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
+                    } else if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
                         const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
                         useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
                         Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
@@ -505,7 +518,7 @@ export class Repository {
                 });
             });
         } else {
-            Global.isVerbose() && console.log('[${this.repoName}]: no commit given');
+            Global.isVerbose() && console.log(`[${this.repoName}]: no commit given`);
             return Promise.resolve();
         }
     }

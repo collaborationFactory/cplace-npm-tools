@@ -17,7 +17,7 @@ export function withRepositories(repos: IReposDescriptor,
 }
 
 function createRepositories(repos: IReposDescriptor, rootDir: string): Promise<void[]> {
-    const promises: Promise<void>[] = Object.keys(repos).map((repoName) => {
+    const promises: Array<Promise<void>> = Object.keys(repos).map((repoName) => {
         const pathToRepo = path.join(rootDir, repoName);
         const descriptor = repos[repoName];
 
