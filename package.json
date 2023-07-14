@@ -1,6 +1,6 @@
 {
   "name": "@cplace/cli",
-  "version": "0.19.24",
+  "version": "0.19.25",
   "description": "cplace cli tools",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
