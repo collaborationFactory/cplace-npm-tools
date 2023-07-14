@@ -49,8 +49,7 @@ export class Repository {
                 console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because useSnapshot is true.`);
             } else if (repoProperties.commit) {
                 refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.
-                    Use the update command to checkout the required commits after cloning!`);
+                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.`);
             } else if (repoProperties.tag) {
                 refToCheckout = repoProperties.tag;
                 refIsTag = true;
@@ -87,7 +86,7 @@ export class Repository {
                                     resolve(newRepo);
                                 });
                         } else if (repoProperties.commit) {
-                            Global.isVerbose() && console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+                            console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
                             newRepo.checkoutCommit(repoProperties.commit)
                                 .then(() => {
                                     resolve(newRepo);
