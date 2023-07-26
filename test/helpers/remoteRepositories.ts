@@ -163,11 +163,11 @@ export const basicTestSetupData: ITestSetupData = {
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_1: {
-        repoName: 'test-1',
+        repoName: 'test_1',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_2: {
-        repoName: 'test-2',
+        repoName: 'test_2',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     }
 };
@@ -192,7 +192,7 @@ export const multiBranchTestSetupData: ITestSetupData = {
         ]
     },
     test_1: {
-        repoName: 'test-1',
+        repoName: 'test_1',
         releaseBranches: [
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: ['version/22.2.0', 'version/22.2.1', 'version/22.2.2', 'version/22.2.3']},
@@ -201,7 +201,7 @@ export const multiBranchTestSetupData: ITestSetupData = {
         ]
     },
     test_2: {
-        repoName: 'test-2',
+        repoName: 'test_2',
         releaseBranches: [
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: []},
