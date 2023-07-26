@@ -2,6 +2,12 @@
  * Data model for repo commands
  */
 
+export interface IReposTransitiveDependencies {
+    repoName: string;
+    reposDescriptor?: IReposDescriptor;
+    transitiveDependencies?: Map<string, IReposTransitiveDependencies>;
+}
+
 export interface IReposDescriptor {
     [repoName: string]: IRepoStatus;
 }

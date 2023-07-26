@@ -6,7 +6,6 @@ import * as fs from 'fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
 import {IGitStatus, Repository} from '../../git';
-import {enforceNewline} from '../../util';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
 import * as eol from 'eol';
