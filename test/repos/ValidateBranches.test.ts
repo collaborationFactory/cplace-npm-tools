@@ -18,14 +18,14 @@ describe('validate the transitive of the root parent repos json for a basic setu
         const testBranches = async (rootDir: string): Promise<IReposDescriptor> => {
             const parentRepos = catParentReposJson(rootDir);
 
-            // FIXME create parent repos for each
-            Object.keys(parentRepos).forEach((repo) => {
-                if (repo !== 'main') {
-                    writeParentRepos(path.join(rootDir, '..', repo), {
-                        main: {url: 'test', branch: 'branch'}
-                    });
-                }
+            writeParentRepos(path.join(rootDir, '..', 'test_1'), {
+                main: {url: parentRepos.main.url, branch: 'release/22.2'}
             });
+            writeParentRepos(path.join(rootDir, '..', 'test_2'), {
+                main: {url: parentRepos.main.url, branch: 'release/22.2'},
+                test_1: {url: parentRepos.test_1.url, branch: 'release/22.2'}
+            });
+
             const params: ICommandParameters = {};
             params[Global.PARAMETER_VERBOSE] = true;
 

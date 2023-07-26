@@ -4,6 +4,7 @@
 
 export interface IReposTransitiveDependencies {
     repoName: string;
+    repoPath: string[];
     reposDescriptor?: IReposDescriptor;
     transitiveDependencies?: Map<string, IReposTransitiveDependencies>;
 }
