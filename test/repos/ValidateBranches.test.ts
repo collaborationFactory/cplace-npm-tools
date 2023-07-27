@@ -14,7 +14,7 @@ function writeParentRepos(dir: string, newParentRepos: IReposDescriptor): void {
 }
 
 describe('validate the transitive of the root parent repos json for a basic setup', () => {
-    test('validate', async () => {
+    test('all branches are correctly configured', async () => {
         const testBranches = async (rootDir: string): Promise<IReposDescriptor> => {
             const parentRepos = catParentReposJson(rootDir);
 
@@ -44,6 +44,39 @@ describe('validate the transitive of the root parent repos json for a basic setu
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluateWithRemoteAndLocalRepos(testBranches, assertBranches);
+            .evaluateWithFolders(testBranches, assertBranches);
+    });
+
+    test('branches are not correctly configured', async () => {
+        const testBranches = async (rootDir: string): Promise<IReposDescriptor> => {
+            const parentRepos = catParentReposJson(rootDir);
+
+            writeParentRepos(path.join(rootDir, '..', 'test_1'), {
+                main: {url: parentRepos.main.url, branch: 'release/22.2'}
+            });
+            writeParentRepos(path.join(rootDir, '..', 'test_2'), {
+                main: {url: parentRepos.main.url, branch: 'customer/custom/22.2-ABC'},
+                test_1: {url: parentRepos.test_1.url, branch: 'release/22.2'}
+            });
+
+            const params: ICommandParameters = {};
+            params[Global.PARAMETER_VERBOSE] = true;
+
+            Global.parseParameters(params);
+            const vb = new ValidateBranches();
+            vb.prepareAndMayExecute(params, rootDir);
+            await vb.execute();
+
+            // FIXME need to validate tree
+            return catParentReposJson(rootDir);
+        };
+
+        const assertBranches = async (parentReposJson: IReposDescriptor): Promise<void> => {
+            console.log('assert', parentReposJson);
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithFolders(testBranches, assertBranches);
     });
 });
