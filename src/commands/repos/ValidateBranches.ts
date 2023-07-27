@@ -39,15 +39,16 @@ export class ValidateBranches extends AbstractReposCommand {
             reposDescriptor: this.parentRepos,
             transitiveDependencies: new Map<string, IReposTransitiveDependencies>()
         };
-        this.currentPath.push(this.rootRepoName);
-        return Promise
-            .resolve(Object.keys(this.parentRepos)
-                         .map((repoName: string) => this.handleRepo(repoName, rootDependencies), {concurrency: 1}))
-            .then(() => {
-                console.log(this.toPrintableDependencyTree(rootDependencies));
-                const dependenciesMap = this.mapDependencies(rootDependencies);
-                this.printReport(this.validateDependencies(dependenciesMap));
-            });
+        return new Promise<void>((resolve) => {
+            this.currentPath.push(this.rootRepoName);
+            Object.keys(this.parentRepos)
+                .map((repoName: string) => this.createDependencyTree(repoName, rootDependencies), {concurrency: 1});
+            console.log(this.toPrintableDependencyTree(rootDependencies));
+            const dependenciesMap = this.mapDependencies(rootDependencies);
+            const report = this.validateDependencies(dependenciesMap);
+            this.printReport(report);
+            resolve();
+        });
     }
 
     /**
@@ -56,7 +57,7 @@ export class ValidateBranches extends AbstractReposCommand {
      * @param parentDependencies the parent dependencies where further child repositories are added to.
      * @private
      */
-    private handleRepo(repoName: string, parentDependencies: IReposTransitiveDependencies): void {
+    private createDependencyTree(repoName: string, parentDependencies: IReposTransitiveDependencies): void {
         Global.isVerbose() && console.log(`[${repoName}]: starting traversing the parent-repos.json`);
         const repoProperties = this.parentRepos[repoName];
         Global.isVerbose() && console.log(`[${repoName}]:`, 'repoProperties', repoProperties);
@@ -81,7 +82,7 @@ export class ValidateBranches extends AbstractReposCommand {
             childDependencies.reposDescriptor = JSON.parse(fs.readFileSync(childConfigPath, 'utf8'));
             childDependencies.transitiveDependencies = new Map<string, IReposTransitiveDependencies>();
             Object.keys(childDependencies.reposDescriptor)
-                .map((nextChildRepoName: string) => this.handleRepo(nextChildRepoName, childDependencies), {concurrency: 1});
+                .map((nextChildRepoName: string) => this.createDependencyTree(nextChildRepoName, childDependencies), {concurrency: 1});
         }
 
         parentDependencies.transitiveDependencies.set(repoName, childDependencies);
@@ -158,16 +159,16 @@ export class ValidateBranches extends AbstractReposCommand {
     }
 
     private validateDependenciesToRepo(transitiveDependencies: IReposTransitiveDependencies[]): IReposDiff[] {
-        let prevRepo: IReposTransitiveDependencies;
         const reposDiff: IReposDiff[] = [];
         for (const currentRepo of transitiveDependencies) {
-            if (prevRepo) {
-                const diff = this.compareRepos(prevRepo, currentRepo);
-                if (diff.hasDiff === true) {
-                    reposDiff.push(diff);
+            for (const nextRepo of transitiveDependencies) {
+                if (currentRepo !== nextRepo) {
+                    const diff = this.compareRepos(currentRepo, nextRepo);
+                    if (diff.hasDiff === true) {
+                        reposDiff.push(diff);
+                    }
                 }
             }
-            prevRepo = currentRepo;
         }
         return reposDiff;
     }
@@ -193,9 +194,20 @@ export class ValidateBranches extends AbstractReposCommand {
 
     private printReport(report: IReposDiffReport): void {
         if (report.reposWithDiff.size > 0) {
-            console.log('has diff');
+            let repoReport = `[${this.rootRepoName}] has conflicting parent repo configurations!`;
+            for (const [repoName, diffs] of report.reposWithDiff) {
+                diffs.forEach((diff) => {
+                    repoReport += `\n${diff.repoA.repoPath} <-> ${diff.repoB.repoPath}`;
+                    Object.entries(diff.details).forEach(([key, value]) => {
+                        if (value) {
+                            repoReport += `\n${key}`;
+                        }
+                    });
+                });
+                console.log(repoReport);
+            }
         } else {
-            console.log(`No differences found for the transitive dependencies of ${this.rootRepoName}.`);
+            console.log(`[${this.rootRepoName}] has NO conflicts.`);
         }
     }
 }
