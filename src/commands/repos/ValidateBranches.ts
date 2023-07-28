@@ -1,16 +1,17 @@
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposTransitiveDependencies} from './models';
-import {Global} from '../../Global';
 import * as fs from 'fs';
 import * as path from 'path';
 
 interface IReposDiffReport {
     reposWithDiff: Map<string, IReposDiff[]>;
+    diffStatistic: Map<string, number>;
 }
 
 interface IReposDiff {
     repoA: IReposTransitiveDependencies;
     repoB: IReposTransitiveDependencies;
+    normalizedValidatedPairKey: string;
     hasDiff: boolean;
     details: IReposDiffDetails;
 }
@@ -43,10 +44,10 @@ export class ValidateBranches extends AbstractReposCommand {
             this.currentPath.push(this.rootRepoName);
             Object.keys(this.parentRepos)
                 .map((repoName: string) => this.createDependencyTree(repoName, rootDependencies), {concurrency: 1});
-            console.log(this.toPrintableDependencyTree(rootDependencies));
             const dependenciesMap = this.mapDependencies(rootDependencies);
             const report = this.validateDependencies(dependenciesMap);
             this.printReport(report);
+            console.log('Dependency tree:\n', this.toPrintableDependencyTree(rootDependencies));
             resolve();
         });
     }
@@ -58,10 +59,6 @@ export class ValidateBranches extends AbstractReposCommand {
      * @private
      */
     private createDependencyTree(repoName: string, parentDependencies: IReposTransitiveDependencies): void {
-        Global.isVerbose() && console.log(`[${repoName}]: starting traversing the parent-repos.json`);
-        const repoProperties = this.parentRepos[repoName];
-        Global.isVerbose() && console.log(`[${repoName}]:`, 'repoProperties', repoProperties);
-
         if (this.currentPath.includes(repoName)) {
             throw new Error(`[${repoName}]: Circular dependency to Repository ${repoName} detected in dependency path [${this.currentPath}]!`);
         }
@@ -143,29 +140,42 @@ export class ValidateBranches extends AbstractReposCommand {
 
     private validateDependencies(dependenciesMap: Map<string, IReposTransitiveDependencies[]>): IReposDiffReport {
         const report: IReposDiffReport = {
-            reposWithDiff: new Map<string, IReposDiff[]>()
+            reposWithDiff: this.createDiffs(dependenciesMap),
+            diffStatistic: null
         };
+        report.diffStatistic = this.calculateDiffStatistic(report);
+        return report;
+    }
+
+    private createDiffs(dependenciesMap: Map<string, IReposTransitiveDependencies[]>): Map<string, IReposDiff[]> {
+        const reposWithDiff: Map<string, IReposDiff[]> = new Map();
         for (const [repoName, transitiveDependencies] of dependenciesMap) {
             const reposDiff: IReposDiff[] = this.validateDependenciesToRepo(transitiveDependencies);
             if (reposDiff.length > 0) {
-                if (report.reposWithDiff.has(repoName)) {
-                    report.reposWithDiff.set(repoName, report.reposWithDiff.get(repoName).concat(reposDiff));
+                if (reposWithDiff.has(repoName)) {
+                    reposWithDiff.set(repoName, reposWithDiff.get(repoName).concat(reposDiff));
                 } else {
-                    report.reposWithDiff.set(repoName, reposDiff);
+                    reposWithDiff.set(repoName, reposDiff);
                 }
             }
         }
-        return report;
+        return reposWithDiff;
     }
 
     private validateDependenciesToRepo(transitiveDependencies: IReposTransitiveDependencies[]): IReposDiff[] {
         const reposDiff: IReposDiff[] = [];
+        const pairsValidated: Map<string, boolean> = new Map();
         for (const currentRepo of transitiveDependencies) {
             for (const nextRepo of transitiveDependencies) {
                 if (currentRepo !== nextRepo) {
-                    const diff = this.compareRepos(currentRepo, nextRepo);
-                    if (diff.hasDiff === true) {
-                        reposDiff.push(diff);
+                    const normalizedValidatedPairKey = this.getNormalizedValidatedPairKey(currentRepo, nextRepo);
+                    if (!pairsValidated.has(normalizedValidatedPairKey)) {
+                        pairsValidated.set(normalizedValidatedPairKey, true);
+                        const diff = this.compareRepos(currentRepo, nextRepo);
+                        diff.normalizedValidatedPairKey = normalizedValidatedPairKey;
+                        if (diff.hasDiff === true) {
+                            reposDiff.push(diff);
+                        }
                     }
                 }
             }
@@ -173,10 +183,15 @@ export class ValidateBranches extends AbstractReposCommand {
         return reposDiff;
     }
 
+    private getNormalizedValidatedPairKey(currentRepo: IReposTransitiveDependencies, nextRepo: IReposTransitiveDependencies): string {
+        return [currentRepo.repoPath.join('/'), nextRepo.repoPath.join('/')].sort().join(' <-> ');
+    }
+
     private compareRepos(prevRepo: IReposTransitiveDependencies, currentRepo: IReposTransitiveDependencies): IReposDiff {
         const diff: IReposDiff = {
             repoA: prevRepo,
             repoB: currentRepo,
+            normalizedValidatedPairKey: null,
             hasDiff: false,
             details: {
                 url: prevRepo.repoStatus.url !== currentRepo.repoStatus.url,
@@ -192,22 +207,58 @@ export class ValidateBranches extends AbstractReposCommand {
         return diff;
     }
 
+    private calculateDiffStatistic(report: IReposDiffReport): Map<string, number> {
+        const pathStatistics: Map<string, number> = new Map();
+        report.reposWithDiff.forEach((diffs) => {
+            diffs.forEach((diff) => {
+                this.updateRepoPathDiffCount(pathStatistics, diff.repoA.repoPath.join('/'));
+                this.updateRepoPathDiffCount(pathStatistics, diff.repoB.repoPath.join('/'));
+            });
+        });
+        return pathStatistics;
+    }
+
+    private updateRepoPathDiffCount(pathStatistics: Map<string, number>, repoPath: string): void {
+        if (pathStatistics.has(repoPath)) {
+            pathStatistics.set(repoPath, pathStatistics.get(repoPath) + 1);
+        } else {
+            pathStatistics.set(repoPath, 1);
+        }
+    }
+
     private printReport(report: IReposDiffReport): void {
         if (report.reposWithDiff.size > 0) {
             let repoReport = `[${this.rootRepoName}] has conflicting parent repo configurations!`;
-            for (const [repoName, diffs] of report.reposWithDiff) {
-                diffs.forEach((diff) => {
-                    repoReport += `\n${diff.repoA.repoPath} <-> ${diff.repoB.repoPath}`;
-                    Object.entries(diff.details).forEach(([key, value]) => {
-                        if (value) {
-                            repoReport += `\n${key}`;
-                        }
-                    });
-                });
-                console.log(repoReport);
-            }
+            repoReport += this.diffsPerPathReport(report);
+            repoReport += this.conflictingPathsReport(report);
+            console.log(repoReport);
         } else {
             console.log(`[${this.rootRepoName}] has NO conflicts.`);
         }
+    }
+
+    private diffsPerPathReport(report: IReposDiffReport): string {
+        let repoReport = `\n\nCount of divergences to other parent repo configurations found per repository path:`;
+        [...report.diffStatistic.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .forEach(([key, value]) => {
+                repoReport += `\n${key}: ${value}`;
+            });
+        return repoReport;
+    }
+
+    private conflictingPathsReport(report: IReposDiffReport): string {
+        let repoReport = `\n\nConflicting repository paths:`;
+        report.reposWithDiff.forEach((diffs) => {
+            diffs.forEach((diff) => {
+                repoReport += `\n${diff.normalizedValidatedPairKey}`;
+                Object.entries(diff.details).forEach(([key, value]) => {
+                    if (value) {
+                        repoReport += `\n- ${key}`;
+                    }
+                });
+            });
+        });
+        return repoReport;
     }
 }
