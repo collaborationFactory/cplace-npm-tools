@@ -2,6 +2,7 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposTransitiveDependencies} from './models';
 import * as fs from 'fs';
 import * as path from 'path';
+import {AsciiTree} from 'oo-ascii-tree';
 
 interface IReposDiffReport {
     reposWithDiff: Map<string, IReposDiff[]>;
@@ -47,7 +48,7 @@ export class ValidateBranches extends AbstractReposCommand {
             const dependenciesMap = this.mapDependencies(rootDependencies);
             const report = this.validateDependencies(dependenciesMap);
             this.printReport(report);
-            console.log('Dependency tree:\n', this.toPrintableDependencyTree(rootDependencies));
+            console.log('\nDependency tree:\n', this.toPrintableAsciiTree(rootDependencies));
             resolve();
         });
     }
@@ -87,21 +88,27 @@ export class ValidateBranches extends AbstractReposCommand {
         this.currentPath.pop();
     }
 
-    private toPrintableDependencyTree(rootDependencies: IReposTransitiveDependencies): string {
-        let tree: string = '';
+    private toPrintableAsciiTree(rootDependencies: IReposTransitiveDependencies): string {
+        const tree = new AsciiTree(this.rootRepoName);
         if (rootDependencies.transitiveDependencies) {
-            for (const [key, value] of rootDependencies.transitiveDependencies.entries()) {
-                const repoStatus = rootDependencies.reposDescriptor[key];
-                tree += `\n${value.repoPath.join('/')} -> branch: ${repoStatus.branch}`
-                    + `${repoStatus.tag ? ', tag: ' + repoStatus.tag : ''}`
-                    + `${repoStatus.artifactGroup ? ', artifactGroup: ' + repoStatus.artifactGroup : ''}`
-                    + `${repoStatus.artifactVersion ? ', artifactVersion:' + repoStatus.artifactVersion : ''}`;
-                if (value) {
-                    tree += this.toPrintableDependencyTree(value);
-                }
+            this.addChildNodes(tree, rootDependencies);
+        }
+        return tree.toString();
+    }
+
+    private addChildNodes(tree: AsciiTree, dependencies: IReposTransitiveDependencies): void {
+        for (const [key, value] of dependencies.transitiveDependencies.entries()) {
+            const repoStatus = dependencies.reposDescriptor[key];
+            const info = `${value.repoName} -> branch: ${repoStatus.branch}`
+                + `${repoStatus.tag ? ', tag: ' + repoStatus.tag : ''}`
+                + `${repoStatus.artifactGroup ? ', artifactGroup: ' + repoStatus.artifactGroup : ''}`
+                + `${repoStatus.artifactVersion ? ', artifactVersion:' + repoStatus.artifactVersion : ''}`;
+            const childTree = new AsciiTree(info);
+            tree.add(childTree);
+            if (value.transitiveDependencies) {
+                this.addChildNodes(childTree, value);
             }
         }
-        return tree;
     }
 
     /**
@@ -196,7 +203,8 @@ export class ValidateBranches extends AbstractReposCommand {
             details: {
                 url: prevRepo.repoStatus.url !== currentRepo.repoStatus.url,
                 branch: prevRepo.repoStatus.branch !== currentRepo.repoStatus.branch,
-                useSnapshot: prevRepo.repoStatus.useSnapshot !== currentRepo.repoStatus.useSnapshot,
+                useSnapshot: false,
+                // useSnapshot: prevRepo.repoStatus.useSnapshot !== currentRepo.repoStatus.useSnapshot,
                 artifactGroup: prevRepo.repoStatus.artifactGroup !== currentRepo.repoStatus.artifactGroup,
                 artifactVersion: prevRepo.repoStatus.artifactVersion !== currentRepo.repoStatus.artifactVersion,
                 tag: prevRepo.repoStatus.tag !== currentRepo.repoStatus.tag,
