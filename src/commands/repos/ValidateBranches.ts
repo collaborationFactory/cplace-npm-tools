@@ -1,17 +1,31 @@
 import {AbstractReposCommand} from './AbstractReposCommand';
-import {IReposTransitiveDependencies} from './models';
+import {IReposDescriptor, IRepoStatus} from './models';
 import * as fs from 'fs';
 import * as path from 'path';
 import {AsciiTree} from 'oo-ascii-tree';
 import {ICommandParameters} from '../models';
 import {Global} from '../../Global';
 
-interface IReposDiffReport {
+export interface IReposValidationResult {
+    rootDependencies: IReposTransitiveDependencies;
+    dependenciesMap: Map<string, IReposTransitiveDependencies[]>;
+    report: IReposDiffReport;
+}
+
+export interface IReposTransitiveDependencies {
+    repoName: string;
+    repoPath: string[];
+    repoStatus: IRepoStatus;
+    reposDescriptor?: IReposDescriptor;
+    transitiveDependencies?: Map<string, IReposTransitiveDependencies>;
+}
+
+export interface IReposDiffReport {
     reposWithDiff: Map<string, IReposDiff[]>;
     diffStatistic: Map<string, number>;
 }
 
-interface IReposDiff {
+export interface IReposDiff {
     repoA: IReposTransitiveDependencies;
     repoB: IReposTransitiveDependencies;
     normalizedValidatedPairKey: string;
@@ -19,7 +33,7 @@ interface IReposDiff {
     details: IReposDiffDetails;
 }
 
-interface IReposDiffDetails {
+export interface IReposDiffDetails {
     url: boolean;
     branch: boolean;
     useSnapshot: boolean;
@@ -42,6 +56,16 @@ export class ValidateBranches extends AbstractReposCommand {
     private excludeList: string[] = this.defaultExcludeList;
 
     public execute(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            this.validateAndReport();
+            resolve();
+        });
+    }
+
+    /**
+     * Public visibility and return value for test.
+     */
+    public validateAndReport(): IReposValidationResult {
         const rootDependencies: IReposTransitiveDependencies = {
             repoName: this.rootRepoName,
             repoPath: [...this.currentPath],
@@ -49,16 +73,18 @@ export class ValidateBranches extends AbstractReposCommand {
             reposDescriptor: this.parentRepos,
             transitiveDependencies: new Map<string, IReposTransitiveDependencies>()
         };
-        return new Promise<void>((resolve) => {
-            this.currentPath.push(this.rootRepoName);
-            Object.keys(this.parentRepos)
-                .map((repoName: string) => this.createDependencyTree(repoName, rootDependencies), {concurrency: 1});
-            const dependenciesMap = this.mapDependencies(rootDependencies);
-            const report = this.validateDependencies(dependenciesMap);
-            this.printReport(report);
-            console.log('\nDependency tree:\n', this.toPrintableAsciiTree(rootDependencies));
-            resolve();
-        });
+        this.currentPath.push(this.rootRepoName);
+        Object.keys(this.parentRepos)
+            .map((repoName: string) => this.createDependencyTree(repoName, rootDependencies), {concurrency: 1});
+        const dependenciesMap = this.mapDependencies(rootDependencies);
+        const report = this.validateDependencies(dependenciesMap);
+        this.printReport(report);
+        console.log('\nDependency tree:\n', this.toPrintableAsciiTree(rootDependencies));
+        return {
+            rootDependencies,
+            dependenciesMap,
+            report
+        };
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
