@@ -3,6 +3,8 @@ import {IReposTransitiveDependencies} from './models';
 import * as fs from 'fs';
 import * as path from 'path';
 import {AsciiTree} from 'oo-ascii-tree';
+import {ICommandParameters} from '../models';
+import {Global} from '../../Global';
 
 interface IReposDiffReport {
     reposWithDiff: Map<string, IReposDiff[]>;
@@ -29,11 +31,17 @@ interface IReposDiffDetails {
 
 export class ValidateBranches extends AbstractReposCommand {
 
+    public static readonly PARAMETER_INCLUDE: string = 'include';
+    public static readonly PARAMETER_EXCLUDE: string = 'exclude';
+
     private currentPath: string[] = [];
     private rootRepoName: string;
+    private allowedFilters: string[] = ['url', 'branch', 'useSnapshot', 'artifactGroup', 'artifactVersion', 'tag', 'tagMarker', 'latestTagForRelease', 'commit', 'description'];
+    private includeList: string[];
+    private defaultExcludeList: string[] = ['url', 'useSnapshot', 'tagMarker', 'latestTagForRelease', 'description'];
+    private excludeList: string[] = this.defaultExcludeList;
 
     public execute(): Promise<void> {
-        this.rootRepoName = path.basename(this.rootDir);
         const rootDependencies: IReposTransitiveDependencies = {
             repoName: this.rootRepoName,
             repoPath: [...this.currentPath],
@@ -50,6 +58,40 @@ export class ValidateBranches extends AbstractReposCommand {
             this.printReport(report);
             console.log('\nDependency tree:\n', this.toPrintableAsciiTree(rootDependencies));
             resolve();
+        });
+    }
+
+    protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
+        this.rootRepoName = path.basename(this.rootDir);
+        if (params[ValidateBranches.PARAMETER_INCLUDE]) {
+            const value = params[ValidateBranches.PARAMETER_INCLUDE];
+            if (value === 'all') {
+                this.includeList = this.allowedFilters;
+            } else {
+                this.includeList = value.toString().split(' ');
+                this.validateListParameters(this.includeList);
+            }
+            Global.isVerbose() && console.log(`[${this.rootRepoName}]:`, 'Configured include list: ', this.includeList);
+        }
+        if (params[ValidateBranches.PARAMETER_EXCLUDE]) {
+            const value = params[ValidateBranches.PARAMETER_EXCLUDE];
+            if (value === 'all') {
+                this.excludeList = this.allowedFilters;
+            } else {
+                this.excludeList = value.toString().split(' ');
+                this.validateListParameters(this.excludeList);
+            }
+            Global.isVerbose() && console.log(`[${this.rootRepoName}]:`, 'Configured excludeList list: ', this.excludeList);
+        }
+
+        return true;
+    }
+
+    private validateListParameters(list: string[]): void {
+        list.forEach((filter: string) => {
+            if (!this.allowedFilters.includes(filter)) {
+                throw new Error(`Unsupported filter [${filter}]. Allowed are ${this.allowedFilters}`);
+            }
         });
     }
 
@@ -99,11 +141,14 @@ export class ValidateBranches extends AbstractReposCommand {
     private addChildNodes(tree: AsciiTree, dependencies: IReposTransitiveDependencies): void {
         for (const [key, value] of dependencies.transitiveDependencies.entries()) {
             const repoStatus = dependencies.reposDescriptor[key];
-            const info = `${value.repoName} -> branch: ${repoStatus.branch}`
-                + `${repoStatus.tag ? ', tag: ' + repoStatus.tag : ''}`
-                + `${repoStatus.artifactGroup ? ', artifactGroup: ' + repoStatus.artifactGroup : ''}`
-                + `${repoStatus.artifactVersion ? ', artifactVersion:' + repoStatus.artifactVersion : ''}`;
-            const childTree = new AsciiTree(info);
+            const childTree = new AsciiTree(key);
+
+            Object.entries(repoStatus).forEach(([fieldName, fieldValue]) => {
+                if (fieldValue && this.addIfNotFiltered(fieldName)) {
+                    childTree.add(new AsciiTree(`--> ${fieldName}: ${fieldValue}`));
+                }
+            });
+
             tree.add(childTree);
             if (value.transitiveDependencies) {
                 this.addChildNodes(childTree, value);
@@ -201,18 +246,28 @@ export class ValidateBranches extends AbstractReposCommand {
             normalizedValidatedPairKey: null,
             hasDiff: false,
             details: {
-                url: prevRepo.repoStatus.url !== currentRepo.repoStatus.url,
-                branch: prevRepo.repoStatus.branch !== currentRepo.repoStatus.branch,
+                url: false,
+                branch: false,
                 useSnapshot: false,
-                // useSnapshot: prevRepo.repoStatus.useSnapshot !== currentRepo.repoStatus.useSnapshot,
-                artifactGroup: prevRepo.repoStatus.artifactGroup !== currentRepo.repoStatus.artifactGroup,
-                artifactVersion: prevRepo.repoStatus.artifactVersion !== currentRepo.repoStatus.artifactVersion,
-                tag: prevRepo.repoStatus.tag !== currentRepo.repoStatus.tag,
-                commit: prevRepo.repoStatus.commit !== currentRepo.repoStatus.commit
+                artifactGroup: false,
+                artifactVersion: false,
+                tag: false,
+                commit: false
             }
         };
+
+        Object.keys(diff.details).forEach((key) => {
+            if (this.addIfNotFiltered(key)) {
+                diff.details[key] = prevRepo.repoStatus[key] !== currentRepo.repoStatus[key];
+            }
+        });
+
         diff.hasDiff = Object.values(diff.details).includes(true);
         return diff;
+    }
+
+    private addIfNotFiltered(key: string): boolean {
+        return this.includeList ? this.includeList.includes(key) : !this.excludeList.includes(key);
     }
 
     private calculateDiffStatistic(report: IReposDiffReport): Map<string, number> {

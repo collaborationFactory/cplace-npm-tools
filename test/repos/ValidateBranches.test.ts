@@ -55,12 +55,13 @@ describe('validate the transitive of the root parent repos json for a basic setu
                 main: {url: parentRepos.main.url, branch: 'release/22.2'}
             });
             writeParentRepos(path.join(rootDir, '..', 'test_2'), {
-                main: {url: parentRepos.main.url, branch: 'customer/custom/22.2-ABC'},
+                main: {url: parentRepos.main.url, branch: 'customer/custom/abc/22.2-ABC', artifactGroup: 'cf.cplace.abc'},
                 test_1: {url: parentRepos.test_1.url, branch: 'release/22.2'}
             });
 
             const params: ICommandParameters = {};
             params[Global.PARAMETER_VERBOSE] = true;
+            params[ValidateBranches.PARAMETER_INCLUDE] = 'branch artifactGroup';
 
             Global.parseParameters(params);
             const vb = new ValidateBranches();
