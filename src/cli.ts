@@ -217,6 +217,20 @@ const cli = meow(
                 2.  The 'useSnapshots' property will be added in the 'parent-repos.json' for each repository. 
                 3.  The 'cplace' and 'cplaceRepositories' blocks will be removed from the 'build.gradle' file
 
+            --validateBranches [--include <list of included fields | all>] [--exclude <list of excluded fields | all>]
+                Validates the parent-repos.json files of all repositories of the integration/root repository to support finding unwanted differences.
+                Prints a basic report to the terminal which contains the count of divergences by repository path, the conflicting repository paths and the dependency tree.
+                Before running the validation, all expected repositories must be cloned and updated to the correct branches or tags.
+                An include list or an exclude list allow to filter which fields of parent-repos.json are validated and part of the report.
+                Allowed filters are: [all, url, branch, useSnapshot, artifactGroup, artifactVersion, tag, tagMarker, commit, description]
+                When no include or exclude list is provided, the default exclude list is used: [url, useSnapshot, tagMarker, description].
+                If both lists are provided the include list will be used.
+                Items in the list are space separated, for example '--exclude "branch artifactGroup artifactVersion"'.
+                Using the 'all'-filter:
+                '--include all' validates and prints all fields.
+                '--exclude all' does no validation but is useful to print the raw dependency structure of the parent repositories.
+                Note that the data is only taken from the locally checked out files.
+
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
             The output is a .dot file.
