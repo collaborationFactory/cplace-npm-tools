@@ -125,6 +125,8 @@ export interface ITestRun {
 
     withDebug(debug: boolean): ITestRun;
 
+    evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
+
     evaluateWithRemoteRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
 
     evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void>;
@@ -163,11 +165,11 @@ export const basicTestSetupData: ITestSetupData = {
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_1: {
-        repoName: 'test-1',
+        repoName: 'test_1',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     },
     test_2: {
-        repoName: 'test-2',
+        repoName: 'test_2',
         releaseBranches: [{branchName: 'release/22.2', releases: ['version/22.2.0']}]
     }
 };
@@ -192,7 +194,7 @@ export const multiBranchTestSetupData: ITestSetupData = {
         ]
     },
     test_1: {
-        repoName: 'test-1',
+        repoName: 'test_1',
         releaseBranches: [
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: ['version/22.2.0', 'version/22.2.1', 'version/22.2.2', 'version/22.2.3']},
@@ -201,7 +203,7 @@ export const multiBranchTestSetupData: ITestSetupData = {
         ]
     },
     test_2: {
-        repoName: 'test-2',
+        repoName: 'test_2',
         releaseBranches: [
             {branchName: 'release/5.20', releases: []},
             {branchName: 'release/22.2', releases: []},
@@ -251,6 +253,16 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
+    public evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return withTempDirectory('freeze-parent-repos', this.testWithFolders, testCase, assertion).then(
+            () => Promise.resolve(),
+            (e) => {
+                console.log('Failed assertion or error while evaluating a test!', e);
+                // fail in case of an exception
+                expect(e).toBeUndefined();
+                Promise.reject(e);
+            });
+    }
     public evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
         return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
@@ -271,6 +283,17 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 expect(e).toBeUndefined();
                 Promise.reject(e);
             });
+    }
+
+    private testWithFolders = async <T>(dir: string, testCase: (workingDir: string) => Promise<T>, assertion: (result: T) => Promise<void>): Promise<void> => {
+        const rootDir = this.createWorkingCopyFolderStructureOnly(dir);
+        try {
+            const testResult = await testCase(rootDir);
+            await assertion(testResult);
+        } catch (e) {
+            this.debugLog('Unexpected error during test evaluation!', e);
+            throw e;
+        }
     }
 
     private testWithRemoteRepos = async <T>(dir: string, testCase: (workingDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (result: T) => Promise<void>) => {
@@ -296,6 +319,24 @@ class EvaluateWithRemoteRepos implements ITestRun {
             this.debugLog('Unexpected error during test evaluation!', e);
             throw e;
         }
+    }
+
+    private createWorkingCopyFolderStructureOnly(dir: string): string {
+        const workingDir = path.join(dir, 'working');
+        fs.mkdirSync(workingDir);
+        Object.keys(this.testSetupData).forEach((repoName) => {
+            fs.mkdirSync(path.join(workingDir, repoName));
+        });
+        const repos: IReposDescriptor = {};
+        Object.keys(this.testSetupData).forEach((repoName) => {
+            repos[repoName] = {
+                url: `git@cplace.test.de:${repoName}.git`,
+                branch: this.branchUnderTest
+            };
+        });
+        const rootDir = path.join(workingDir, ROOT_REPO);
+        EvaluateWithRemoteRepos.writeParentRepos(rootDir, repos);
+        return rootDir;
     }
 
     private createRemoteRepos(dir: string): ILocalRepoData[] {
