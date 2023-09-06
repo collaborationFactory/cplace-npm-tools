@@ -592,6 +592,32 @@ export class Repository {
         });
     }
 
+    public getCurrentVersionTag(): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            this.git.raw(['tag', '--points-at', 'HEAD'], (err, result: string) => {
+                if (err) {
+                    resolve('');
+                } else {
+                    Global.isVerbose() && console.log(`[${this.repoName}]: result of git tag --points-at HEAD`, result);
+                    let currentVersionTag: string;
+                    if (result && result.length > 0) {
+                        const lines: string[] = result.match(/[^\r\n]+/g);
+                        lines.forEach((l) => {
+                            const trimmed = l.trim();
+                            const tagMatches = Repository.TAG_FORMAT.exec(trimmed);
+                            if (tagMatches) {
+                                currentVersionTag = trimmed;
+                            }
+                        });
+                    }
+
+                    Global.isVerbose() && console.log(`[${this.repoName}]: current version tag`, currentVersionTag);
+                    resolve(currentVersionTag);
+                }
+            });
+        });
+    }
+
     public getCurrentCommitHash(): Promise<string> {
         return new Promise<string>((resolve, reject) => {
             this.git.revparse(['HEAD'], (err, commit: string) => {

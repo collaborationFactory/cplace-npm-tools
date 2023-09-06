@@ -124,26 +124,48 @@ export class WriteRepos extends AbstractReposCommand {
     private updateCommitStatus(repoName: string): Promise<{ repoName: string; status: IRepoStatus }> {
         const repo = new Repository(path.join(this.rootDir, '..', repoName));
         return repo.status()
-            .then((status) => this.checkRepoClean(repo, status))
+            .then((gitStatus) => this.checkRepoClean(repo, gitStatus))
+            .then((gitStatus) => this.mapGitStatusToRepoStatus(repo, gitStatus))
+            .then((status) => this.mapTagStatus(repo, status))
             .then((status) => this.mapCommitStatus(repo, status))
             .then((status) => ({repoName, status}));
     }
 
-    private mapCommitStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
+    private mapGitStatusToRepoStatus(repo: Repository, gitStatus: IGitStatus): Promise<IRepoStatus> {
+        return new Promise<string>((resolve) => {
+            const current = this.parentRepos[repo.repoName];
+            const result: IRepoStatus = {
+                url: current.url,
+                branch: gitStatus.current,
+                description: current.description ? current.description : repo.repoName,
+                artifactGroup: current.artifactGroup,
+                artifactVersion: current.artifactVersion
+            };
+            resolve(result);
+        });
+    }
+
+    private mapCommitStatus(repo: Repository, status: IRepoStatus): Promise<IRepoStatus> {
         return repo
             .getCurrentCommitHash()
             .then((commit) => {
-                const current = this.parentRepos[repo.repoName];
-                const result: IRepoStatus = {
-                    url: current.url,
-                    branch: status.current,
-                    description: current.description ? current.description : repo.repoName,
-                    artifactGroup: current.artifactGroup,
-                    artifactVersion: current.artifactVersion
-                };
-                if (this.freeze || current.commit) {
+                const result: IRepoStatus = status;
+                if (this.freeze || status.commit) {
                     result.commit = commit;
                     Global.isVerbose() && console.log(`[${repo.repoName}]: using HEAD commit ${result.commit}`);
+                }
+                return result;
+            });
+    }
+
+    private mapTagStatus(repo: Repository, status: IRepoStatus): Promise<IRepoStatus> {
+        return repo
+            .getCurrentVersionTag()
+            .then((tag) => {
+                const result: IRepoStatus = status;
+                if (this.freeze || status.tag) {
+                    result.tag = tag;
+                    Global.isVerbose() && console.log(`[${repo.repoName}]: using tag ${tag}`);
                 }
                 return result;
             });
