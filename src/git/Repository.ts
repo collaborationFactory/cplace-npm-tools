@@ -14,7 +14,7 @@ export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
-    private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)$/);
+    private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)(-RC.(?<counter>\d+))?$/);
     private static readonly GIT_PROTOCOL: string = 'git@';
     private static readonly HTTPS_PROTOCOL: string = 'https:';
 
@@ -106,10 +106,11 @@ export class Repository {
             const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
             const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
             if (!tagMatches) {
-                throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                // tslint:disable-next-line:max-line-length
+                throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}(-RC.{counter})?'!`);
             }
             if (!tagMarkerMatches) {
-                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}(-RC.{counter})?'!`);
             }
 
             if (tagMatches.groups.major !== tagMarkerMatches.groups.major) {
@@ -189,8 +190,8 @@ export class Repository {
                         Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
                         reject(err);
                     } else {
-                        Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
                         const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
+                        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags.join('\n')}`);
                         if (sortedTags) {
                             resolve(sortedTags.slice(-1)[0]);
                         } else {
