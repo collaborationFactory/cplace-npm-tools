@@ -191,7 +191,7 @@ export class Repository {
                         reject(err);
                     } else {
                         const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
-                        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags.join('\n')}`);
+                        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
                         if (sortedTags) {
                             resolve(sortedTags.slice(-1)[0]);
                         } else {
