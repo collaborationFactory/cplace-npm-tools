@@ -186,19 +186,28 @@ bd37e43ace85f1b288502d17d9b2594a59fb68d2        refs/tags/version/23.1.0-RC.21
 ad37e43ace85f1b212342d17d9b2594a59fb68d3        refs/tags/version/FOO
 luhgaoerfgao
 784037e2b2e6c41b185dea781d72ed9f8bd5c8b5        refs/tags/version/23.1.0-RC.4
+5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.1.5
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.1
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.2
+5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.2-RC.0
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.3
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.4
+5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.1.55
+5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.2.5
+5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.12.5
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.12
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.35
 5ccc9dd38e82cbc7309ce01d18a66df2b1fcbc4f        refs/tags/version/23.1.22
 fae411d00a73c1e89b83c4a90517be0f36a3c06c        refs/tags/version/23.1.0-RC.3
 
         `;
-        const sortedTags = Repository.sortByTagName(result, 'version/23.1.*');
+        const sortedTags = Repository.sortByTagName('testRepo', result, 'version/23.1.*');
         console.log(sortedTags);
         expect(sortedTags).toEqual([
+                                       'version/23.1.1.5',
+                                       'version/23.1.1.55',
+                                       'version/23.1.12.5',
+                                       'version/23.1.2.5',
                                        'version/23.1.0-RC.1',
                                        'version/23.1.0-RC.2',
                                        'version/23.1.0-RC.3',
@@ -208,6 +217,7 @@ fae411d00a73c1e89b83c4a90517be0f36a3c06c        refs/tags/version/23.1.0-RC.3
                                        'version/23.1.0-RC.33',
                                        'version/23.1.0',
                                        'version/23.1.1',
+                                       'version/23.1.2-RC.0',
                                        'version/23.1.2',
                                        'version/23.1.3',
                                        'version/23.1.4',

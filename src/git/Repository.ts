@@ -190,7 +190,7 @@ export class Repository {
                         reject(err);
                     } else {
                         Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
-                        const sortedTags: string[] = this.sortByTagName(result, tagPattern);
+                        const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
                         if (sortedTags) {
                             resolve(sortedTags.slice(-1)[0]);
                         } else {
@@ -202,10 +202,10 @@ export class Repository {
         });
     }
 
-    public static sortByTagName(result: string, tagPattern: string): string[] {
+    public static sortByTagName(repoName: string, result: string, tagPattern: string): string[] {
         const lines: string[] = result.match(/[^\r\n]+/g);
         if (lines) {
-            // 1. prepare all lines - remove hash
+            // 1. prepare all lines - remove hash and non-matching results
             const tags: string[] = lines.map((line: string) => {
                 const tagMatch: RegExpMatchArray = line.match(tagPattern);
                 return tagMatch ? tagMatch[0] : null;
@@ -216,19 +216,63 @@ export class Repository {
                 if (a === b) {
                     return 0;
                 }
-                if (a.match(/^.*-RC\.\d+$/) && b.match(/^.*-RC\.\d+$/)) {
-                    if (a > b) {
+
+                const aRcMatch: RegExpMatchArray = a.match(/^version\/\d+\.\d+\.(\d+)-RC.(\d+)$/);
+                const bRcMatch: RegExpMatchArray = b.match(/^version\/\d+\.\d+\.(\d+)-RC.(\d+)$/);
+                const aMatch: RegExpMatchArray = a.match(/^version\/\d+\.\d+\.(\d+)$/);
+                const bMatch: RegExpMatchArray = b.match(/^version\/\d+\.\d+\.(\d+)$/);
+
+                if (aRcMatch && bRcMatch) {
+                    if (parseInt(aRcMatch[1], 10) > parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    if (parseInt(aRcMatch[1], 10) < parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    if (parseInt(aRcMatch[2], 10) === parseInt(bRcMatch[2], 10)) {
+                        return 0;
+                    }
+                    if (parseInt(aRcMatch[2], 10) > parseInt(bRcMatch[2], 10)) {
                         return 1;
                     }
                     return -1;
                 }
-                if (a.match(/^.*-RC\.\d+$/)) {
+                if (aRcMatch && bMatch) {
+                    if (parseInt(aRcMatch[1], 10) > parseInt(bMatch[1], 10)) {
+                        return 1;
+                    }
                     return -1;
                 }
-                if (b.match(/^.*-RC\.\d+$/)) {
+                if (aMatch && bRcMatch) {
+                    if (parseInt(aMatch[1], 10) >= parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aMatch && bMatch) {
+                    if (parseInt(aMatch[1], 10) > parseInt(bMatch[1], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${b}].`);
                     return 1;
                 }
+                if (bMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}].`);
+                    return -1;
+                }
+                if (aRcMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${b}].`);
+                    return 1;
+                }
+                if (bRcMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}].`);
+                    return -1;
+                }
                 if (a > b) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}] and [${b}].`);
                     return 1;
                 }
                 return -1;
