@@ -190,11 +190,9 @@ export class Repository {
                         reject(err);
                     } else {
                         Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
-                        const lines: string[] = result.match(/[^\r\n]+/g);
-                        if (lines) {
-                            const lastLine = lines.slice(-1)[0];
-                            const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
-                            resolve(tagMatch ? tagMatch[0] : null);
+                        const sortedTags: string[] = this.sortByTagName(result, tagPattern);
+                        if (sortedTags) {
+                            resolve(sortedTags.slice(-1)[0]);
                         } else {
                             resolve(null);
                         }
@@ -202,6 +200,42 @@ export class Repository {
                 });
             });
         });
+    }
+
+    public static sortByTagName(result: string, tagPattern: string): string[] {
+        const lines: string[] = result.match(/[^\r\n]+/g);
+        if (lines) {
+            // 1. prepare all lines - remove hash
+            const tags: string[] = lines.map((line: string) => {
+                const tagMatch: RegExpMatchArray = line.match(tagPattern);
+                return tagMatch ? tagMatch[0] : null;
+            }).filter((tag) => tag);
+
+            // 2. sort lines, respecting RC order
+            return tags.sort((a: string, b: string): number => {
+                if (a === b) {
+                    return 0;
+                }
+                if (a.match(/^.*-RC\.\d+$/) && b.match(/^.*-RC\.\d+$/)) {
+                    if (a > b) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (a.match(/^.*-RC\.\d+$/)) {
+                    return -1;
+                }
+                if (b.match(/^.*-RC\.\d+$/)) {
+                    return 1;
+                }
+                if (a > b) {
+                    return 1;
+                }
+                return -1;
+            });
+        } else {
+            return null;
+        }
     }
 
     /**
