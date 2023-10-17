@@ -18,6 +18,7 @@ export interface IReposTransitiveDependencies {
     repoStatus: IRepoStatus;
     reposDescriptor?: IReposDescriptor;
     transitiveDependencies?: Map<string, IReposTransitiveDependencies>;
+    missing?: boolean;
 }
 
 export interface IReposDiffReport {
@@ -48,6 +49,7 @@ export class ValidateBranches extends AbstractReposCommand {
     public static readonly PARAMETER_INCLUDE: string = 'include';
     public static readonly PARAMETER_EXCLUDE: string = 'exclude';
 
+    private missingRepoPaths: string[] = [];
     private currentPath: string[] = [];
     private rootRepoName: string;
     private allowedFilters: string[] = ['url', 'branch', 'useSnapshot', 'artifactGroup', 'artifactVersion', 'tag', 'tagMarker', 'latestTagForRelease', 'commit', 'description'];
@@ -80,6 +82,11 @@ export class ValidateBranches extends AbstractReposCommand {
         const report = this.validateDependencies(dependenciesMap);
         this.printReport(report);
         console.log('\nDependency tree:\n', this.toPrintableAsciiTree(rootDependencies));
+
+        if (this.missingRepoPaths.length > 0) {
+            throw new Error(`[${this.rootRepoName}]: Missing repositories! Reference paths:\n${this.missingRepoPaths.join('\n')}
+Please configure all transitive repository dependencies and clone all repos with the cplace-cli.`);
+        }
         return {
             rootDependencies,
             dependenciesMap,
@@ -134,24 +141,24 @@ export class ValidateBranches extends AbstractReposCommand {
 
         this.currentPath.push(repoName);
 
-        const repoPath = path.join(this.rootDir, '..', repoName);
-        if (!fs.existsSync(repoPath)) {
-            throw new Error(`[${repoName}]: Repository [${repoName}], dependency of [${parentDependencies.repoPath?.join(' -> ')}], not cloned to the expected path ${repoPath}.
-Please configure all transitive repository dependencies and clone all repos with the cplace-cli.`);
-        }
-        const childConfigPath = path.join(repoPath, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         const childDependencies: IReposTransitiveDependencies = {
             repoName,
             repoPath: [...this.currentPath],
             repoStatus: parentDependencies.reposDescriptor[repoName]
         };
-        if (fs.existsSync(childConfigPath)) {
-            childDependencies.reposDescriptor = JSON.parse(fs.readFileSync(childConfigPath, 'utf8'));
-            childDependencies.transitiveDependencies = new Map<string, IReposTransitiveDependencies>();
-            Object.keys(childDependencies.reposDescriptor)
-                .map((nextChildRepoName: string) => this.createDependencyTree(nextChildRepoName, childDependencies), {concurrency: 1});
+        const repoPath = path.join(this.rootDir, '..', repoName);
+        if (!fs.existsSync(repoPath)) {
+            childDependencies.missing = true;
+            this.missingRepoPaths.push(`${parentDependencies.repoPath?.join(' -> ')} -> * ${repoName}`);
+        } else {
+            const childConfigPath = path.join(repoPath, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+            if (fs.existsSync(childConfigPath)) {
+                childDependencies.reposDescriptor = JSON.parse(fs.readFileSync(childConfigPath, 'utf8'));
+                childDependencies.transitiveDependencies = new Map<string, IReposTransitiveDependencies>();
+                Object.keys(childDependencies.reposDescriptor)
+                    .map((nextChildRepoName: string) => this.createDependencyTree(nextChildRepoName, childDependencies), {concurrency: 1});
+            }
         }
-
         parentDependencies.transitiveDependencies.set(repoName, childDependencies);
 
         this.currentPath.pop();
@@ -168,7 +175,8 @@ Please configure all transitive repository dependencies and clone all repos with
     private addChildNodes(tree: AsciiTree, dependencies: IReposTransitiveDependencies): void {
         for (const [key, value] of dependencies.transitiveDependencies.entries()) {
             const repoStatus = dependencies.reposDescriptor[key];
-            const childTree = new AsciiTree(key);
+            const repoName = value.missing ? `${key} *** missing ***` : key;
+            const childTree = new AsciiTree(repoName);
 
             Object.entries(repoStatus).forEach(([fieldName, fieldValue]) => {
                 if (fieldValue && this.addIfNotFiltered(fieldName)) {

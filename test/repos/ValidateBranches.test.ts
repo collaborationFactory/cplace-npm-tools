@@ -1,4 +1,4 @@
-import {basicTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
+import {assertVoid, basicTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
 import {IReposDescriptor} from '../../src/commands/repos/models';
 import {IReposValidationResult, ValidateBranches} from '../../src/commands/repos/ValidateBranches';
 import {ICommandParameters} from '../../src/commands/models';
@@ -103,7 +103,7 @@ describe('validate the transitive of the root parent repos json for a basic setu
     });
 
     test('a transitive repo is missing', async () => {
-        const testBranches = async (rootDir: string): Promise<IReposValidationResult> => {
+        const testBranches = async (rootDir: string): Promise<boolean> => {
             const parentRepos = catParentReposJson(rootDir);
 
             writeParentRepos(path.join(rootDir, '..', 'test_1'), {
@@ -123,18 +123,23 @@ describe('validate the transitive of the root parent repos json for a basic setu
             const vb = new ValidateBranches();
             vb.prepareAndMayExecute(params, rootDir);
 
-            return vb.validateAndReport();
-        };
-
-        const assertBranches = async (validationResult: IReposValidationResult): Promise<void> => {
-            assertBasicStructureConsistency(validationResult);
-            expect(validationResult.report.diffStatistic.size).toEqual(4);
-            expect(validationResult.report.reposWithDiff.size).toEqual(1);
-            expect(Array.from(validationResult.report.reposWithDiff.keys())).toEqual(['main']);
+            try {
+                vb.validateAndReport();
+            } catch (e) {
+                if (e?.message?.includes('[rootRepo]: Missing repositories! Reference paths:')
+                    && e?.message?.includes('rootRepo -> test_1 -> * missing')
+                    && e?.message?.includes('rootRepo -> test_2 -> test_1 -> * missing')
+                ) {
+                    return true;
+                } else {
+                    throw new Error(`Did not fail as expected!Original message:\n${e?.message}`);
+                }
+            }
+            return false;
         };
 
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
-            .evaluateWithFolders(testBranches, assertBranches);
+            .evaluateWithFolders(testBranches, assertVoid);
     });
 });
