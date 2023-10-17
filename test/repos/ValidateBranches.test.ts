@@ -101,4 +101,40 @@ describe('validate the transitive of the root parent repos json for a basic setu
             .withBranchUnderTest('release/22.2')
             .evaluateWithFolders(testBranches, assertBranches);
     });
+
+    test('a transitive repo is missing', async () => {
+        const testBranches = async (rootDir: string): Promise<IReposValidationResult> => {
+            const parentRepos = catParentReposJson(rootDir);
+
+            writeParentRepos(path.join(rootDir, '..', 'test_1'), {
+                main: {url: parentRepos.main.url, branch: 'release/22.2'},
+                missing: {url: 'git@cplace.test.de:missing.git', branch: 'release/22.2'}
+            });
+            writeParentRepos(path.join(rootDir, '..', 'test_2'), {
+                main: {url: parentRepos.main.url, branch: 'customer/custom/abc/22.2-ABC', artifactGroup: 'cf.cplace.abc'},
+                test_1: {url: parentRepos.test_1.url, branch: 'release/22.2'}
+            });
+
+            const params: ICommandParameters = {};
+            params[Global.PARAMETER_VERBOSE] = true;
+            params[ValidateBranches.PARAMETER_INCLUDE] = 'branch artifactGroup';
+
+            Global.parseParameters(params);
+            const vb = new ValidateBranches();
+            vb.prepareAndMayExecute(params, rootDir);
+
+            return vb.validateAndReport();
+        };
+
+        const assertBranches = async (validationResult: IReposValidationResult): Promise<void> => {
+            assertBasicStructureConsistency(validationResult);
+            expect(validationResult.report.diffStatistic.size).toEqual(4);
+            expect(validationResult.report.reposWithDiff.size).toEqual(1);
+            expect(Array.from(validationResult.report.reposWithDiff.keys())).toEqual(['main']);
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithFolders(testBranches, assertBranches);
+    });
 });

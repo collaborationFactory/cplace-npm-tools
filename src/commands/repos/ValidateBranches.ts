@@ -136,7 +136,8 @@ export class ValidateBranches extends AbstractReposCommand {
 
         const repoPath = path.join(this.rootDir, '..', repoName);
         if (!fs.existsSync(repoPath)) {
-            throw new Error(`[${repoName}]: Repository ${repoName} not cloned to the expected path ${repoPath}. Please clone all repos with the cplace-cli.`);
+            throw new Error(`[${repoName}]: Repository [${repoName}], dependency of [${parentDependencies.repoPath?.join(' -> ')}], not cloned to the expected path ${repoPath}.
+Please configure all transitive repository dependencies and clone all repos with the cplace-cli.`);
         }
         const childConfigPath = path.join(repoPath, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         const childDependencies: IReposTransitiveDependencies = {
