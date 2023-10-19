@@ -1,4 +1,4 @@
-import {basicTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
+import {assertVoid, basicTestSetupData, catParentReposJson, testWith} from '../helpers/remoteRepositories';
 import {IReposDescriptor} from '../../src/commands/repos/models';
 import {IReposValidationResult, ValidateBranches} from '../../src/commands/repos/ValidateBranches';
 import {ICommandParameters} from '../../src/commands/models';
@@ -100,5 +100,46 @@ describe('validate the transitive of the root parent repos json for a basic setu
         await testWith(basicTestSetupData)
             .withBranchUnderTest('release/22.2')
             .evaluateWithFolders(testBranches, assertBranches);
+    });
+
+    test('a transitive repo is missing', async () => {
+        const testBranches = async (rootDir: string): Promise<boolean> => {
+            const parentRepos = catParentReposJson(rootDir);
+
+            writeParentRepos(path.join(rootDir, '..', 'test_1'), {
+                main: {url: parentRepos.main.url, branch: 'release/22.2'},
+                missing: {url: 'git@cplace.test.de:missing.git', branch: 'release/22.2'}
+            });
+            writeParentRepos(path.join(rootDir, '..', 'test_2'), {
+                main: {url: parentRepos.main.url, branch: 'customer/custom/abc/22.2-ABC', artifactGroup: 'cf.cplace.abc'},
+                test_1: {url: parentRepos.test_1.url, branch: 'release/22.2'}
+            });
+
+            const params: ICommandParameters = {};
+            params[Global.PARAMETER_VERBOSE] = true;
+            params[ValidateBranches.PARAMETER_INCLUDE] = 'branch artifactGroup';
+
+            Global.parseParameters(params);
+            const vb = new ValidateBranches();
+            vb.prepareAndMayExecute(params, rootDir);
+
+            try {
+                vb.validateAndReport();
+            } catch (e) {
+                if (e?.message?.includes('[rootRepo]: Missing repositories! Reference paths:')
+                    && e?.message?.includes('rootRepo -> test_1 -> * missing')
+                    && e?.message?.includes('rootRepo -> test_2 -> test_1 -> * missing')
+                ) {
+                    return true;
+                } else {
+                    throw new Error(`Did not fail as expected!Original message:\n${e?.message}`);
+                }
+            }
+            return false;
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithFolders(testBranches, assertVoid);
     });
 });
