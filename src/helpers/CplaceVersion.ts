@@ -32,33 +32,17 @@ export class CplaceVersion {
             console.warn(`Could not find build.gradle. Assuming version 1.0.0`);
             CplaceVersion._version = new CplaceVersion(1, 0, 0, false);
         } else {
-            // search for version string in build.gradle
-            const buildFileContent = fs.readFileSync(buildFilePath, 'utf8');
-            let versionString = buildFileContent
-                .split('\n')
-                .find((line) => line.trim().startsWith('version'));
-
-            if (!versionString) {
-                // search version string in version.gradle
-                const versionFileContent = fs.readFileSync(versionFilePath, 'utf8');
-                versionString = versionFileContent
-                    .split('\n')
-                    .find((line) => line.includes('currentVersion'));
-            }
-            if (!versionString) {
+            const version = this.determineVersion(buildFilePath, versionFilePath);
+            if (!version) {
                 console.error(`Version string not found in version.gradle file nor in build.gradle file`);
                 throw new Error(`Version string not found in version.gradle file nor in build.gradle file`);
             }
 
-            const version = versionString
-                .split('=')[1]
-                .replace(/'/g, '')
-                .trim();
             const versionSnapshotParts = version.split('-');
             const versionParts = versionSnapshotParts[0].split('.');
             versionParts.push(
                 versionSnapshotParts.length > 1 &&
-                    versionSnapshotParts[1].toLowerCase().includes('snapshot')
+                versionSnapshotParts[1].toLowerCase().includes('snapshot')
                     ? 'true'
                     : 'false'
             );
@@ -77,12 +61,37 @@ export class CplaceVersion {
         return CplaceVersion._version;
     }
 
-    public static toString(): string {
-        let version = `${this._version?.major}.${this._version?.minor}.${this._version?.patch}`;
-        if (this._version?.snapshot) {
-            version += '-SNAPSHOT';
-        }
+    /**
+     * Retrieves the version string from build.gradle or version.gradle files.
+     * It first looks for 'version' in build.gradle. If not found, it searches for
+     * 'currentVersion' or 'cplaceVersion' in version.gradle.
+     *
+     * @param {string} buildFilePath - Path to build.gradle file.
+     * @param {string} versionFilePath - Path to version.gradle file.
+     * @returns {string | undefined} Extracted version string, or undefined if not found.
+     */
+    public static determineVersion(buildFilePath: string, versionFilePath: string): string {
+        // search for version string in build.gradle
+        const buildFileContent = fs.readFileSync(buildFilePath, 'utf8');
+        let versionString = this.getVersionString(buildFileContent, ['version']);
 
+        if (!versionString) {
+            // search version string in version.gradle
+            const versionFileContent = fs.readFileSync(versionFilePath, 'utf8');
+            versionString = this.getVersionString(versionFileContent, ['currentVersion', 'cplaceVersion']);
+        }
+        return versionString;
+
+    }
+
+    public static toString(): string {
+        let version = `${this._version?.major}.${this._version?.minor}`;
+        if (Number.isFinite(this._version?.patch)) {
+            version += `.${this._version?.patch}`;
+            if (this._version?.snapshot) {
+                version += '-SNAPSHOT';
+            }
+        }
         return version;
     }
 
@@ -95,7 +104,7 @@ export class CplaceVersion {
         return CplaceVersion._version;
     }
 
-    public static compareTo(otherVersion: {major: number, minor: number, patch: number}): number {
+    public static compareTo(otherVersion: { major: number, minor: number, patch: number }): number {
         if (this._version.major !== otherVersion.major) {
             return this._version.major - otherVersion.major;
         } else if (this._version.minor !== otherVersion.minor) {
@@ -105,5 +114,33 @@ export class CplaceVersion {
         }
 
         return 0;
+    }
+
+    /**
+     * Extracts a version string from the file content based on a list of patterns.
+     * It searches each line of the file content for the first occurrence that starts with any of the given patterns.
+     * Once a matching line is found, it extracts the version.
+     *
+     * @param {string} versionFileContent - The content of the file to be searched.
+     * @param {string[]} patterns - An array of string patterns to look for at the start of each line.
+     * @returns {string | undefined} The extracted version string if a match is found, otherwise undefined.
+     */
+    private static getVersionString(versionFileContent: string, patterns: string[]): string | undefined {
+        for (const pattern of patterns) {
+            const versionString = versionFileContent
+                .split('\n')
+                .find((line) => line.trim().startsWith(pattern));
+
+            if (versionString) {
+                const version = versionString.split('=');
+                if (version.length >= 2) {
+                    return version[1]
+                        .replace(/'/g, '')
+                        .replace(/"/g, '')
+                        .trim();
+                }
+            }
+        }
+        return undefined;
     }
 }
