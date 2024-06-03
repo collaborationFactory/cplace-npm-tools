@@ -14,7 +14,7 @@ export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
     private static readonly ADDITIONAL_INFO_PATTERN: RegExp = new RegExp(/^(.+?): (gone)?(ahead (\d+))?(, )?(behind (\d+))?$/);
     private static readonly REMOTE_BRANCH_PATTERN: RegExp = new RegExp(/^remotes\/(.+)$/);
-    private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)$/);
+    private static readonly TAG_FORMAT: RegExp = new RegExp(/^version\/(?<major>\d+).(?<minor>\d+).(?<patch>\d+)(-RC.(?<counter>\d+))?$/);
     private static readonly GIT_PROTOCOL: string = 'git@';
     private static readonly HTTPS_PROTOCOL: string = 'https:';
 
@@ -106,10 +106,11 @@ export class Repository {
             const tagMatches = Repository.TAG_FORMAT.exec(repoProperties.latestTagForRelease);
             const tagMarkerMatches = Repository.TAG_FORMAT.exec(repoProperties.tagMarker);
             if (!tagMatches) {
-                throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                // tslint:disable-next-line:max-line-length
+                throw new Error(`[${repoName}]: Resolved latestTagForRelease ${repoProperties.latestTagForRelease} does not match the expected pattern 'version/{major}.{minor}.{patch}(-RC.{counter})?'!`);
             }
             if (!tagMarkerMatches) {
-                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}'!`);
+                throw new Error(`[${repoName}]: Configured tagMarker ${repoProperties.tagMarker} does not match the expected pattern 'version/{major}.{minor}.{patch}(-RC.{counter})?'!`);
             }
 
             if (tagMatches.groups.major !== tagMarkerMatches.groups.major) {
@@ -189,12 +190,10 @@ export class Repository {
                         Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
                         reject(err);
                     } else {
-                        Global.isVerbose() && console.log(`[${repoName}]: result of git ls-remote:\n${result}`);
-                        const lines: string[] = result.match(/[^\r\n]+/g);
-                        if (lines) {
-                            const lastLine = lines.slice(-1)[0];
-                            const tagMatch: RegExpMatchArray = lastLine.match(tagPattern);
-                            resolve(tagMatch ? tagMatch[0] : null);
+                        const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
+                        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
+                        if (sortedTags) {
+                            resolve(sortedTags.slice(-1)[0]);
                         } else {
                             resolve(null);
                         }
@@ -202,6 +201,86 @@ export class Repository {
                 });
             });
         });
+    }
+
+    public static sortByTagName(repoName: string, result: string, tagPattern: string): string[] {
+        const lines: string[] = result.match(/[^\r\n]+/g);
+        if (lines) {
+            // 1. prepare all lines - remove hash and non-matching results
+            const tags: string[] = lines.map((line: string) => {
+                const tagMatch: RegExpMatchArray = line.match(tagPattern);
+                return tagMatch ? tagMatch[0] : null;
+            }).filter((tag) => tag);
+
+            // 2. sort lines, respecting RC order
+            return tags.sort((a: string, b: string): number => {
+                if (a === b) {
+                    return 0;
+                }
+
+                const aRcMatch: RegExpMatchArray = a.match(/^version\/\d+\.\d+\.(\d+)-RC.(\d+)$/);
+                const bRcMatch: RegExpMatchArray = b.match(/^version\/\d+\.\d+\.(\d+)-RC.(\d+)$/);
+                const aMatch: RegExpMatchArray = a.match(/^version\/\d+\.\d+\.(\d+)$/);
+                const bMatch: RegExpMatchArray = b.match(/^version\/\d+\.\d+\.(\d+)$/);
+
+                if (aRcMatch && bRcMatch) {
+                    if (parseInt(aRcMatch[1], 10) > parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    if (parseInt(aRcMatch[1], 10) < parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    if (parseInt(aRcMatch[2], 10) === parseInt(bRcMatch[2], 10)) {
+                        return 0;
+                    }
+                    if (parseInt(aRcMatch[2], 10) > parseInt(bRcMatch[2], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aRcMatch && bMatch) {
+                    if (parseInt(aRcMatch[1], 10) > parseInt(bMatch[1], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aMatch && bRcMatch) {
+                    if (parseInt(aMatch[1], 10) >= parseInt(bRcMatch[1], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aMatch && bMatch) {
+                    if (parseInt(aMatch[1], 10) > parseInt(bMatch[1], 10)) {
+                        return 1;
+                    }
+                    return -1;
+                }
+                if (aMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${b}].`);
+                    return 1;
+                }
+                if (bMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}].`);
+                    return -1;
+                }
+                if (aRcMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${b}].`);
+                    return 1;
+                }
+                if (bRcMatch) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}].`);
+                    return -1;
+                }
+                if (a > b) {
+                    console.log(`[${repoName}]: Unsupported version format [${a}] and [${b}].`);
+                    return 1;
+                }
+                return -1;
+            });
+        } else {
+            return null;
+        }
     }
 
     /**
