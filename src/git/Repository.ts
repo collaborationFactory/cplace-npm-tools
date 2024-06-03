@@ -20,8 +20,10 @@ export class Repository {
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
+    private readonly workginDir: string;
 
     constructor(repoPath: string = './') {
+        this.workginDir = path.resolve(repoPath);
         try {
             this.git = simpleGit(repoPath);
         } catch (e) {
@@ -911,7 +913,10 @@ export class Repository {
     public checkBranchExistsOnRemote(branchName: string): boolean {
         let result = '';
         try {
-            result = execSync(`git rev-parse origin/${branchName}`).toString();
+            result = execSync(`git rev-parse origin/${branchName}`, {
+                cwd: this.workginDir,
+                stdio : 'pipe'
+            }).toString();
         } catch (e) {
             throw new Error(`Branch ${branchName} doesn't exist. ${e}`);
         }

@@ -134,6 +134,11 @@ export class WriteRepos extends AbstractReposCommand {
             .getCurrentCommitHash()
             .then((commit) => {
                 const current = this.parentRepos[repo.repoName];
+                try {
+                    repo.checkBranchExistsOnRemote(status.current.trim());
+                } catch (e) {
+                    console.warn(`[${repo.repoName}]: branch ${status.current} does not exist on remote. Pushing the change in 'parent-repos.json' might result with incorrect behavior in CI/CD.`);
+                }
                 const result: IRepoStatus = {
                     url: current.url,
                     branch: status.current,
