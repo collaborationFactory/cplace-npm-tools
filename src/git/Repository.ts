@@ -20,10 +20,10 @@ export class Repository {
 
     public readonly repoName: string;
     private readonly git: simpleGit.Git;
-    private readonly workginDir: string;
+    private readonly workingDir: string;
 
     constructor(repoPath: string = './') {
-        this.workginDir = path.resolve(repoPath);
+        this.workingDir = path.resolve(repoPath);
         try {
             this.git = simpleGit(repoPath);
         } catch (e) {
@@ -914,7 +914,7 @@ export class Repository {
         let result = '';
         try {
             result = execSync(`git rev-parse origin/${branchName}`, {
-                cwd: this.workginDir,
+                cwd: this.workingDir,
                 stdio : 'pipe'
             }).toString();
         } catch (e) {
