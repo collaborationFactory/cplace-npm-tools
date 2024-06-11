@@ -110,6 +110,10 @@ const cli = meow(
                 to the current state of the parent repository.
                 If --freeze is set, then the exact commit hashes of the currently checked out parent repos will
                     be written regardless whether there already was a commit hash in the descriptor or not.
+                    If the current branch of the repository does not exist remotely, the command will fail. 
+                    If the branch is a local only branch created during checking out a tag, the --latest-tag flag must be used                     
+                    as well. Else the remote branch must be created first since the repo cannot be frozen to a non-existing 
+                    branch. This would fail any other builds, locally for other developers and especially on CI/CD.
                 If --un-freeze is set, the parent-repos.json will be cleaned up. That is: configured tags, tagMarkers or commit hashes are removed.
                     Other command flags will be ignored.
                 If --force is set, then an update to the commit hashes (as with --freeze) will take place even if the working copies of the parent repos
