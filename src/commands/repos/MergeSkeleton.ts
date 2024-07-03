@@ -8,6 +8,7 @@ import {Global} from '../../Global';
 import { ICommandParameters } from '../models';
 import { CplaceVersion } from '../../helpers/CplaceVersion';
 import { execSync } from 'child_process';
+import {StatusResult} from 'simple-git';
 
 export class MergeSkeleton extends AbstractReposCommand {
 
@@ -46,7 +47,7 @@ export class MergeSkeleton extends AbstractReposCommand {
     protected selectedSkeletonBranch: string;
     protected targetBranchIsTracked: boolean = false;
     protected baseBranch: string;
-    protected status: IGitStatus;
+    protected status: StatusResult;
     protected mergeSuccess: boolean = true;
 
     public async execute(): Promise<void> {
@@ -228,7 +229,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         return `${skeletonVerion}`;
     }
 
-    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string): Promise<Repository> {
+    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string): Promise<void> {
         console.log(`Merging skeleton branch ${skeletonBranch}`);
         return repo.merge(skeletonBranch, {noEdit: true});
     }

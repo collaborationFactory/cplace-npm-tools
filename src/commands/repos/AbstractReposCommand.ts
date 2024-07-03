@@ -9,6 +9,7 @@ import {IGitStatus, Repository} from '../../git';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
 import * as eol from 'eol';
+import {StatusResult} from 'simple-git';
 
 export abstract class AbstractReposCommand implements ICommand {
     public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -92,7 +93,7 @@ export abstract class AbstractReposCommand implements ICommand {
         }
     }
 
-    protected async checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
+    protected async checkRepoClean(repo: Repository, status: StatusResult): Promise<StatusResult> {
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&

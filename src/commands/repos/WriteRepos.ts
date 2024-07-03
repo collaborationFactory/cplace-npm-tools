@@ -6,6 +6,7 @@ import {IReposDescriptor, IRepoStatus} from './models';
 import {ICommandParameters} from '../models';
 import * as path from 'path';
 import {fs} from '../../p/fs';
+import {StatusResult} from 'simple-git';
 
 /**
  * General write-repos-state command
@@ -129,7 +130,7 @@ export class WriteRepos extends AbstractReposCommand {
             .then((status) => ({repoName, status}));
     }
 
-    private mapCommitStatus(repo: Repository, status: IGitStatus): Promise<IRepoStatus> {
+    private mapCommitStatus(repo: Repository, status: StatusResult): Promise<IRepoStatus> {
         return repo
             .getCurrentCommitHash()
             .then((commit) => {
