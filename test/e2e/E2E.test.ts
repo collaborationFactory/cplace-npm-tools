@@ -1,15 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { E2E } from '../../src/commands/e2e';
-import { withTempDirectory } from '../helpers/directories';;
+import { withTempDirectory } from '../helpers/directories';
 import * as util from '../../src/util';
-import { mocked } from 'ts-jest';
 
 jest.mock('../../src/util');
 
 test('E2E detects Allure Reporter in Dev Dependencies', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',
@@ -30,7 +29,7 @@ test('E2E detects Allure Reporter in Dev Dependencies', async () => {
 
 test('E2E detects Allure Reporter in Dependencies', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',
@@ -54,7 +53,7 @@ test('E2E detects Allure Reporter in Dependencies', async () => {
 
 test('E2E detects missing Allure Reporter', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',
@@ -75,7 +74,7 @@ test('E2E detects missing Allure Reporter', async () => {
 
 test('E2E detects WDIO Image-Comparison-Service in Dev Dependencies', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',
@@ -96,7 +95,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dev Dependencies', async () =
 
 test('E2E detects WDIO Image-Comparison-Service in Dependencies', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',
@@ -120,7 +119,7 @@ test('E2E detects WDIO Image-Comparison-Service in Dependencies', async () => {
 
 test('E2E detects missing WDIO Image-Comparison-Service', async () => {
     await withTempDirectory('e2e-allure', async (dir) => {
-        mocked(util).getPathToMainRepo.mockReturnValue(dir);
+        jest.mocked(util).getPathToMainRepo.mockReturnValue(dir);
 
         const packageJson = {
             name: 'cplace',

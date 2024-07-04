@@ -21,17 +21,6 @@
     "url": "https://github.com/collaborationFactory/cplace-npm-tools.git"
   },
   "license": "SEE LICENSE IN LICENSE",
-  "jest": {
-    "testTimeout": 20000,
-    "globals": {
-      "ts-jest": {
-        "diagnostics": false
-      }
-    },
-    "preset": "ts-jest",
-    "rootDir": "test",
-    "verbose": true
-  },
   "devDependencies": {
     "@eslint/create-config": "^0.4.2",
     "@types/jest": "^29.5.12",
