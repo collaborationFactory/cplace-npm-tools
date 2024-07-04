@@ -13,7 +13,7 @@ import { promiseAllSettledParallel } from '../../promiseAllSettled';
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
-    private static readonly RELEASE_BRANCH_PATTERN: string = '((\\d+)(\.\\d+){0,2})';
+    private static readonly RELEASE_BRANCH_PATTERN: string = '((\\d+)(.\\d+){0,2})';
 
     private static readonly PARAMETER_REMOTE: string = 'remote';
     private static readonly PARAMETER_PUSH: string = 'push';

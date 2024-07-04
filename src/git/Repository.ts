@@ -5,7 +5,7 @@
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
-import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
+import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary} from './models';
 import {exec, execSync} from 'child_process';
 import * as util from 'util';
 import {IRepoStatus} from '../commands/repos/models';

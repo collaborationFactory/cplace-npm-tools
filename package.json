@@ -8,7 +8,7 @@
     "test": "jest",
     "dev:tsc": "tsc",
     "dev:lint": "eslint \"**/*.ts\"",
-    "dev": "npm run dev:tsc",
+    "dev": "npm run dev:lint && npm run dev:tsc",
     "clean": "rimraf dist/ *.tgz",
     "prepare": "npm run clean && npm run dev"
   },

@@ -3,7 +3,7 @@
  */
 import * as path from 'path';
 import {AbstractReposCommand} from './AbstractReposCommand';
-import {IGitStatus, Repository} from '../../git';
+import {Repository} from '../../git';
 import {Global} from '../../Global';
 import { ICommandParameters } from '../models';
 import { CplaceVersion } from '../../helpers/CplaceVersion';
@@ -68,7 +68,7 @@ export class MergeSkeleton extends AbstractReposCommand {
 
         // validate cplace version after checking out the target branch
         this.validateCplaceVersion();
-        this.selectedSkeletonBranch = this.getSkeletonBranchToMerge(repo);
+        this.selectedSkeletonBranch = this.getSkeletonBranchToMerge();
 
         if (!isRepoMerging) {
             if (this.targetBranchIsTracked) {
@@ -84,7 +84,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         await this.acceptOursAndContinueMerge(repo)
             .catch((err) => {
                 this.mergeSuccess = false;
-                return Promise.reject('Cannot merge skeleton because of merge conflicts. Fix conflicts manually and rerun the same command.');
+                return Promise.reject(`Cannot merge skeleton because of merge conflicts. Fix conflicts manually and rerun the same command.\nError: ${err}`);
             });
 
         if (this.mergeSuccess) {
@@ -169,7 +169,7 @@ export class MergeSkeleton extends AbstractReposCommand {
     private async addSkeletonAsRemote(repo: Repository): Promise<void> {
         console.log('Add skeleton repo as remote');
         await repo.addRemote(MergeSkeleton.SKELETON_REMOTE_NAME, MergeSkeleton.SKELETON_REMOTE)
-            .catch((err) => console.log('Skeleton remote already exists'));
+            .catch((err) => console.log(`Skeleton remote already exists.\nError: ${err}`));
         await repo.fetch({});
     }
 
@@ -215,7 +215,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         Promise.resolve();
     }
 
-    private getSkeletonBranchToMerge(repo: Repository): string {
+    private getSkeletonBranchToMerge(): string {
         if (this.skeletonBranch) {
             return `${this.skeletonBranch}`;
         }
@@ -245,7 +245,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         console.log('Try to continue merge');
         await repo.rawWrapper(['-c', 'core.editor=true', 'merge', '--continue'])
             .catch((err) => {
-                throw new Error('Cannot merge because of merge conflicts');
+                throw new Error(`Cannot merge because of merge conflicts.\nError: ${err}`);
             });
     }
 

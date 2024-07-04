@@ -36,7 +36,8 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
         this.pluginName = pluginName;
     }
 
-    public prepareAndMayExecute(params: ICommandParameters): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    public prepareAndMayExecute(pclsarams: ICommandParameters): boolean {
         this.pluginPath = path.resolve(process.cwd(), this.pluginName);
         if (!fs.existsSync(this.pluginPath)) {
             console.error(`Plugin directory ${this.pluginPath} does not exist`);

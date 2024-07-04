@@ -1,5 +1,5 @@
 import * as Promise from 'bluebird';
-import {IGitStatus, Repository} from '../../git';
+import {Repository} from '../../git';
 import {Global} from '../../Global';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';

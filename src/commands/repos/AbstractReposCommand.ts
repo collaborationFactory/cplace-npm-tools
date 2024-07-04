@@ -5,7 +5,7 @@ import {Global} from '../../Global';
 import * as fs from 'fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
-import {IGitStatus, Repository} from '../../git';
+import {Repository} from '../../git';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
 import * as eol from 'eol';
@@ -82,6 +82,7 @@ export abstract class AbstractReposCommand implements ICommand {
 
     public abstract execute(): Promise<void>;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         return true;
     }

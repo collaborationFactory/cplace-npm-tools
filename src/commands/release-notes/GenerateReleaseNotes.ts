@@ -215,7 +215,7 @@ export class GenerateReleaseNotes implements ICommand {
             this.changelog.push(`_for ${this.release.releaseBranchName()}_`);
         }
         this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
-        let sortedLogs: IGitLogEntry[];
+
         for (const log of gitLogEntries) {
             log.message = (releaseNotesMessagesFile.getMessage(log.hash) || (explicits && explicits.getMessage(log.hash)));
             const regExp = /^[\s\w-]+:/;
@@ -224,7 +224,7 @@ export class GenerateReleaseNotes implements ICommand {
                     .trim();
             }
         }
-        sortedLogs = this.sortLogs(gitLogEntries);
+        const sortedLogs: IGitLogEntry[] = this.sortLogs(gitLogEntries);
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')

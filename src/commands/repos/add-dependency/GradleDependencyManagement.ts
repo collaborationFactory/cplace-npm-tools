@@ -28,6 +28,7 @@ export class GradleDependencyManagement extends DependencyManagement {
         console.log(`The plugins from ${repositoryName} will automatically be available`);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async addSinglePlugin(pluginName: string, includeTransitive: boolean): Promise<void> {
         const gradleBuilds = Object.keys(this.parentRepos)
             .map((repoName) => new GradleBuild(path.join(this.repositoryDir, '..', repoName)));
