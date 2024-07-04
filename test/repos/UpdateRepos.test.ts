@@ -92,7 +92,7 @@ describe('updating the parent repos', () => {
             updateParentRepos.test_2.tagMarker = 'version/22.2.0';
             updateParentRepos.test_2.useSnapshot = true;
 
-            return testWithParentRepos(rootDir, {update: updateParentRepos});
+            return testWithParentRepos(rootDir, {update: updateParentRepos}, 0);
         };
 
         const assertThatTheReposAreBackOnTheExpectedTagOrOnTheHead = async (testResult: string): Promise<void> => {
