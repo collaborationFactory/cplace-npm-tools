@@ -6,8 +6,7 @@ import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary} from './models';
-import {exec, execSync} from 'child_process';
-import * as util from 'util';
+import {execSync} from 'child_process';
 import {IRepoStatus} from '../commands/repos/models';
 import {SimpleGit} from 'simple-git/dist/typings/simple-git';
 import {StatusResult} from 'simple-git';
@@ -337,20 +336,26 @@ export class Repository {
     }
 
     get baseDir(): string {
-        return this.repoPath;
+        return this.workingDir;
     }
 
-    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): Promise<boolean> {
+    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): boolean {
         const pathname = options.pathname;
         const ref = options.ref;
-        Global.isVerbose() && console.log(`check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
-        return util.promisify(exec)(
-            `git ls-tree --name-only "${ref}" "${pathname}"`, {
+        Global.isVerbose() && console.log(`[${this.repoName}]: check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
+        try {
+            const result: Buffer = execSync(`git ls-tree --name-only "${ref}" "${pathname}"`, {
                 cwd: path.join(this.baseDir)
+            });
+            if(result) {
+                return result.toString().split(/\r?\n/).indexOf(pathname) >= 0;
+            } else {
+                return false;
             }
-        ).then(({stdout}) => {
-            return stdout.split(/\r?\n/).indexOf(pathname) >= 0;
-        });
+        } catch (e) {
+            console.error(`[${this.repoName}]:`, `Error at checking whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}!`, e);
+            return false;
+        }
     }
 
     public log(fromHash: string, toHash: string = 'HEAD'): Promise<IGitLogSummary> {

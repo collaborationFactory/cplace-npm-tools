@@ -75,7 +75,6 @@ export class UpdateRepos extends AbstractReposCommand {
         }
 
         const pathToRepo = path.join(this.rootDir, '..', repoName);
-
         const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
             await repo.fetch({});
@@ -102,9 +101,9 @@ export class UpdateRepos extends AbstractReposCommand {
         const repo = new Repository(pathToRepo);
         const targetRef = await this.getTargetRef(repo, repoProperties);
 
-        const startingBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
+        const startingBranchHasCheckedInNodeModules = repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
         Global.isVerbose() && console.log(`[${repoName}]:`, 'current branch has ', AbstractReposCommand.NODE_MODULES, 'checked in:', startingBranchHasCheckedInNodeModules);
-        const targetBranchHasCheckedInNodeModules = await repo.checkRepoHasPathInBranch({ref: targetRef, pathname: AbstractReposCommand.NODE_MODULES});
+        const targetBranchHasCheckedInNodeModules = repo.checkRepoHasPathInBranch({ref: targetRef, pathname: AbstractReposCommand.NODE_MODULES});
         Global.isVerbose() && console.log(`[${repoName}]:`, 'target branch ', targetRef, ' has ', AbstractReposCommand.NODE_MODULES, 'checked in:', targetBranchHasCheckedInNodeModules);
 
         if (!startingBranchHasCheckedInNodeModules && targetBranchHasCheckedInNodeModules) {

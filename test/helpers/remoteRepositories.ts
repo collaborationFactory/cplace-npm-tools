@@ -214,6 +214,8 @@ export const multiBranchTestSetupData: ITestSetupData = {
     }
 };
 
+export const COMMITED_DUMMY_FILE = 'latest_change.txt';
+
 class EvaluateWithRemoteRepos implements ITestRun {
 
     private debug: boolean = false;
@@ -354,10 +356,10 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 this.debugLog(`setting up remote repository ${remote.name}`);
                 this.branchOff(remote, releaseBranch.branchName);
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
-                this.commitSomeChanges(remote, 'latest_change.txt');
+                this.commitSomeChanges(remote, COMMITED_DUMMY_FILE);
             });
             this.branchOff(remote, this.defaultBranch);
-            this.commitSomeChanges(remote, 'latest_change.txt');
+            this.commitSomeChanges(remote, COMMITED_DUMMY_FILE);
             this.cloneRepo(remotePath, remote.url, true);
             remote.url += '.git';
         }
