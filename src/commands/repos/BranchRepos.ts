@@ -10,6 +10,7 @@ import {fs} from '../../p/fs';
 import * as Promise from 'bluebird';
 import {IReposDescriptor} from './models';
 import {enforceNewline} from '../../util';
+import * as path from 'path';
 
 export class BranchRepos extends AbstractReposCommand {
     private static readonly PARAMETER_PARENT: string = 'parent';
@@ -83,7 +84,8 @@ export class BranchRepos extends AbstractReposCommand {
     }
 
     private adjustParentReposJsonAndCommit(repo: Repository): Promise<Repository> {
-        if (repo.baseDir === `../${this.parentRepoPath}`) {
+        // check if this is cplace main repo
+        if (repo.baseDir === path.resolve('..', this.parentRepoPath)) {
             return Promise.resolve(repo);
         }
         try {
