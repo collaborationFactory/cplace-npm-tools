@@ -85,11 +85,11 @@ export class BranchRepos extends AbstractReposCommand {
 
     private adjustParentReposJsonAndCommit(repo: Repository): Promise<Repository> {
         // check if this is cplace main repo
-        if (repo.baseDir === path.resolve('..', this.parentRepoPath)) {
+        if (repo.workingDir === path.resolve('..', this.parentRepoPath)) {
             return Promise.resolve(repo);
         }
         try {
-            const filename = `${repo.baseDir}/${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`;
+            const filename = path.join(repo.workingDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
             const descriptorFile = fs.readFileSync(filename, 'utf8');
             const reposDescriptor: IReposDescriptor = JSON.parse(descriptorFile);
 

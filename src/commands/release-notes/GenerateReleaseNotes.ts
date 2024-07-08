@@ -250,7 +250,7 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     private createMarkdownForCplaceDocs(): void {
-        const pathToReleaseNotesInMarkdown = path.join(this.repo.baseDir, 'documentation', 'changelog', `_index.md`);
+        const pathToReleaseNotesInMarkdown = path.join(this.repo.workingDir, 'documentation', 'changelog', `_index.md`);
 
         const markdownHeader = `---
 title: "Release Notes"
@@ -259,7 +259,7 @@ type: "section"
 ---
 `;
         if (!fs.existsSync(pathToReleaseNotesInMarkdown)) {
-            fs.mkdirSync(path.join(this.repo.baseDir, 'documentation', 'changelog'), {recursive: true});
+            fs.mkdirSync(path.join(this.repo.workingDir, 'documentation', 'changelog'), {recursive: true});
         }
         fs.writeFileSync(pathToReleaseNotesInMarkdown, markdownHeader + ' ' + this.changelog.join('\n'), 'utf8');
         console.log(`>> Changelog has successfully been generated in ${path.join(process.cwd(), pathToReleaseNotesInMarkdown)}`);

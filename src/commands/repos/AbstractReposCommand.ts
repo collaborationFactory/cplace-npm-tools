@@ -88,9 +88,9 @@ export abstract class AbstractReposCommand implements ICommand {
     }
 
     protected removeFolderInRepo(repo: Repository, folderName: string): void {
-        if (fs.existsSync(path.join(repo.baseDir, folderName))) {
+        if (fs.existsSync(path.join(repo.workingDir, folderName))) {
             console.log(`[${repo.repoName}]: Removing ${folderName} folder`);
-            rimraf.sync(path.join(repo.baseDir, folderName));
+            rimraf.sync(path.join(repo.workingDir, folderName));
         }
     }
 

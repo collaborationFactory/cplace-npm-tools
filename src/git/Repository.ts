@@ -21,7 +21,11 @@ export class Repository {
 
     public readonly repoName: string;
     private readonly git: SimpleGit;
-    private readonly workingDir: string;
+
+    /**
+     * The working directory of the repository. This is the absolute and normalized path to the repository as returned by path.resolve(...).
+     */
+    readonly workingDir: string;
 
     constructor(readonly repoPath: string = './') {
         this.workingDir = path.resolve(repoPath);
@@ -335,17 +339,13 @@ export class Repository {
         });
     }
 
-    get baseDir(): string {
-        return this.workingDir;
-    }
-
     public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): boolean {
         const pathname = options.pathname;
         const ref = options.ref;
         Global.isVerbose() && console.log(`[${this.repoName}]: check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
         try {
             const result: Buffer = execSync(`git ls-tree --name-only "${ref}" "${pathname}"`, {
-                cwd: path.join(this.baseDir)
+                cwd: this.workingDir,
             });
             if(result) {
                 return result.toString().split(/\r?\n/).indexOf(pathname) >= 0;
@@ -853,13 +853,12 @@ export class Repository {
 
     public commit(message: string, files: string[] | string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committing branch ${this.baseDir} with message ${message}`);
-            // Git.prototype.commit = function (message, files, options, then) {
+            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committing branch in repo ${this.workingDir} with message ${message}`);
             this.git.commit(message, files, {}, (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committed branch ${this.baseDir}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committed branch in repo ${this.workingDir}`);
                     resolve();
                 }
             });
