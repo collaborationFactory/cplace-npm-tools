@@ -354,7 +354,7 @@ export class Repository {
             }
         } catch (e) {
             console.error(`[${this.repoName}]:`, `Error at checking whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}!`, e);
-            return false;
+            throw e;
         }
     }
 
