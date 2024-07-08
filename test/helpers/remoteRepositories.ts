@@ -255,8 +255,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
-    public evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithFolders, testCase, assertion).then(
+    public async evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithFolders, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -265,8 +265,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 Promise.reject(e);
             });
     }
-    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
+    public async evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -276,8 +276,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
             });
     }
 
-    public evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
+    public async evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
