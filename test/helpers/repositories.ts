@@ -34,6 +34,7 @@ function createRepositories(repos: IReposDescriptor, rootDir: string): Promise<v
                 {
                     cwd: pathToRepo
                 },
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 (error, stdout) => {
                     if (error) {
                         reject(error);

@@ -8,7 +8,9 @@ export function createTempDirectory(suffix: string): string {
         os.tmpdir(),
         `${new Date().getTime()}-cplace-cli-test-${suffix}`
     );
-    fs.mkdirSync(dirPath);
+    if(!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath);
+    }
     return dirPath;
 }
 

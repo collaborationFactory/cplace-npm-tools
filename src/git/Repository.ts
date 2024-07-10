@@ -1,14 +1,15 @@
 /**
  * Repository class providing helper methods
  */
-import * as Promise from 'bluebird';
+// import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
-import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary, IGitStatus} from './models';
-import {exec, execSync} from 'child_process';
-import * as util from 'util';
+import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary} from './models';
+import {execSync} from 'child_process';
 import {IRepoStatus} from '../commands/repos/models';
+import {SimpleGit} from 'simple-git/dist/typings/simple-git';
+import {StatusResult} from 'simple-git';
 
 export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
@@ -19,13 +20,17 @@ export class Repository {
     private static readonly HTTPS_PROTOCOL: string = 'https:';
 
     public readonly repoName: string;
-    private readonly git: simpleGit.Git;
-    private readonly workingDir: string;
+    private readonly git: SimpleGit;
 
-    constructor(repoPath: string = './') {
+    /**
+     * The working directory of the repository. This is the absolute and normalized path to the repository as returned by path.resolve(...).
+     */
+    readonly workingDir: string;
+
+    constructor(readonly repoPath: string = './') {
         this.workingDir = path.resolve(repoPath);
         try {
-            this.git = simpleGit(repoPath);
+            this.git = simpleGit.simpleGit(repoPath);
         } catch (e) {
             console.log(`[${this.repoName}]:`, `Error at initialising a new Repository for ${repoPath}!`, e);
             throw e;
@@ -77,7 +82,7 @@ export class Repository {
             }
 
             Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
-                simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
+                simpleGit.simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -187,7 +192,7 @@ export class Repository {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
             Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir).then((remoteOriginUrl) => {
-                simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
+                simpleGit.simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
                     if (err) {
                         Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
                         reject(err);
@@ -323,7 +328,7 @@ export class Repository {
 
     public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
         return new Promise<string>((resolve) => {
-            simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
+            simpleGit.simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
                 if (err) {
                     console.log(`[${repoName}]:`, 'git remote get-url failed! Has the root parent repository the remote added as "origin"?\n', err);
                     resolve('');
@@ -334,21 +339,23 @@ export class Repository {
         });
     }
 
-    get baseDir(): string {
-        return this.git._baseDir;
-    }
-
-    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): Promise<boolean> {
+    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): boolean {
         const pathname = options.pathname;
         const ref = options.ref;
-        Global.isVerbose() && console.log(`check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
-        return util.promisify(exec)(
-            `git ls-tree --name-only "${ref}" "${pathname}"`, {
-                cwd: path.join(this.baseDir)
+        Global.isVerbose() && console.log(`[${this.repoName}]: check whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}`);
+        try {
+            const result: Buffer = execSync(`git ls-tree --name-only "${ref}" "${pathname}"`, {
+                cwd: this.workingDir,
+            });
+            if(result) {
+                return result.toString().split(/\r?\n/).indexOf(pathname) >= 0;
+            } else {
+                return false;
             }
-        ).then(({stdout}) => {
-            return stdout.split(/\r?\n/).indexOf(pathname) >= 0;
-        });
+        } catch (e) {
+            console.error(`[${this.repoName}]:`, `Error at checking whether repo ${this.repoName} has path ${pathname} in branch/commit/tag ${ref}!`, e);
+            throw e;
+        }
     }
 
     public log(fromHash: string, toHash: string = 'HEAD'): Promise<IGitLogSummary> {
@@ -416,17 +423,18 @@ export class Repository {
         });
     }
 
-    public status(): Promise<IGitStatus> {
+    public status(): Promise<StatusResult> {
         // tslint:disable-next-line:promise-must-complete
-        return new Promise<IGitStatus>((resolve, reject) => {
+        return new Promise<StatusResult>((resolve, reject) => {
             let numTries = 1;
-            const gitStatus = () => this.git.status((err, status: IGitStatus) => {
+
+            const gitStatus = () => this.git.status(null,(err, data): void => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`result of gitStatus in ${this.repoName}`, status);
+                    Global.isVerbose() && console.log(`result of gitStatus in ${this.repoName}`, data);
 
-                    if (!status.current) {
+                    if (!data.current) {
                         if (numTries >= 5) {
                             reject(`tried gitStatus 5 times for ${this.repoName} - still failing, aborting...`);
                         } else {
@@ -435,7 +443,7 @@ export class Repository {
                             gitStatus();
                         }
                     } else {
-                        resolve(status);
+                        resolve(data);
                     }
                 }
             });
@@ -471,18 +479,28 @@ export class Repository {
         });
     }
 
-    public checkoutBranch(branch: string | string[]): Promise<void> {
+    public async checkoutBranch(branch: string | string[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${this.repoName}]: checkout ${this.repoName}, in branch ${branch}`);
-            this.git.checkout(branch, (err) => {
+
+            const callback = async (err) => {
                 if (err) {
                     console.error(`[${this.repoName}]: failed to checkout branch ${branch}`, err);
+                    await this.git.branch(['-a']).then((branches) => {
+                        console.error(`[${this.repoName}]: available branches:`, branches);
+                    });
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} is now in branch ${branch}`);
                     resolve();
                 }
-            });
+            };
+
+            if(branch instanceof Array) {
+                this.git.checkout(branch, callback);
+            } else {
+                this.git.checkout(branch as string, {}, callback);
+            }
         });
     }
 
@@ -573,7 +591,7 @@ export class Repository {
         const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${this.repoName}]: pushing to ${remote}/${remoteBranchName}`);
-            this.git.push(remote, remoteBranch, (err) => {
+            this.git.push(remote, remoteBranch,{}, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -618,7 +636,7 @@ export class Repository {
 
                     Global.isVerbose() && console.log(`[${this.repoName}]: pulling branch ${branch} from remote ${trackingBranch}`);
                     return new Promise((resolve, reject) => {
-                        this.git.pull(remote, trackingBranch, {'--ff-only': true}, (err) => {
+                        this.git.pull(remote, trackingBranch, ['--ff-only'], (err) => {
                             if (err) {
                                 reject(err);
                             } else {
@@ -835,13 +853,12 @@ export class Repository {
 
     public commit(message: string, files: string[] | string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committing branch ${this.baseDir} with message ${message}`);
-            // Git.prototype.commit = function (message, files, options, then) {
+            Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committing branch in repo ${this.workingDir} with message ${message}`);
             this.git.commit(message, files, {}, (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committed branch ${this.baseDir}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, `Committed branch in repo ${this.workingDir}`);
                     resolve();
                 }
             });
@@ -898,8 +915,8 @@ export class Repository {
         });
     }
 
-    public rawWrapper(rawCommand: string[]): Promise<void> {
-        return new Promise<string[]>((resolve, reject) => {
+    public rawWrapper(rawCommand: string[]): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
             this.git.raw(rawCommand, (err, result: string) => {
                 if (err) {
                     reject(err);

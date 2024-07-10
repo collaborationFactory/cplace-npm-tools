@@ -23,7 +23,7 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
     protected buildFileContent: string[];
 
     protected currentReadIndex: number = 0;
-    protected repoToGroupMap: Map<string, {}> = new Map<string, {}>();
+    protected repoToGroupMap: Map<string, unknown> = new Map<string, unknown>();
     protected notUpdatedRepos: string[] = [];
 
     public execute(): Promise<void> {
@@ -46,6 +46,7 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
             });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         // read build.gradle file and prepare map from repo name to artifact group
         if (fs.existsSync(this.pathToBuildGradle)) {
@@ -76,7 +77,7 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
         }
 
         if (calculatedArtifactGroup) {
-            status.artifactGroup = calculatedArtifactGroup.replace(/\'/g, '');
+            status.artifactGroup = calculatedArtifactGroup.replace(/'/g, '');
         } else {
             Global.isVerbose() && console.log(`[${repoName}]:`, 'artifact group not found in build.gradle');
             this.notUpdatedRepos.push(repoName);
@@ -112,11 +113,11 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
         }
     }
 
-    private readRepositoriesMap(buildFileContent: string[], level: number): Map<string, {}> {
-        const resultMap = new Map<string, {}>();
+    private readRepositoriesMap(buildFileContent: string[], level: number): Map<string, unknown> {
+        const resultMap = new Map<string, unknown>();
 
         let key: string;
-        let value: {};
+        let value: unknown;
         let currentLine: string;
 
         while (this.currentReadIndex < buildFileContent.length) {
@@ -148,7 +149,6 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
 
         let blockStartFound: boolean = false;
         let bracketLevel: number = 0;
-        let blockStartIndex: number = 0;
 
         const blockReplace: string = `${blockName}\\s*\\{`;
         const blockRegex: RegExp = new RegExp(blockReplace, 'g');
@@ -159,7 +159,6 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
             if (!blockStartFound) {
                 if (line.trim().match(blockRegex)) {
                     blockStartFound = true;
-                    blockStartIndex = this.currentReadIndex;
                     bracketLevel++;
                 } else {
                     result.push(line);

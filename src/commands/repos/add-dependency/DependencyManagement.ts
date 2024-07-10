@@ -47,6 +47,7 @@ export abstract class DependencyManagement {
      * Called after a new repository dependency has been added.
      * @param repositoryName Name of the repository that was added
      */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async afterNewRepoDependencyAdded(repositoryName: string): Promise<void> {
         // no default behavior
     }
@@ -70,6 +71,7 @@ export abstract class DependencyManagement {
      * Checks if the given repository is valid and can be used as dependency.
      * @param repositoryPath Path to the repository
      */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected isValidRepository(repositoryPath: string): boolean {
         return true;
     }

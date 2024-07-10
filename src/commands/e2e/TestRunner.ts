@@ -24,6 +24,7 @@ export class TestRunner {
     }
 
     public async runTests(): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const launcherModule = require(this.getWdioCliExecutable());
         let hasFailedTest: boolean = false;
         for (const plugin of this.plugins) {

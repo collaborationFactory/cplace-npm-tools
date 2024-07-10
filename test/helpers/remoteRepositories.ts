@@ -214,6 +214,8 @@ export const multiBranchTestSetupData: ITestSetupData = {
     }
 };
 
+export const COMMITED_DUMMY_FILE = 'latest_change.txt';
+
 class EvaluateWithRemoteRepos implements ITestRun {
 
     private debug: boolean = false;
@@ -253,8 +255,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
         return this;
     }
 
-    public evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithFolders, testCase, assertion).then(
+    public async evaluateWithFolders<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithFolders, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -263,8 +265,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 Promise.reject(e);
             });
     }
-    public evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
+    public async evaluateWithRemoteRepos<T>(testCase: (rootDir: string, remoteRepos?: ILocalRepoData[]) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithRemoteRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -274,8 +276,8 @@ class EvaluateWithRemoteRepos implements ITestRun {
             });
     }
 
-    public evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
-        return withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
+    public async evaluateWithRemoteAndLocalRepos<T>(testCase: (rootDir: string) => Promise<T>, assertion: (testResult: T) => Promise<void>): Promise<void> {
+        return await withTempDirectory('freeze-parent-repos', this.testWithRemoteAndLocalRepos, testCase, assertion).then(
             () => Promise.resolve(),
             (e) => {
                 console.log('Failed assertion or error while evaluating a test!', e);
@@ -354,10 +356,10 @@ class EvaluateWithRemoteRepos implements ITestRun {
                 this.debugLog(`setting up remote repository ${remote.name}`);
                 this.branchOff(remote, releaseBranch.branchName);
                 releaseBranch.releases.forEach((release) => this.createRelease(remote, release));
-                this.commitSomeChanges(remote, 'latest_change.txt');
+                this.commitSomeChanges(remote, COMMITED_DUMMY_FILE);
             });
             this.branchOff(remote, this.defaultBranch);
-            this.commitSomeChanges(remote, 'latest_change.txt');
+            this.commitSomeChanges(remote, COMMITED_DUMMY_FILE);
             this.cloneRepo(remotePath, remote.url, true);
             remote.url += '.git';
         }

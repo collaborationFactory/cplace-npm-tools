@@ -76,8 +76,7 @@ describe('using promiseAllSettled', () => {
                   [17, [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]],
                   [100, [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]],
                   [101, [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]]
-              ])
-    ('running parallel with limited concurrency %p, expected %p',
+              ])('running parallel with limited concurrency %p, expected %p',
      async (concurrency: number, expectedOrder: number[]) => {
          resultsInExecutionOrder = [];
 

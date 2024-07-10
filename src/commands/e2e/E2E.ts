@@ -46,6 +46,7 @@ export class E2E implements ICommand {
     private static readonly DEFAULT_JUNITREPORTPATH: string = './e2eJunitReports';
     private static readonly DEFAULT_ALLUREOUTPUTPATH: string = './allure-output';
     private static readonly DEFAULT_SCREEENSHOTPATH: string = './e2eScreenshots';
+    private static readonly LOG_LEVELS: string[] = ['trace', 'debug', 'info', 'warn', 'error', 'silent'];
 
     private workingDir: string;
     private mainRepoDir: string;
@@ -223,7 +224,7 @@ export class E2E implements ICommand {
 
         const logLevel = params[E2E.PARAMETER_LOGLEVEL] || params[E2E.PARAMETER_LOGLEVEL.toLowerCase()];
         if (typeof logLevel === 'string' && logLevel.length > 0) {
-            if (logLevel.toLowerCase() === 'trace' || 'debug' || 'info' || 'warn' || 'error' || 'silent') {
+            if (E2E.LOG_LEVELS.includes(logLevel.toLowerCase())) {
                 this.logLevel = logLevel.toLowerCase();
             } else {
                 console.warn(`The provided logLevel does not match the any of the allowed values 'trace | debug | info | warn | error | silent'. Default logLevel is used.`);

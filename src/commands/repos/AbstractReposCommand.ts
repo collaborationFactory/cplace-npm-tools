@@ -5,10 +5,11 @@ import {Global} from '../../Global';
 import * as fs from 'fs';
 import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
-import {IGitStatus, Repository} from '../../git';
+import {Repository} from '../../git';
 import * as path from 'path';
 import * as rimraf from 'rimraf';
 import * as eol from 'eol';
+import {StatusResult} from 'simple-git';
 
 export abstract class AbstractReposCommand implements ICommand {
     public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
@@ -81,18 +82,19 @@ export abstract class AbstractReposCommand implements ICommand {
 
     public abstract execute(): Promise<void>;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         return true;
     }
 
     protected removeFolderInRepo(repo: Repository, folderName: string): void {
-        if (fs.existsSync(path.join(repo.baseDir, folderName))) {
+        if (fs.existsSync(path.join(repo.workingDir, folderName))) {
             console.log(`[${repo.repoName}]: Removing ${folderName} folder`);
-            rimraf.sync(path.join(repo.baseDir, folderName));
+            rimraf.sync(path.join(repo.workingDir, folderName));
         }
     }
 
-    protected async checkRepoClean(repo: Repository, status: IGitStatus): Promise<IGitStatus> {
+    protected async checkRepoClean(repo: Repository, status: StatusResult): Promise<StatusResult> {
         const isRepoClean =
             status.not_added.length === 0 &&
             status.deleted.length === 0 &&

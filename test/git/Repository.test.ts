@@ -1,12 +1,13 @@
-import {basicTestSetupData, ROOT_REPO, testWith} from '../helpers/remoteRepositories';
+import {assertVoid, basicTestSetupData, COMMITED_DUMMY_FILE, ROOT_REPO, testWith} from '../helpers/remoteRepositories';
 import {Repository} from '../../src/git';
 import * as simpleGit from 'simple-git';
+import * as Path from 'node:path';
 
 const GIT_VIA_SSH_URI = `git@github.com:collaborationFactory/${ROOT_REPO}.git`;
 const GIT_VIA_HTTPS_URI = `https://github.com/collaborationFactory/${ROOT_REPO}.git`;
 
 async function remoteSetUrl(rootDir: string, remoteUri: string): Promise<void> {
-    await simpleGit(rootDir).remote(['set-url', 'origin', remoteUri], (err, execResult: string) => {
+    await simpleGit.simpleGit(rootDir).remote(['set-url', 'origin', remoteUri], (err, execResult: string) => {
         if (err) {
             throw err;
         } else {
@@ -37,7 +38,7 @@ describe('testing the repository helpers', () => {
 
     test('test that getLocalOriginUrl does not fail if no remote urls are configured', async () => {
         const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
-            await simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
+            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
                 if (err) {
                     throw err;
                 } else {
@@ -61,14 +62,14 @@ describe('testing the repository helpers', () => {
 
     test('test that getLocalOriginUrl does not fail for unexpected origins', async () => {
         const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
-            await simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
+            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
                 if (err) {
                     throw err;
                 } else {
                     console.log('remote set-utl result:', execResult);
                 }
             });
-            await simpleGit(rootDir).remote(['add', 'uncommon', GIT_VIA_SSH_URI], (err, execResult: string) => {
+            await simpleGit.simpleGit(rootDir).remote(['add', 'uncommon', GIT_VIA_SSH_URI], (err, execResult: string) => {
                 if (err) {
                     throw err;
                 } else {
@@ -225,5 +226,27 @@ fae411d00a73c1e89b83c4a90517be0f36a3c06c        refs/tags/version/23.1.0-RC.3
                                        'version/23.1.22',
                                        'version/23.1.35'
                                    ]);
+    });
+
+    test('test checkRepoHasPathInBranch is true', async () => {
+        const testGetRemoteOriginUrl = async (rootDir: string): Promise<boolean> => {
+            const repo = new Repository(Path.join(rootDir));
+            return repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: COMMITED_DUMMY_FILE});
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithRemoteAndLocalRepos(testGetRemoteOriginUrl, assertVoid);
+    });
+
+    test('test checkRepoHasPathInBranch is false', async () => {
+        const testGetRemoteOriginUrl = async (rootDir: string): Promise<boolean> => {
+            const repo = new Repository(Path.join(rootDir));
+            return !repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: 'does-not-exist'});
+        };
+
+        await testWith(basicTestSetupData)
+            .withBranchUnderTest('release/22.2')
+            .evaluateWithRemoteAndLocalRepos(testGetRemoteOriginUrl, assertVoid);
     });
 });

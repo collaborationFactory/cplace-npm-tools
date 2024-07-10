@@ -35,7 +35,7 @@ export class VisualizeCommand implements ICommand {
         if (regexForExclusion) {
             this.regexForExclusion = String(regexForExclusion);
         } else {
-            this.regexForExclusion = String('HEAD|attic\/.*');
+            this.regexForExclusion = String('HEAD|attic/.*');
         }
         Global.isVerbose() && console.log(`using regexForExclusion ${this.regexForExclusion} for branch filtering`);
 
