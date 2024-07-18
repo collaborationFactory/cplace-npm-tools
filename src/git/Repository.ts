@@ -486,9 +486,6 @@ export class Repository {
             const callback = async (err) => {
                 if (err) {
                     console.error(`[${this.repoName}]: failed to checkout branch ${branch}`, err);
-                    await this.git.branch(['-a']).then((branches) => {
-                        console.error(`[${this.repoName}]: available branches:`, branches);
-                    });
                     reject(err);
                 } else {
                     Global.isVerbose() && console.log(`[${this.repoName}]: repo ${this.repoName} is now in branch ${branch}`);
