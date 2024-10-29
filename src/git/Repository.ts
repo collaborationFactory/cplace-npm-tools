@@ -565,17 +565,17 @@ export class Repository {
                 } else if (data.conflicts.length > 0) {
                     // abort if merge failed
                     this.git.mergeFromTo('--abort', undefined, (err2) => {
-                        console.log('[${this.repoName}]: error during merge:', err2);
+                        console.log(`[${this.repoName}]: error during merge:`, err2);
                         reject(data);
                     });
                 } else {
                     Global.isVerbose() && console.log(`[${this.repoName}]: merged ${otherBranch} into ${this.repoName}`);
                     if (opts.listFiles) {
                         if (data.files.length > 0) {
-                            console.log('[${this.repoName}]: The following files have been merged: ');
+                            console.log(`[${this.repoName}]: The following files have been merged: `);
                             data.files.forEach((file) => console.log(file));
                         } else {
-                            console.log('[${this.repoName}]:  Nothing to merge.');
+                            console.log(`[${this.repoName}]:  Nothing to merge.`);
                         }
                     }
                     resolve();
