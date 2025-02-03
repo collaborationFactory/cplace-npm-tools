@@ -1,7 +1,6 @@
 /**
  * Repository class providing helper methods
  */
-// import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
 import {Global} from '../Global';
