@@ -243,7 +243,7 @@ const cli = meow(
             Use --pdf to create a PDF from the .dot file. Requires Graphviz to be installed and the dot binary to
             be on the path.
 
-        flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files]
+        flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files] [--list-missing-upmerges]
             Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your
             local branches. All merges will be done on new, temporary local branches and will then be pushed.
 
@@ -264,6 +264,11 @@ const cli = meow(
 
             --show-files
                 List files to be merged
+            
+            --list-missing-upmerges
+                Checks if there are commits that need to be upmerged between branches
+                and fails if any are found. Shows commit details when 10 or fewer commits
+                need merging, otherwise displays a summary grouped by author.
 
         refactor <subcommand> --plugin|-p <plugin>
             Handles plugin specific refactorings where <subcommand> is one of the following:

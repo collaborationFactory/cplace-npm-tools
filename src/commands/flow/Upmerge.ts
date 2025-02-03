@@ -10,6 +10,7 @@ import * as randomatic from 'randomatic';
 import { IBranchDetails } from './models';
 import { Global } from '../../Global';
 import { promiseAllSettledParallel } from '../../promiseAllSettled';
+import {UpmergeChecker} from "./UpmergeChecker";
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -21,6 +22,7 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_SHOW_FILES: string = 'showFiles';
     private static readonly PARAMETER_ALL_CUSTOMERS: string = 'allCustomers';
     private static readonly PARAMETER_CUSTOMER: string = 'customer';
+    private static readonly PARAMETER_LIST_MISSING_UPMERGES: string = 'listMissingUpmerges';
 
     private repo: Repository;
     private remote: string = 'origin';
@@ -29,6 +31,7 @@ export class Upmerge implements ICommand {
     private showFiles: boolean;
     private allCustomers: boolean;
     private customer: string;
+    private listMissingUpmerges: boolean;
 
     private remoteReleaseBranchPattern: RegExp;
 
@@ -49,6 +52,7 @@ export class Upmerge implements ICommand {
             this.release = release;
         }
         this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] === true;
+        this.listMissingUpmerges =params[Upmerge.PARAMETER_LIST_MISSING_UPMERGES] === true;
 
         this.allCustomers = params[Upmerge.PARAMETER_ALL_CUSTOMERS] === true;
         if (!this.allCustomers) {
@@ -58,24 +62,25 @@ export class Upmerge implements ICommand {
             }
         }
 
+
         this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/release/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
 
         return true;
     }
 
     public async execute(): Promise<void> {
+        await this.repo.fetch({});
+        await this.checkRepoClean();
+        const release = await this.checkForRelease();
 
-        return this.repo
-            .fetch({})
-            .then(() => this.checkRepoClean())
-            .then(() => this.checkForRelease())
-            .then((release) => {
-                return this.repo
-                    .listBranches()
-                    .then((branches) => this.filterReleaseBranchesAndCreateOrder(release, branches));
-            })
-            .then((branches) => this.checkMergability(branches))
-            .then((branches) => this.doMerges(branches));
+        const gitBranchDetails = await this.repo.listBranches();
+        const branches = this.filterReleaseBranchesAndCreateOrder(release, gitBranchDetails);
+        await this.checkMergability(branches);
+        if(this.listMissingUpmerges) {
+           await new UpmergeChecker(this.repo).checkUpmerges(branches);
+        }else {
+            await this.doMerges(branches);
+        }
     }
 
     private checkRepoClean(): BPromise<void> {
@@ -285,16 +290,4 @@ export class Upmerge implements ICommand {
             });
     }
 
-}
-
-function nativeToBluebird<T>(nativePromise: Promise<T>): BPromise<T> {
-    return BPromise.resolve(nativePromise);
-}
-
-function bluebirdToNative<T>(bluebirdPromise: BPromise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-        bluebirdPromise
-            .then((result) => resolve(result))
-            .catch((err) => reject(err));
-    });
 }
