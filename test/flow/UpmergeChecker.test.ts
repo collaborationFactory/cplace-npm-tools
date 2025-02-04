@@ -10,33 +10,13 @@ describe('UpmergeChecker', () => {
     let upmergeChecker: UpmergeChecker;
     let mockRepo: jest.Mocked<Repository>;
     let consoleLogSpy: jest.SpyInstance;
+    let consoleErrorSpy: jest.SpyInstance;
 
     // Sample test data
     const sampleBranches: IBranchDetails[] = [
-        {
-            name: 'origin/release/23.1',
-            commit: 'commit1',
-            current: false,
-            isRemote: true,
-            version: ReleaseNumber.parse('23.1'),
-            customer: null
-        },
-        {
-            name: 'origin/release/23.2',
-            commit: 'commit2',
-            current: false,
-            isRemote: true,
-            version: ReleaseNumber.parse('23.2'),
-            customer: null
-        },
-        {
-            name: 'origin/master',
-            commit: 'commit3',
-            current: false,
-            isRemote: true,
-            version: ReleaseNumber.parse('master'),
-            customer: null
-        }
+        createBranchDetails('release/23.1', 'commit1', '23.1'),
+        createBranchDetails('release/23.2', 'commit2', '23.2'),
+        createBranchDetails('master', 'commit3', 'master')
     ];
 
     const sampleCommits = [
@@ -62,6 +42,7 @@ describe('UpmergeChecker', () => {
         (Repository as jest.MockedClass<typeof Repository>).mockImplementation(() => mockRepo);
         upmergeChecker = new UpmergeChecker(mockRepo);
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     });
 
     afterEach(() => {
@@ -90,10 +71,10 @@ describe('UpmergeChecker', () => {
 
             await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]]))
                 .rejects
-                .toThrow("Pending upmerges found: branch origin/release/23.1 into origin/release/23.2");
+                .toThrow(UpmergeChecker.ERROR_MESSAGE);
 
             expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(2); // merge-base and log
-            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Commits to be merged:'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Commits to be merged:'));
         });
 
         it('should handle git command errors gracefully', async () => {
@@ -121,10 +102,10 @@ describe('UpmergeChecker', () => {
                 .mockResolvedValueOnce('mergebase123')
                 .mockResolvedValueOnce(commitJson);
 
-            await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow("Pending upmerges found: branch origin/release/23.1 into origin/release/23.2");
+            await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow(UpmergeChecker.ERROR_MESSAGE);
 
-            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('abc123'));
-            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('def456'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('abc123'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('def456'));
         });
 
         it('should show aggregated author info when commits exceed threshold', async () => {
@@ -140,10 +121,10 @@ describe('UpmergeChecker', () => {
                 .mockResolvedValueOnce('mergebase123')
                 .mockResolvedValueOnce(commitJson);
 
-            await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow("Pending upmerges found: branch origin/release/23.1 into origin/release/23.2");
+            await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow(UpmergeChecker.ERROR_MESSAGE);
 
-            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('12 commits to be merged'));
-            expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('John Doe <john@example.com> (12 commits)'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('12 commits to be merged'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('John Doe <john@example.com> (12 commits)'));
         });
     });
 
@@ -154,9 +135,9 @@ describe('UpmergeChecker', () => {
                 .mockResolvedValueOnce('mergebase1') // merge-base
                 .mockResolvedValueOnce(JSON.stringify(sampleCommits[0])) // log
 
-            await expect(upmergeChecker.checkUpmerges(sampleBranches)).rejects.toThrow("Pending upmerges found: branch origin/release/23.1 into origin/release/23.2");
+            await expect(upmergeChecker.checkUpmerges(sampleBranches)).rejects.toThrow("Git command failed");
 
-            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(2);
+            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(3);
             expect(mockRepo.rawWrapper).toHaveBeenCalledWith(
                 expect.arrayContaining(['merge-base', 'origin/release/23.1', 'origin/release/23.2'])
             );
@@ -166,14 +147,98 @@ describe('UpmergeChecker', () => {
             await upmergeChecker.checkUpmerges([]);
 
             expect(mockRepo.rawWrapper).not.toHaveBeenCalled();
-            expect(consoleLogSpy).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).not.toHaveBeenCalled();
         });
 
         it('should handle single branch array', async () => {
             await upmergeChecker.checkUpmerges([sampleBranches[0]]);
 
             expect(mockRepo.rawWrapper).not.toHaveBeenCalled();
-            expect(consoleLogSpy).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).not.toHaveBeenCalled();
+        });
+    });
+    describe('generateBranchPairs', () => {
+        it('should generate correct branch pairs for release and customer branches', () => {
+            // Arrange
+            const branches: IBranchDetails[] = [
+                createBranchDetails('release/23.1', 'commit1', '23.1'),
+                createBranchDetails('release/23.2', 'commit2', '23.2'),
+                createBranchDetails('release/23.3', 'commit3', '23.3'),
+                createBranchDetails('main', 'commit0', 'master'),
+                createBranchDetails('customer/acme/23.1', 'commit4', '23.1', 'acme'),
+                createBranchDetails('customer/acme/23.2', 'commit5', '23.2', 'acme'),
+                createBranchDetails('customer/acme/23.3', 'commit6', '23.3', 'acme')
+            ];
+
+            // Act
+            const pairs = upmergeChecker['generateBranchPairs'](branches);
+
+            // expect(simplifiedActual).toEqual(expectedPairs);
+            expect(pairs.length).toBe(8); // Total number of merge pairs
+
+            // Verify order of merges
+            expect(pairs[0].source.name).toBe('origin/release/23.1');
+            expect(pairs[0].target.name).toBe('origin/release/23.2');
+
+            expect(pairs[1].source.name).toBe('origin/release/23.2');
+            expect(pairs[1].target.name).toBe('origin/release/23.3');
+
+            expect(pairs[2].source.name).toBe('origin/release/23.3');
+            expect(pairs[2].target.name).toBe('origin/main');
+
+            //First customer branch, only merge with release branch
+            expect(pairs[3].source.name).toBe('origin/release/23.1');
+            expect(pairs[3].target.name).toBe('origin/customer/acme/23.1');
+
+            //Second customer branch, merge with previous customer branch and release
+            expect(pairs[4].source.name).toBe('origin/customer/acme/23.1');
+            expect(pairs[4].target.name).toBe('origin/customer/acme/23.2');
+
+            expect(pairs[5].source.name).toBe('origin/release/23.2');
+            expect(pairs[5].target.name).toBe('origin/customer/acme/23.2');
+
+            //Third customer branch, merge with previous customer branch and release
+            expect(pairs[6].source.name).toBe('origin/customer/acme/23.2');
+            expect(pairs[6].target.name).toBe('origin/customer/acme/23.3');
+
+            expect(pairs[7].source.name).toBe('origin/release/23.3');
+            expect(pairs[7].target.name).toBe('origin/customer/acme/23.3');
+
+        });
+
+        it('should handle single release branch', () => {
+            const branches: IBranchDetails[] = [
+                createBranchDetails('release/23.1', 'commit1', '23.1')
+            ];
+
+            const pairs = upmergeChecker['generateBranchPairs'](branches);
+            expect(pairs).toEqual([]);
+        });
+
+        it('should handle single customer branch', () => {
+            const branches: IBranchDetails[] = [
+                createBranchDetails('release/23.1', 'commit1', '23.1'),
+                createBranchDetails('master', 'commit1', 'master'),
+                createBranchDetails('customer/acme/23.1', 'commit2', '23.1', 'acme')
+            ];
+
+            const pairs = upmergeChecker['generateBranchPairs'](branches);
+            expect(pairs.length).toBe(2);
+            expect(pairs[0].source.name).toBe('origin/release/23.1');
+            expect(pairs[0].target.name).toBe('origin/master');
+            expect(pairs[1].source.name).toBe('origin/release/23.1');
+            expect(pairs[1].target.name).toBe('origin/customer/acme/23.1');
         });
     });
 });
+
+function createBranchDetails(name: string, commit: string, version: string, customer: string | null = null): IBranchDetails {
+    return {
+        name: `origin/${name}`,
+        commit,
+        current: false,
+        isRemote: true,
+        version: ReleaseNumber.parse(version),
+        customer
+    };
+}

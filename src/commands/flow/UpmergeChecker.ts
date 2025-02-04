@@ -31,6 +31,11 @@ type UpmergeCheckResult = {
     authors?: AuthorInfo[];
 }
 
+type BranchPair = {
+    source: IBranchDetails;
+    target: IBranchDetails;
+}
+
 /**
  * The UpmergeChecker analyzes branches to identify commits that need to be merged
  * upward into higher version branches (upmerges). It provides detailed reporting
@@ -45,42 +50,97 @@ type UpmergeCheckResult = {
  */
 export class UpmergeChecker {
     private static readonly COMMIT_THRESHOLD = 10;
+    public static readonly ERROR_MESSAGE = 'Pending upmerges found';
 
     constructor(private readonly repo: Repository) {
     }
 
     /**
-     * Checks for pending upmerges between the given branches. For each pair of branches,
-     * it checks what commits need to be merged from the source branch into the target branch.
-     * If any commits are found, it throws an error with details about the pending upmerges.
-     * If all branches are up to date, it prints a success message.
-     * @param branches - Array of branch details to check for upmerges
+     * Checks for pending upmerges between branches, handling both release and customer branches.
+     * For release branches, checks sequential merges.
+     * For customer branches, checks both previous customer version and release branch merges.
+     *
+     *
+     * @param branches - Array of branch details sorted by version
      * @throws Error if any pending upmerges are found
      */
     public async checkUpmerges(branches: IBranchDetails[]): Promise<void> {
-        for (let i = 0; i < branches.length - 1; i++) {
-            const sourceBranch = branches[i];
-            const targetBranch = branches[i + 1];
-
-            const result = await this.checkMerge(sourceBranch, targetBranch);
-
+        const pairs = this.generateBranchPairs(branches);
+        let hasPendingUpmerges = false;
+        for (const pair of pairs) {
+            const result = await this.checkMerge(pair.source, pair.target);
             this.printResult(result);
-
-            if (result?.commits?.length > 0) {
-                throw new Error(`Pending upmerges found: branch ${sourceBranch.name} into ${targetBranch.name}`);
+            if (!hasPendingUpmerges) {
+                hasPendingUpmerges = result?.commits?.length > 0;
             }
+        }
+        if (!hasPendingUpmerges) {
+            console.log('\n✓ All branches are up to date');
+        } else {
+            throw new Error(UpmergeChecker.ERROR_MESSAGE);
         }
     }
 
     /**
-     * Checks what commits need to be merged from source branch to target branch.
-     * Uses git merge-base to find the common ancestor and then gets all commits
-     * that are in source but not in target branch.
+     * Generates pairs of branches to check for upmerges. For release branches, pairs are
+     * sequential. For customer branches, pairs are created for both previous customer
      *
-     * @param sourceBranch - Branch to merge from
-     * @param targetBranch - Branch to merge into
-     * @returns Promise resolving to object containing merge check details
-     * @throws Error if merge base cannot be found or git commands fail
+     * @param branches - Array of branch details sorted by version
+     */
+    private generateBranchPairs(branches: IBranchDetails[]): BranchPair[] {
+        const pairs: BranchPair[] = [];
+        const releaseBranches = branches.filter(b => !b.customer);
+        const customerBranches = branches.filter(b => b.customer)
+            .sort((a, b) => a.version.compareTo(b.version));
+
+        // First add release branch pairs
+        for (let i = 0; i < releaseBranches.length - 1; i++) {
+            pairs.push({
+                source: releaseBranches[i],
+                target: releaseBranches[i + 1]
+            });
+        }
+
+        // Then add customer branch pairs
+        for (let i = 0; i < customerBranches.length; i++) {
+            const currentBranch = customerBranches[i];
+
+            // For subsequent branches:
+            // 1. Merge from previous customer version beginning with the second branch
+            if (i > 0) {
+                const previousCustomerBranch = customerBranches[i - 1];
+                pairs.push({source: previousCustomerBranch, target: currentBranch});
+            }
+
+            // 2. Merge from corresponding release branch
+            const matchingRelease = this.findMatchingReleaseBranch(currentBranch, releaseBranches);
+            if (matchingRelease) {
+                pairs.push({source: matchingRelease, target: currentBranch});
+            }
+        }
+        return pairs;
+    }
+
+    /**
+     * Finds the matching release branch for a customer branch.
+     * The matching release branch has the same version number as the customer branch.
+     * If no matching release branch is found, returns undefined.
+     *
+     * @param customerBranch - Customer branch to find a matching release branch for
+     * @param releaseBranches - Array of release branches to search for a match
+     *
+     */
+    private findMatchingReleaseBranch(customerBranch: IBranchDetails, releaseBranches: IBranchDetails[]): IBranchDetails | undefined {
+        return releaseBranches
+            .filter(b => !b.customer)
+            .find(b => b.version.compareTo(customerBranch.version) == 0);
+    }
+
+    /**
+     * Checks for pending upmerges between two branches, returning detailed information
+     *
+     * @param sourceBranch
+     * @param targetBranch
      */
     private async checkMerge(sourceBranch: IBranchDetails, targetBranch: IBranchDetails): Promise<UpmergeCheckResult> {
         try {
@@ -107,7 +167,6 @@ export class UpmergeChecker {
         } catch (error) {
             console.log(`Failed to check merge from ${sourceBranch.name} into ${targetBranch.name}: ${error.message}`);
             throw error;
-
         }
     }
 
@@ -127,7 +186,8 @@ export class UpmergeChecker {
                 try {
                     acc.push(JSON.parse(line));
                 } catch (err) {
-                    console.warn('Failed to parse commit:', err.message);
+                    console.error('Failed to parse commit:', err.message);
+                    throw err;
                 }
                 return acc;
             }, [] as CommitInfo[]);
@@ -165,23 +225,25 @@ export class UpmergeChecker {
      * @param result - Object containing merge check results including commits and authors
      */
     private printResult(result: UpmergeCheckResult): void {
-        console.log(`\nChecking merge from ${result.sourceBranch} into ${result.targetBranch}:`);
+        const sourceBranch = result.sourceBranch.replaceAll('origin/', '');
+        const targetBranch = result.targetBranch.replaceAll('origin/', '');
+        console.log(`\nChecking merge from ${sourceBranch} into ${targetBranch}:`);
         if (!result.commits.length) {
             console.log('✓ Branches are up to date');
             return;
         }
-
+        console.error(`Pending upmerges found: branch ${sourceBranch} into ${targetBranch}`);
         if (result.commits.length <= UpmergeChecker.COMMIT_THRESHOLD) {
             // Show detailed commit information
-            console.log('📝 Commits to be merged:');
+            console.error('Commits to be merged:');
             result.commits.forEach(commit => {
-                console.log(`  ${commit.hash?.substring(0, 7)} (${commit.author_name} <${commit.author_email}>, ${commit.date}) ${commit.message}`);
+                console.error(`  ${commit.hash?.substring(0, 7)} (${commit.author_name} <${commit.author_email}>, ${commit.date}) ${commit.message}`);
             });
         } else {
             // Show aggregated author information
-            console.log(`📝 ${result.commits.length} commits to be merged from ${result.authors.length} authors:`);
+            console.error(`${result.commits.length} commits to be merged from ${result.authors.length} authors:`);
             result.authors.forEach(author => {
-                console.log(`  ${author.name} <${author.email}> (${author.commitCount} commits)`);
+                console.error(`  ${author.name} <${author.email}> (${author.commitCount} commits)`);
             });
         }
     }
