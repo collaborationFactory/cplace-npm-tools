@@ -53,12 +53,11 @@ describe('UpmergeChecker', () => {
         it('should return false when all branches are up to date', async () => {
             // Mock git commands to return empty commit list
             mockRepo.rawWrapper
-                .mockResolvedValueOnce('mergebase123') // merge-base
                 .mockResolvedValueOnce(''); // log (no commits)
 
             await upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]]);
 
-            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(2); // merge-base and log
+            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(1); // merge-base and log
             expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✓ Branches are up to date'));
         });
 
@@ -66,14 +65,13 @@ describe('UpmergeChecker', () => {
             const commitJson = sampleCommits.map(commit => JSON.stringify(commit)).join('\n');
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce('mergebase123') // merge-base
                 .mockResolvedValueOnce(commitJson); // log with commits
 
             await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]]))
                 .rejects
                 .toThrow(UpmergeChecker.ERROR_MESSAGE);
 
-            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(2); // merge-base and log
+            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(1); // merge-base and log
             expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Commits to be merged:'));
         });
 
@@ -85,13 +83,6 @@ describe('UpmergeChecker', () => {
                 .toThrow('Git command failed');
         });
 
-        it('should throw error when merge base cannot be found', async () => {
-            mockRepo.rawWrapper.mockResolvedValueOnce(''); // Empty merge-base result
-
-            await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]]))
-                .rejects
-                .toThrow('No merge base found');
-        });
     });
 
     describe('logging behavior', () => {
@@ -99,7 +90,6 @@ describe('UpmergeChecker', () => {
             const commitJson = sampleCommits.map(commit => JSON.stringify(commit)).join('\n');
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce('mergebase123')
                 .mockResolvedValueOnce(commitJson);
 
             await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow(UpmergeChecker.ERROR_MESSAGE);
@@ -118,7 +108,6 @@ describe('UpmergeChecker', () => {
             const commitJson = manyCommits.map(commit => JSON.stringify(commit)).join('\n');
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce('mergebase123')
                 .mockResolvedValueOnce(commitJson);
 
             await expect(upmergeChecker.checkUpmerges([sampleBranches[0], sampleBranches[1]])).rejects.toThrow(UpmergeChecker.ERROR_MESSAGE);
@@ -131,15 +120,13 @@ describe('UpmergeChecker', () => {
     describe('multiple branch chain checking', () => {
         it('should check all sequential branch pairs', async () => {
             mockRepo.rawWrapper
-                // First pair
-                .mockResolvedValueOnce('mergebase1') // merge-base
                 .mockResolvedValueOnce(JSON.stringify(sampleCommits[0])) // log
 
             await expect(upmergeChecker.checkUpmerges(sampleBranches)).rejects.toThrow("Git command failed");
 
-            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(3);
+            expect(mockRepo.rawWrapper).toHaveBeenCalledTimes(2);
             expect(mockRepo.rawWrapper).toHaveBeenCalledWith(
-                expect.arrayContaining(['merge-base', 'origin/release/23.1', 'origin/release/23.2'])
+                expect.arrayContaining(['origin/release/23.2..origin/release/23.1'])
             );
         });
 

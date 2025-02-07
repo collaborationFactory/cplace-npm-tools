@@ -144,14 +144,8 @@ export class UpmergeChecker {
      */
     private async checkMerge(sourceBranch: IBranchDetails, targetBranch: IBranchDetails): Promise<UpmergeCheckResult> {
         try {
-            const mergeBaseCmd = ['merge-base', sourceBranch.name, targetBranch.name];
-            const mergeBase = await this.repo.rawWrapper(mergeBaseCmd);
-            if (!mergeBase.trim()) {
-                throw new Error(`No merge base found between ${sourceBranch.name} and ${targetBranch.name}`);
-            }
-
             const logCmd = ['log', '--format={"hash": "%H", "author_name": "%aN", "author_email": "%aE", "date": "%ad", "message": "%s"}', '--date=short',
-                `${mergeBase.trim()}..${sourceBranch.name}`];
+                `${targetBranch.name}..${sourceBranch.name}`];
             const log = await this.repo.rawWrapper(logCmd);
 
             const commits = this.parseJsonCommits(log);
@@ -178,6 +172,8 @@ export class UpmergeChecker {
      * @returns Array of parsed CommitInfo objects
      */
     private parseJsonCommits(log: string): CommitInfo[] {
+        if (!log) return [];
+
         return log.trim()
             .split('\n')
             .filter(line => line.trim())
