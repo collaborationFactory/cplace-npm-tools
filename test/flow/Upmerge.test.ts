@@ -1,8 +1,8 @@
-import { Upmerge } from '../../src/commands/flow/Upmerge';
-import { Repository } from '../../src/git';
-import { IGitBranchDetails } from '../../src/git/models';
-import { ICommandParameters } from '../../src/commands/models';
-import { StatusResult } from 'simple-git';
+import {Upmerge} from '../../src/commands/flow/Upmerge';
+import {Repository} from '../../src/git';
+import {IGitBranchDetails} from '../../src/git/models';
+import {ICommandParameters} from '../../src/commands/models';
+import {StatusResult} from 'simple-git';
 
 // Mock Repository class
 jest.mock('../../src/git/Repository');
@@ -69,7 +69,6 @@ describe('Upmerge', () => {
                 tracking: null
             }
         ];
-
 
 
         beforeEach(() => {

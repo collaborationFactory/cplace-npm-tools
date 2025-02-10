@@ -2,15 +2,15 @@
  * Upmerge command for merging the release branches chain to master
  */
 import * as BPromise from 'bluebird';
-import { Repository } from '../../git';
-import { ICommand, ICommandParameters } from '../models';
-import { ReleaseNumber } from './ReleaseNumber';
-import { IGitBranchDetails } from '../../git/models';
+import {Repository} from '../../git';
+import {ICommand, ICommandParameters} from '../models';
+import {ReleaseNumber} from './ReleaseNumber';
+import {IGitBranchDetails} from '../../git/models';
 import * as randomatic from 'randomatic';
-import { IBranchDetails } from './models';
-import { Global } from '../../Global';
-import { promiseAllSettledParallel } from '../../promiseAllSettled';
-import {UpmergeChecker} from "./UpmergeChecker";
+import {IBranchDetails} from './models';
+import {Global} from '../../Global';
+import {promiseAllSettledParallel} from '../../promiseAllSettled';
+import {UpmergeAnalyzer} from "./UpmergeAnalyzer";
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -22,7 +22,7 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_SHOW_FILES: string = 'showFiles';
     private static readonly PARAMETER_ALL_CUSTOMERS: string = 'allCustomers';
     private static readonly PARAMETER_CUSTOMER: string = 'customer';
-    private static readonly PARAMETER_LIST_MISSING_UPMERGES: string = 'listMissingUpmerges';
+    private static readonly PARAMETER_SHOW_DETAILS: string = 'showDetails';
 
     private repo: Repository;
     private remote: string = 'origin';
@@ -31,7 +31,7 @@ export class Upmerge implements ICommand {
     private showFiles: boolean;
     private allCustomers: boolean;
     private customer: string;
-    private listMissingUpmerges: boolean;
+    private showDetails: boolean;
 
     private remoteReleaseBranchPattern: RegExp;
 
@@ -52,7 +52,7 @@ export class Upmerge implements ICommand {
             this.release = release;
         }
         this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] === true;
-        this.listMissingUpmerges =params[Upmerge.PARAMETER_LIST_MISSING_UPMERGES] === true;
+        this.showDetails = params[Upmerge.PARAMETER_SHOW_DETAILS] === true;
 
         this.allCustomers = params[Upmerge.PARAMETER_ALL_CUSTOMERS] === true;
         if (!this.allCustomers) {
@@ -61,26 +61,20 @@ export class Upmerge implements ICommand {
                 this.customer = customer;
             }
         }
-
-
         this.remoteReleaseBranchPattern = new RegExp(`^${this.remote}/release/${Upmerge.RELEASE_BRANCH_PATTERN}$`);
-
         return true;
     }
 
     public async execute(): Promise<void> {
-        await this.repo.fetch({});
-        await this.checkRepoClean();
-        const release = await this.checkForRelease();
+            await this.repo.fetch({});
+            await this.checkRepoClean();
+            const release = await this.checkForRelease();
 
-        const gitBranchDetails = await this.repo.listBranches();
-        const branches = this.filterReleaseBranchesAndCreateOrder(release, gitBranchDetails);
-        await this.checkMergability(branches);
-        if(this.listMissingUpmerges) {
-           await new UpmergeChecker(this.repo).checkUpmerges(branches);
-        }else {
+            const gitBranchDetails = await this.repo.listBranches();
+            const branches = this.filterReleaseBranchesAndCreateOrder(release, gitBranchDetails);
+            await this.checkMergability(branches);
+
             await this.doMerges(branches);
-        }
     }
 
     private checkRepoClean(): BPromise<void> {
@@ -210,7 +204,9 @@ export class Upmerge implements ICommand {
         const releaseBranches = branches.filter((branch) => !branch.customer);
         const customerBranches = branches.filter((branch) => branch.customer);
         let prevBranch: string | string[];
-
+        console.log('='.repeat(80));
+        console.log(`Repository: ${this.repo.repoName}`);
+        console.log('='.repeat(80));
         return this.repo
             .status()
             .then((status) => prevBranch = status.current)
@@ -220,11 +216,13 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 BPromise.resolve()))
-            .finally(() => this.repo
-                .checkoutBranch(prevBranch)
-                .then(() => promiseAllSettledParallel(
-                    [...cleanup].map((b) => this.repo.deleteBranch(b))
-                ))
+            .finally(() => {
+                    this.repo
+                        .checkoutBranch(prevBranch)
+                        .then(() => promiseAllSettledParallel(
+                            [...cleanup].map((b) => this.repo.deleteBranch(b))
+                        ))
+                }
             );
     }
 
@@ -270,8 +268,11 @@ export class Upmerge implements ICommand {
 
     private mergeBranch(branch: IBranchDetails, srcBranch: IBranchDetails, tolerateExistingBranch: boolean, cleanup: Set<string>): BPromise {
         const tempSrcBranch = this.tempBranchName(srcBranch.name);
+        const upmergeChecker = new UpmergeAnalyzer(this.repo);
 
-        console.log(`Merging ${tempSrcBranch} into ${branch.name}`);
+        const needsSeparator = this.showDetails || this.showFiles;
+        console.log(`${needsSeparator ? '\n' : ''}Merging ${tempSrcBranch} into ${branch.name}${needsSeparator ? '\n' + '-'.repeat(80) : ''}`);
+
 
         if (!branch.name.startsWith(this.remote + '/')) {
             return BPromise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
@@ -279,9 +280,12 @@ export class Upmerge implements ICommand {
         const tempBranchName = this.tempBranchName(branch.name);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
             .then(() => cleanup.add(tempBranchName))
-            .then(() => this.repo
-                .merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles})
-                .catch((err) => BPromise.reject(`When trying to merge ${tempSrcBranch} into ${branch.name}\n${err}`)))
+            .then(() => {
+                if (this.showDetails) {
+                    return upmergeChecker.analyzeRequiredMerge(tempSrcBranch, branch.name)
+                }
+            })
+            .then(() => this.repo.merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
             .then(() => {
                 const targetBranchName = branch.name.substr(this.remote.length + 1);
                 return this.push
