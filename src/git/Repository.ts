@@ -577,9 +577,9 @@ export class Repository {
                         console.log(`  ${file}`);
                     });
                     console.log('\nPlease resolve conflicts and try the merge again\n');
-                    reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${this.repoName}`));
+                    reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${status.current}`));
                 } else {
-                    Global.isVerbose() && console.log(`Merged ${otherBranch} into ${this.repoName}`);
+                    Global.isVerbose() && console.log(`Merged ${otherBranch} into ${status.current}`);
                     if (opts.listFiles) {
                         if (data.files.length > 0) {
                             console.log(`Merged files (${data.files.length}): `);
