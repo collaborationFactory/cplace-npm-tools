@@ -560,35 +560,35 @@ export class Repository {
             opts.noEdit && options.push('--no-edit');
             this.git.merge(options, async (err, data) => {
                 if (err) {
-                    reject(err);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: merge failed`, err);
+                }
+
+                // Merge conflict not detected correctly by simple-git
+                // see https://github.com/steveukx/git-js/issues/715
+                // therefore we need to check the status manually
+                const status = await this.status();
+                if (status.conflicted.length > 0) {
+                    console.log(`Files to merge (${status.files.length}):`);
+                    status.files.forEach((file) => {
+                        console.log(`  ${file.path}`);
+                    })
+                    console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
+                    status.conflicted.forEach((file) => {
+                        console.log(`  ${file}`);
+                    });
+                    console.log('\nPlease resolve conflicts and try the merge again\n');
+                    reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${this.repoName}`));
                 } else {
-                    // Merge conflict not detected correctly by simple-git
-                    // see https://github.com/steveukx/git-js/issues/715
-                    // therefore we need to check the status manually
-                    const status = await this.status();
-                    if (status.conflicted.length > 0) {
-                        console.log(`Files to merge (${status.files.length}):`);
-                        status.files.forEach((file) => {
-                            console.log(`  ${file.path}`);
-                        })
-                        console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
-                        status.conflicted.forEach((file) => {
-                            console.log(`  ${file}`);
-                        });
-                        console.log('\nPlease resolve conflicts and try the merge again\n');
-                        reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${this.repoName}`));
-                    } else {
-                        Global.isVerbose() && console.log(`Merged ${otherBranch} into ${this.repoName}`);
-                        if (opts.listFiles) {
-                            if (data.files.length > 0) {
-                                console.log(`Merged files (${data.files.length}): `);
-                                data.files.forEach((file) => console.log(`  ${file}`));
-                            } else {
-                                console.log(`Nothing to merge.`);
-                            }
+                    Global.isVerbose() && console.log(`Merged ${otherBranch} into ${this.repoName}`);
+                    if (opts.listFiles) {
+                        if (data.files.length > 0) {
+                            console.log(`Merged files (${data.files.length}): `);
+                            data.files.forEach((file) => console.log(`  ${file}`));
+                        } else {
+                            console.log(`Nothing to merge.`);
                         }
-                        resolve();
                     }
+                    resolve();
                 }
             });
         });
