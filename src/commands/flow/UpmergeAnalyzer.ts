@@ -133,6 +133,7 @@ export class UpmergeAnalyzer {
      *
      * @param result - Object containing merge check results including commits and authors
      */
+
     private printResult(result: UpmergeCheckResult): void {
         if (result.commits.length === 0) {
             return;

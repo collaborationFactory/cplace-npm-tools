@@ -36,6 +36,8 @@ export class Upmerge implements ICommand {
     private remoteReleaseBranchPattern: RegExp;
 
     private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
+    private static readonly REPO_DIVIDER = '='.repeat(20);
+    private static readonly BRANCH_DIVIDER = '-'.repeat(20);
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         this.repo = new Repository();
@@ -66,15 +68,15 @@ export class Upmerge implements ICommand {
     }
 
     public async execute(): Promise<void> {
-            await this.repo.fetch({});
-            await this.checkRepoClean();
-            const release = await this.checkForRelease();
+        await this.repo.fetch({});
+        await this.checkRepoClean();
+        const release = await this.checkForRelease();
 
-            const gitBranchDetails = await this.repo.listBranches();
-            const branches = this.filterReleaseBranchesAndCreateOrder(release, gitBranchDetails);
-            await this.checkMergability(branches);
+        const gitBranchDetails = await this.repo.listBranches();
+        const branches = this.filterReleaseBranchesAndCreateOrder(release, gitBranchDetails);
+        await this.checkMergability(branches);
 
-            await this.doMerges(branches);
+        await this.doMerges(branches);
     }
 
     private checkRepoClean(): BPromise<void> {
@@ -204,9 +206,9 @@ export class Upmerge implements ICommand {
         const releaseBranches = branches.filter((branch) => !branch.customer);
         const customerBranches = branches.filter((branch) => branch.customer);
         let prevBranch: string | string[];
-        console.log('='.repeat(80));
+        console.log(Upmerge.REPO_DIVIDER);
         console.log(`Repository: ${this.repo.repoName}`);
-        console.log('='.repeat(80));
+        console.log(Upmerge.REPO_DIVIDER);
         return this.repo
             .status()
             .then((status) => prevBranch = status.current)
@@ -271,7 +273,7 @@ export class Upmerge implements ICommand {
         const upmergeChecker = new UpmergeAnalyzer(this.repo);
 
         const needsSeparator = this.showDetails || this.showFiles;
-        console.log(`${needsSeparator ? '\n' : ''}Merging ${tempSrcBranch} into ${branch.name}${needsSeparator ? '\n' + '-'.repeat(80) : ''}`);
+        console.log(`${needsSeparator ? '\n' : ''}Merging ${tempSrcBranch} into ${branch.name}${needsSeparator ? '\n' + Upmerge.BRANCH_DIVIDER : ''}`);
 
 
         if (!branch.name.startsWith(this.remote + '/')) {
