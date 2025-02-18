@@ -1,15 +1,14 @@
 /**
  * Repository class providing helper methods
  */
-// import * as Promise from 'bluebird';
 import * as path from 'path';
 import * as simpleGit from 'simple-git';
+import {StatusResult} from 'simple-git';
 import {Global} from '../Global';
 import {IGitBranchAndCommit, IGitBranchDetails, IGitLogSummary} from './models';
 import {execSync} from 'child_process';
 import {IRepoStatus} from '../commands/repos/models';
 import {SimpleGit} from 'simple-git/dist/typings/simple-git';
-import {StatusResult} from 'simple-git';
 
 export class Repository {
     private static readonly TRACKING_BRANCH_PATTERN: RegExp = new RegExp(/^\[(.+?)]/);
@@ -180,9 +179,9 @@ export class Repository {
                         resolve(latestTag);
                     })
                     .catch((error) => {
-                               console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
-                               reject(error);
-                           }
+                            console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
+                            reject(error);
+                        }
                     );
             }
         });
@@ -347,7 +346,7 @@ export class Repository {
             const result: Buffer = execSync(`git ls-tree --name-only "${ref}" "${pathname}"`, {
                 cwd: this.workingDir,
             });
-            if(result) {
+            if (result) {
                 return result.toString().split(/\r?\n/).indexOf(pathname) >= 0;
             } else {
                 return false;
@@ -377,8 +376,8 @@ export class Repository {
             const pathSpec = `${fromHash}..${toHash}`;
             options[pathSpec] = null;
             this.git.log(options, (err, data: IGitLogSummary) => {
-                             err ? reject(err) : resolve(data);
-                         }
+                    err ? reject(err) : resolve(data);
+                }
             );
         });
     }
@@ -428,7 +427,7 @@ export class Repository {
         return new Promise<StatusResult>((resolve, reject) => {
             let numTries = 1;
 
-            const gitStatus = () => this.git.status(null,(err, data): void => {
+            const gitStatus = () => this.git.status(null, (err, data): void => {
                 if (err) {
                     reject(err);
                 } else {
@@ -493,7 +492,7 @@ export class Repository {
                 }
             };
 
-            if(branch instanceof Array) {
+            if (branch instanceof Array) {
                 this.git.checkout(branch, callback);
             } else {
                 this.git.checkout(branch as string, {}, callback);
@@ -559,23 +558,34 @@ export class Repository {
             opts.noFF && options.push('--no-ff');
             opts.ffOnly && options.push('--ff-only');
             opts.noEdit && options.push('--no-edit');
-            this.git.merge(options, (err, data) => {
+            this.git.merge(options, async (err, data) => {
                 if (err) {
-                    reject(err);
-                } else if (data.conflicts.length > 0) {
-                    // abort if merge failed
-                    this.git.mergeFromTo('--abort', undefined, (err2) => {
-                        console.log(`[${this.repoName}]: error during merge:`, err2);
-                        reject(data);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: merge failed`, err);
+                }
+
+                // Merge conflict not detected correctly by simple-git
+                // see https://github.com/steveukx/git-js/issues/715
+                // therefore we need to check the status manually
+                const status = await this.status();
+                if (status.conflicted.length > 0) {
+                    console.log(`Files to merge (${status.files.length}):`);
+                    status.files.forEach((file) => {
+                        console.log(`  ${file.path}`);
+                    })
+                    console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
+                    status.conflicted.forEach((file) => {
+                        console.log(`  ${file}`);
                     });
+                    console.log('\nPlease resolve conflicts and try the merge again\n');
+                    reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${status.current}`));
                 } else {
-                    Global.isVerbose() && console.log(`[${this.repoName}]: merged ${otherBranch} into ${this.repoName}`);
+                    Global.isVerbose() && console.log(`Merged ${otherBranch} into ${status.current}`);
                     if (opts.listFiles) {
                         if (data.files.length > 0) {
-                            console.log(`[${this.repoName}]: The following files have been merged: `);
-                            data.files.forEach((file) => console.log(file));
+                            console.log(`Merged files (${data.files.length}): `);
+                            data.files.forEach((file) => console.log(`  ${file}`));
                         } else {
-                            console.log(`[${this.repoName}]:  Nothing to merge.`);
+                            console.log(`Nothing to merge.`);
                         }
                     }
                     resolve();
@@ -588,7 +598,7 @@ export class Repository {
         const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${this.repoName}]: pushing to ${remote}/${remoteBranchName}`);
-            this.git.push(remote, remoteBranch,{}, (err) => {
+            this.git.push(remote, remoteBranch, {}, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -929,7 +939,7 @@ export class Repository {
         try {
             result = execSync(`git rev-parse origin/${branchName}`, {
                 cwd: this.workingDir,
-                stdio : 'pipe'
+                stdio: 'pipe'
             }).toString();
         } catch (e) {
             throw new Error(`Branch ${branchName} doesn't exist. ${e}`);

@@ -194,27 +194,31 @@ $  cplace-cli --help
             Use --pdf to create a PDF from the .dot file. Requires Graphviz to be installed and the dot binary to
             be on the path.
 
-        flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files]
-            Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your
-            local branches. All merges will be done on new, temporary local branches and will then be pushed.
+         flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files] [--show-details]
+          Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your
+          local branches. All merges will be done on new, temporary local branches and will then be pushed.
 
-            --no-push
-                Will not push changes, dry run only to check for conflicts
+          --no-push
+              Will not push changes, dry run only to check for conflicts
 
-            --release <version>
-                Merge from this release version upwards (e.g. "4.38"). If not specified and the current branch is
-                tracking a release branch, this release version will be used.
+          --release <version>
+              Merge from this release version upwards (e.g. "4.38"). If not specified and the current branch is
+              tracking a release branch, this release version will be used.
 
-            --all-customers
-                Also merges into all customer-branches. This applies to customer branches named
-                'customer/$customerName/$version', where $version must merge the pattern mentioned for --release.
+          --all-customers
+              Also merges into all customer-branches. This applies to customer branches named
+              'customer/$customerName/$version', where $version must merge the pattern mentioned for --release.
 
-            --customer <customer>
-                Also merge into the branches of the given customer. The customer name must match the same pattern
-                as mentioned in --all-customers.
+          --customer <customer>
+              Also merge into the branches of the given customer. The customer name must match the same pattern
+              as mentioned in --all-customers.
 
-            --show-files
-                List files to be merged
+          --show-files
+              List files to be merged
+        
+         --show-details
+              Shows commit details when 10 or fewer commits
+              need merging, otherwise displays a summary grouped by author.
 
         refactor <subcommand> --plugin|-p <plugin>
             Handles plugin specific refactorings where <subcommand> is one of the following:
