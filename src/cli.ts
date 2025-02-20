@@ -305,7 +305,7 @@ const cli = meow(
               (default: latest version)
               
         version --rewrite-versions
-            Rewrites versions in version.gradle and parent-repos.json files for custom branches.
+            Rewrites versions in the version.gradle and parent-repos.json files for custom branches.
             This command helps manage versions for non-release branches by:
             1. Finding repositories with custom branches (non-release/master/main)
             2. Setting their version to major.minor.999 in version.gradle
