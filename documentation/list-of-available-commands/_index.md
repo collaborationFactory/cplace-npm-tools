@@ -226,6 +226,7 @@ $  cplace-cli --help
             --test-sources
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like
                 structure with 'src/main/java' and 'src/test/java'
+
         version --rewrite-versions
             Rewrites versions in the version.gradle and parent-repos.json files for custom branches.
             This command helps manage versions for non-release branches by:
