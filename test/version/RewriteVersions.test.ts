@@ -2,144 +2,184 @@ import { RewriteVersions } from '../../src/commands/version/RewriteVersions';
 import { ICommandParameters } from '../../src/commands/models';
 import * as fs from 'fs';
 import * as path from 'path';
-import {Global} from "../../src/Global";
+import { Global } from "../../src/Global";
 
 describe('RewriteVersions', () => {
     let testRootDir: string;
     const rootDir = 'collaborationFactory/root';
     const mainDir = 'collaborationFactory/main';
     const pawDir = 'collaborationFactory/cplace-paw';
-    const ppDir = 'collaborationFactory/cplace-project-planning';
+    const projectPlanningDir = 'collaborationFactory/cplace-project-planning';
 
     beforeEach(() => {
-        // Create test directories
         testRootDir = fs.mkdtempSync('rewrite-versions-test-');
-
-        createDirs([
-            path.join(testRootDir, mainDir),
-            path.join(testRootDir, rootDir),
-            path.join(testRootDir, pawDir),
-            path.join(testRootDir, ppDir)
-        ]);
-
-        // Create initial parent repos files and version files
-        createParentRepoFile(path.join(testRootDir, rootDir), ['main', 'cplace-paw', 'cplace-project-planning']);
-        createParentRepoFile(path.join(testRootDir, pawDir), ['main']);
-        createParentRepoFile(path.join(testRootDir, ppDir), ['main', 'cplace-paw']);
-
-        createVersionFile(path.join(testRootDir, mainDir));
-        createVersionFile(path.join(testRootDir, rootDir));
-        createVersionFile(path.join(testRootDir, pawDir));
-        createVersionFile(path.join(testRootDir, ppDir));
-
-        // Mock Global.isVerbose
+        createTestStructure();
         jest.spyOn(Global, 'isVerbose').mockReturnValue(true);
     });
 
     afterEach(() => {
-        // Cleanup test directory
         fs.rmSync(testRootDir, { recursive: true, force: true });
     });
 
     test('should set main version to .999 and ignore paw/project-planning versions since they are on release branches', async () => {
-        const rootParentReposPath = path.join(testRootDir, rootDir, 'parent-repos.json');
-        let parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        parentRepos.main.branch = 'customer/test-customer-branch';
-        fs.writeFileSync(rootParentReposPath, JSON.stringify(parentRepos, null, 2));
+        updateBranches({ main: 'customer/test-customer-branch' });
+        await executeRewriteVersions();
 
-        const rewriteVersions = new RewriteVersions();
-        const params: ICommandParameters = {};
+        assertArtifactVersions({
+            root: { main: '24.2.999' },
+            projectPlanning: { main: '24.2.999' },
+            paw: { main: '24.2.999' }
+        });
 
-        rewriteVersions.prepareAndMayExecute(params, path.join(testRootDir, rootDir));
-        await rewriteVersions.execute();
-
-        // Check root parent-repos.json
-        parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        expect(parentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(parentRepos['cplace-paw'].artifactVersion).toBeUndefined();
-        expect(parentRepos['cplace-project-planning'].artifactVersion).toBeUndefined();
-
-        // Check PP parent-repos.json
-        const ppParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, ppDir, 'parent-repos.json'), 'utf8'));
-        expect(ppParentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(ppParentRepos['cplace-paw'].artifactVersion).toBeUndefined();
-
-        // Check PAW parent-repos.json
-        const pawParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, pawDir, 'parent-repos.json'), 'utf8'));
-        expect(pawParentRepos.main.artifactVersion).toBe('24.2.999');
-
-        // Check version.gradle in main
-        const mainVersionGradle = fs.readFileSync(path.join(testRootDir, mainDir, 'version.gradle'), 'utf8');
-        expect(mainVersionGradle).toContain("currentVersion='24.2.999'");
+        assertVersionGradleContent(mainDir, "currentVersion='24.2.999'");
     });
 
-    test('customer branch in main and cplace-paw', async () => {
-        const rootParentReposPath = path.join(testRootDir, rootDir, 'parent-repos.json');
-        let parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        parentRepos.main.branch = 'customer/test-customer-branch';
-        parentRepos['cplace-paw'].branch = 'feature/new-test-feature';
-        fs.writeFileSync(rootParentReposPath, JSON.stringify(parentRepos, null, 2));
+    test('should set version to .999 for main and paw since both have non-release branches', async () => {
+        updateBranches({
+            main: 'customer/test-customer-branch',
+            'cplace-paw': 'feature/new-test-feature'
+        });
+        await executeRewriteVersions();
 
-        const rewriteVersions = new RewriteVersions();
-        const params: ICommandParameters = {};
-
-        rewriteVersions.prepareAndMayExecute(params, path.join(testRootDir, rootDir));
-        await rewriteVersions.execute();
-
-        // Check root parent-repos.json
-        parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        expect(parentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(parentRepos['cplace-paw'].artifactVersion).toBe('24.2.999');
-        expect(parentRepos['cplace-project-planning'].artifactVersion).toBeUndefined();
-
-        // Check PP parent-repos.json
-        const ppParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, ppDir, 'parent-repos.json'), 'utf8'));
-        expect(ppParentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(ppParentRepos['cplace-paw'].artifactVersion).toBe('24.2.999');
-
-        // Check PAW parent-repos.json
-        const pawParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, pawDir, 'parent-repos.json'), 'utf8'));
-        expect(pawParentRepos.main.artifactVersion).toBe('24.2.999');
+        assertArtifactVersions({
+            root: { main: '24.2.999', 'cplace-paw': '24.2.999' },
+            projectPlanning: { main: '24.2.999', 'cplace-paw': '24.2.999' },
+            paw: { main: '24.2.999' }
+        });
     });
 
-    test('currentVersion already set in cplace-paw', async () => {
-        const rootParentReposPath = path.join(testRootDir, rootDir, 'parent-repos.json');
-        let parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        parentRepos.main.branch = 'customer/test-customer-branch';
-        parentRepos['cplace-paw'].branch = 'feature/new-test-feature';
-        fs.writeFileSync(rootParentReposPath, JSON.stringify(parentRepos, null, 2));
-
-        // Create version file with existing currentVersion in PAW
+    test('should overwrite existing currentVersion in paw version.gradle when paw has non-release branch', async () => {
+        updateBranches({
+            main: 'customer/test-customer-branch',
+            'cplace-paw': 'feature/new-test-feature'
+        });
         createVersionFileWithCurrentVersion(path.join(testRootDir, pawDir));
+        await executeRewriteVersions();
+
+        assertArtifactVersions({
+            root: { main: '24.2.999', 'cplace-paw': '24.2.999' },
+            projectPlanning: { main: '24.2.999', 'cplace-paw': '24.2.999' },
+            paw: { main: '24.2.999' }
+        });
+    });
+
+    test('should not change versions when all branches are release branches', async () => {
+        updateBranches({
+            main: 'release/24.2',
+            'cplace-paw': 'release/24.1',
+            'cplace-project-planning': 'release/24.2'
+        });
+        await executeRewriteVersions();
+
+        assertNoArtifactVersions();
+        assertNoCurrentVersions();
+    });
+
+    test('should not change versions when all branches are master or main', async () => {
+        updateBranches({
+            main: 'master',
+            'cplace-paw': 'main',
+            'cplace-project-planning': 'master'
+        });
+        await executeRewriteVersions();
+
+        assertNoArtifactVersions();
+        assertNoCurrentVersions();
+    });
+
+    test('should handle missing parent-repos.json gracefully', async () => {
+        fs.unlinkSync(path.join(testRootDir, rootDir, 'parent-repos.json'));
 
         const rewriteVersions = new RewriteVersions();
         const params: ICommandParameters = {};
-
-        rewriteVersions.prepareAndMayExecute(params, path.join(testRootDir, rootDir));
-        await rewriteVersions.execute();
-
-        // Check root parent-repos.json
-        parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
-        expect(parentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(parentRepos['cplace-paw'].artifactVersion).toBe('24.2.999');
-        expect(parentRepos['cplace-project-planning'].artifactVersion).toBeUndefined();
-
-        // Check PP parent-repos.json
-        const ppParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, ppDir, 'parent-repos.json'), 'utf8'));
-        expect(ppParentRepos.main.artifactVersion).toBe('24.2.999');
-        expect(ppParentRepos['cplace-paw'].artifactVersion).toBe('24.2.999');
-
-        // Check PAW parent-repos.json
-        const pawParentRepos = JSON.parse(fs.readFileSync(path.join(testRootDir, pawDir, 'parent-repos.json'), 'utf8'));
-        expect(pawParentRepos.main.artifactVersion).toBe('24.2.999');
+        expect(rewriteVersions.prepareAndMayExecute(params, path.join(testRootDir, rootDir))).toBe(false);
     });
 
-    // Helper functions
-    function createDirs(dirs: string[]) {
+    test('should handle empty parent-repos.json gracefully', async () => {
+        fs.writeFileSync(path.join(testRootDir, rootDir, 'parent-repos.json'), '{}');
+        await executeRewriteVersions();
+
+        assertNoArtifactVersions();
+        assertNoCurrentVersions();
+    });
+
+    function createTestStructure(): void {
+        const dirs = [
+            path.join(testRootDir, mainDir),
+            path.join(testRootDir, rootDir),
+            path.join(testRootDir, pawDir),
+            path.join(testRootDir, projectPlanningDir)
+        ];
         dirs.forEach(dir => fs.mkdirSync(dir, { recursive: true }));
+
+        createParentRepoFile(path.join(testRootDir, rootDir), ['main', 'cplace-paw', 'cplace-project-planning']);
+        createParentRepoFile(path.join(testRootDir, pawDir), ['main']);
+        createParentRepoFile(path.join(testRootDir, projectPlanningDir), ['main', 'cplace-paw']);
+
+        dirs.forEach(dir => createVersionFile(dir));
     }
 
-    function createParentRepoFile(dir: string, repos: string[]) {
+    function updateBranches(branches: Record<string, string>): void {
+        const rootParentReposPath = path.join(testRootDir, rootDir, 'parent-repos.json');
+        const parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
+        Object.entries(branches).forEach(([repo, branch]) => {
+            parentRepos[repo].branch = branch;
+        });
+        fs.writeFileSync(rootParentReposPath, JSON.stringify(parentRepos, null, 2));
+    }
+
+    async function executeRewriteVersions(): Promise<void> {
+        const rewriteVersions = new RewriteVersions();
+        const params: ICommandParameters = {};
+        rewriteVersions.prepareAndMayExecute(params, path.join(testRootDir, rootDir));
+        await rewriteVersions.execute();
+    }
+
+    function assertArtifactVersions(expected: Record<string, Record<string, string>>): void {
+        const dirMap = {
+            root: rootDir,
+            projectPlanning: projectPlanningDir,
+            paw: pawDir
+        };
+        Object.entries(expected).forEach(([key, versions]) => {
+            const repoPath = path.join(testRootDir, dirMap[key], 'parent-repos.json');
+            const parentRepos = JSON.parse(fs.readFileSync(repoPath, 'utf8'));
+            Object.entries(versions).forEach(([repo, version]) => {
+                expect(parentRepos[repo].artifactVersion).toBe(version);
+            });
+            Object.keys(parentRepos).forEach(repo => {
+                if (!versions[repo]) {
+                    expect(parentRepos[repo].artifactVersion).toBeUndefined();
+                }
+            });
+        });
+    }
+
+    function assertNoArtifactVersions(): void {
+        const dirs = [rootDir, projectPlanningDir, pawDir];
+        dirs.forEach(dir => {
+            const repoPath = path.join(testRootDir, dir, 'parent-repos.json');
+            const parentRepos = JSON.parse(fs.readFileSync(repoPath, 'utf8'));
+            Object.values(parentRepos).forEach(repo => {
+                expect(repo['artifactVersion']).toBeUndefined();
+            });
+        });
+    }
+
+    function assertNoCurrentVersions(): void {
+        const dirs = [mainDir, rootDir, pawDir, projectPlanningDir];
+        dirs.forEach(dir => {
+            const content = fs.readFileSync(path.join(testRootDir, dir, 'version.gradle'), 'utf8');
+            expect(content).not.toContain('currentVersion');
+        });
+    }
+
+    function assertVersionGradleContent(dir: string, expectedContent: string): void {
+        const content = fs.readFileSync(path.join(testRootDir, dir, 'version.gradle'), 'utf8');
+        expect(content).toContain(expectedContent);
+    }
+
+    function createParentRepoFile(dir: string, repos: string[]): void {
         const parentRepos = repos.reduce((acc, repo) => {
             const repoName = repo === 'cplace' ? 'main' : repo;
             acc[repoName] = {
@@ -148,31 +188,25 @@ describe('RewriteVersions', () => {
             };
             return acc;
         }, {});
-
-        fs.writeFileSync(
-            path.join(dir, 'parent-repos.json'),
-            JSON.stringify(parentRepos, null, 2)
-        );
+        fs.writeFileSync(path.join(dir, 'parent-repos.json'), JSON.stringify(parentRepos, null, 2));
     }
 
-    function createVersionFile(dir: string) {
+    function createVersionFile(dir: string): void {
         const content = `
 ext {
     createdOnBranch='release/24.2'
     cplaceVersion='24.2'
-}
-`;
+}`;
         fs.writeFileSync(path.join(dir, 'version.gradle'), content);
     }
 
-    function createVersionFileWithCurrentVersion(dir: string) {
+    function createVersionFileWithCurrentVersion(dir: string): void {
         const content = `
 ext {
     currentVersion='24.2.9'
     createdOnBranch='release/24.2'
     cplaceVersion='24.2'
-}
-`;
+}`;
         fs.writeFileSync(path.join(dir, 'version.gradle'), content);
     }
 });
