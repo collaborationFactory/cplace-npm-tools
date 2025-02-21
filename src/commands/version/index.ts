@@ -1,5 +1,5 @@
 /**
- * Package for visualize commands
+ * Package for version commands
  */
 import { Version } from './Version';
 

@@ -12,12 +12,19 @@ interface IVersionConfig {
     patchVersion: number;
     classifier?: string;
 }
-
+/**
+ * Command for rewriting versions in custom branches of cplace repositories.
+ * Updates version.gradle and parent-repos.json files to use major.minor.999 pattern.
+ * Handles setting artifactVersion and removing useSnapshot flags.
+ */
 export class RewriteVersions extends AbstractReposCommand implements ICommand {
+    private static readonly PATCH_VERSION_CUSTOM_BRANCH = 999;
+
     private static readonly VERSION_GRADLE_NAME: string = 'version.gradle';
     private reposWithCustomBranch: string[] = [];
     private versionConfig: IVersionConfig;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
         // Validate parent-repos.json exists and is valid (handled by parent class)
         if (!this.parentRepos) {
@@ -52,7 +59,7 @@ export class RewriteVersions extends AbstractReposCommand implements ICommand {
             }
             Global.isVerbose() && console.log('Found repos with custom branches:', this.reposWithCustomBranch);
 
-            const fakeVersion = `${this.versionConfig.majorVersion}.${this.versionConfig.minorVersion}.999`;
+            const fakeVersion = `${this.versionConfig.majorVersion}.${this.versionConfig.minorVersion}.${RewriteVersions.PATCH_VERSION_CUSTOM_BRANCH}`;
             Global.isVerbose() && console.log('Using fake version:', fakeVersion);
 
             await this.updateVersionGradleInAffectedRepos(fakeVersion);
@@ -74,7 +81,7 @@ export class RewriteVersions extends AbstractReposCommand implements ICommand {
                 this.versionConfig = {
                     majorVersion: parseInt(cplaceVersionMatch[1], 10),
                     minorVersion: parseInt(cplaceVersionMatch[2], 10),
-                    patchVersion: 999
+                    patchVersion: RewriteVersions.PATCH_VERSION_CUSTOM_BRANCH
                 };
                 Global.isVerbose() && console.log(`Found cplace version major: ${this.versionConfig.majorVersion}, minor: ${this.versionConfig.minorVersion}`);
             } else {

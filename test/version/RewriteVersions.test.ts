@@ -41,7 +41,7 @@ describe('RewriteVersions', () => {
         fs.rmSync(testRootDir, { recursive: true, force: true });
     });
 
-    test('customer branch in main only', async () => {
+    test('should set main version to .999 and ignore paw/project-planning versions since they are on release branches', async () => {
         const rootParentReposPath = path.join(testRootDir, rootDir, 'parent-repos.json');
         let parentRepos = JSON.parse(fs.readFileSync(rootParentReposPath, 'utf8'));
         parentRepos.main.branch = 'customer/test-customer-branch';
