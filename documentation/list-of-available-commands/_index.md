@@ -233,6 +233,7 @@ $  cplace-cli --help
             2. Setting their version to major.minor.999 in version.gradle
             3. Updating artifactVersion in all parent-repos.json files
             4. Removing useSnapshot flag for affected repositories
+            
         e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>]
             [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] [--headless]
             [--noInstall] [--jUnit <?reportsPath>] [--screenshot <?screenshotPath>] [--allure <?allureOutputPath>]
