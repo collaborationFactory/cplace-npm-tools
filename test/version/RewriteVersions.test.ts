@@ -63,24 +63,25 @@ describe('RewriteVersions', () => {
         });
     });
 
-    test('should not change versions when all branches are release branches', async () => {
-        updateBranches({
-            main: 'release/24.2',
-            'cplace-paw': 'release/24.1',
-            'cplace-project-planning': 'release/24.2'
-        });
-        await executeRewriteVersions();
-
-        assertNoArtifactVersions();
-        assertNoCurrentVersions();
-    });
-
-    test('should not change versions when all branches are master or main', async () => {
-        updateBranches({
-            main: 'master',
-            'cplace-paw': 'main',
-            'cplace-project-planning': 'master'
-        });
+    test.each([
+        {
+            name: 'release branches',
+            branches: {
+                main: 'release/24.2',
+                'cplace-paw': 'release/24.1',
+                'cplace-project-planning': 'release/24.2'
+            }
+        },
+        {
+            name: 'master/main branches',
+            branches: {
+                main: 'master',
+                'cplace-paw': 'main',
+                'cplace-project-planning': 'master'
+            }
+        }
+    ])('should not change versions when all branches are $name', async ({ branches }) => {
+        updateBranches(branches);
         await executeRewriteVersions();
 
         assertNoArtifactVersions();
