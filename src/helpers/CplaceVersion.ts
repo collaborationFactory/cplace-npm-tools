@@ -81,7 +81,44 @@ export class CplaceVersion {
             versionString = this.getVersionString(versionFileContent, ['currentVersion', 'cplaceVersion']);
         }
         return versionString;
+    }
 
+    /**
+     * Updates currentVersion property in version.gradle file. If property doesn't exist, adds it before closing brace.
+     * Only writes to file if a change was made.
+     *
+     * @param versionGradlePath Path to version.gradle file
+     * @param newVersion The version to set
+     * @returns true if file was updated, false if no changes needed
+     */
+    public static updateVersionGradleFile(versionGradlePath: string, newVersion: string): boolean {
+        const content = fs.readFileSync(versionGradlePath, 'utf8');
+        let updated = false;
+        const lines = content.split('\n');
+        const result = [];
+
+        for (const line of lines) {
+            if (/^[ \t]+currentVersion[ \t]*=/.test(line)) {
+                const currentValue = line.split('=')[1].trim().replace(/['"]/g, '');
+                if (currentValue !== newVersion) {
+                    result.push(`${line.split('=')[0]}= '${newVersion}'`);
+                    updated = true;
+                } else {
+                    result.push(line);
+                }
+            } else if (!updated && line.trim() === '}') {
+                result.push(`    currentVersion='${newVersion}'`);
+                result.push(line);
+                updated = true;
+            } else {
+                result.push(line);
+            }
+        }
+
+        if (updated) {
+            fs.writeFileSync(versionGradlePath, result.join('\n'), 'utf8');
+        }
+        return updated;
     }
 
     public static toString(): string {
