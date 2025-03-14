@@ -9,6 +9,7 @@ import {Repos} from './repos';
 import {VisualizeDelegate} from './visualize';
 import {RefactorDelegate} from './refactor';
 import {E2E} from './e2e';
+import {Version} from "./version";
 
 const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
@@ -16,7 +17,8 @@ const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'flow': new Flow(),
     'visualize': new VisualizeDelegate(),
     'refactor': new RefactorDelegate(),
-    'e2e': new E2E()
+    'e2e': new E2E(),
+    'version': new Version()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

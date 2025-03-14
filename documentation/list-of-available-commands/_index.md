@@ -227,6 +227,14 @@ $  cplace-cli --help
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like
                 structure with 'src/main/java' and 'src/test/java'
 
+        version --rewrite-versions
+            Rewrites versions in the version.gradle and parent-repos.json files for custom branches.
+            This command helps manage versions for non-release branches by:
+            1. Finding repositories with custom branches (non-release/master/main)
+            2. Setting their version to major.minor.999 in version.gradle
+            3. Updating artifactVersion in all parent-repos.json files
+            4. Removing useSnapshot flag for affected repositories
+            
         e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>]
             [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] [--headless]
             [--noInstall] [--jUnit <?reportsPath>] [--screenshot <?screenshotPath>] [--allure <?allureOutputPath>]
