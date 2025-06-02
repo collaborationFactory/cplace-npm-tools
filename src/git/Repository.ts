@@ -191,7 +191,7 @@ export class Repository {
         return new Promise<string>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
             Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir).then((remoteOriginUrl) => {
-                simpleGit.simpleGit().listRemote(['--tags', '--refs', '--sort=version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
+                simpleGit.simpleGit().listRemote(['--tags', '--refs', '--sort=-version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
                     if (err) {
                         Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
                         reject(err);
