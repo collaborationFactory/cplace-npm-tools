@@ -26,7 +26,7 @@ export type Result = 'missing' | 'failed' | 'success';
 export function run(cmd: string, params: ICommandParameters): Promise<Result> {
 
     if(REGISTERED_COMMANDS[cmd] === undefined) {
-        Promise.reject('Unknown command: ' + cmd);
+        return Promise.reject('Unknown command: ' + cmd);
     }
 
     const command = REGISTERED_COMMANDS[cmd];
