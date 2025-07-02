@@ -350,6 +350,7 @@ if (!cli.input.length) {
                     // the promise can reject with a string
                     console.error('\t' + e);
                 }
+                cli.showHelp();
                 process.exit(1);
             }
         );
