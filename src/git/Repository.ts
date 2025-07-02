@@ -550,7 +550,7 @@ export class Repository {
         });
     }
 
-    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean }): Promise<void> {
+    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
         opts = opts || {};
         return new Promise<void>((resolve, reject) => {
             Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
@@ -558,6 +558,8 @@ export class Repository {
             opts.noFF && options.push('--no-ff');
             opts.ffOnly && options.push('--ff-only');
             opts.noEdit && options.push('--no-edit');
+            opts.noCommit && options.push('--no-commit');
+            options.push('--allow-unrelated-histories');
             this.git.merge(options, async (err, data) => {
                 if (err) {
                     Global.isVerbose() && console.log(`[${this.repoName}]: merge failed`, err);
