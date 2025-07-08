@@ -55,7 +55,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         ['CM', { description: 'copied in index and work tree changed since index', defaultAction: 'o', defaultActionLong: 'ours' }],
 
         // Merge conflicts
-        ['DD', { description: 'both deleted', defaultAction: 't', defaultActionLong: 'theis' }],
+        ['DD', { description: 'both deleted', defaultAction: 't', defaultActionLong: 'theirs' }],
         ['AU', { description: 'added by us', defaultAction: 'o', defaultActionLong: 'ours' }],
         ['UD', { description: 'deleted by them', defaultAction: 'r', defaultActionLong: 'resolve' }],
         ['UA', { description: 'added by them', defaultAction: 'r', defaultActionLong: 'resolve' }],
@@ -200,7 +200,7 @@ export class MergeSkeleton extends AbstractReposCommand {
                     this.pullRequest = true;
                     Global.isVerbose() && console.log('Will create pull request after successful merge');
                 } catch (err) {
-                    throw new Error('You need to have github cli (gh) instaled to create a pull request.');
+                    throw new Error('You need to have github cli (gh) installed to create a pull request.');
                 }
             }
         }
@@ -246,7 +246,7 @@ export class MergeSkeleton extends AbstractReposCommand {
             choices: [
                 {
                     key: 'o',
-                    name: 'Accept our vesion',
+                    name: 'Accept our version',
                     value: 'ours',
                 },
                 {
@@ -360,7 +360,7 @@ export class MergeSkeleton extends AbstractReposCommand {
                 await this.unstageFile(repo, our);
                 fs.unlinkSync(path.join(repo.repoPath, our));
             } else if (fileDescriptor.index === 'D') {
-                // if the file is deleted lcally
+                // if the file is deleted locally
                 await repo.rawWrapper(['rm', '--sparse', '--', our]);
             } else {
                 await repo.rawWrapper(['checkout', '--ours', our]);
