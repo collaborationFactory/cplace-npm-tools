@@ -3,7 +3,7 @@
  * CLI entry point
  */
 import * as meow from 'meow';
-import {CommandRunner} from './commands';
+import {CommandRunner, UnknownCommandError} from './commands';
 import {Global} from './Global';
 import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
@@ -353,7 +353,12 @@ if (!cli.input.length) {
                     // the promise can reject with a string
                     console.error('\t' + e);
                 }
-                cli.showHelp();
+
+                // Only show help for unknown command errors
+                if (e instanceof UnknownCommandError) {
+                    cli.showHelp();
+                }
+
                 process.exit(1);
             }
         );

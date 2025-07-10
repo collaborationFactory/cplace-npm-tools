@@ -11,6 +11,13 @@ import {RefactorDelegate} from './refactor';
 import {E2E} from './e2e';
 import {Version} from "./version";
 
+export class UnknownCommandError extends Error {
+    constructor(command: string) {
+        super(`Unknown command: ${command}`);
+        this.name = 'UnknownCommandError';
+    }
+}
+
 const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'release-notes': new ReleaseNotes(),
     'repos': new Repos(),
@@ -26,7 +33,7 @@ export type Result = 'missing' | 'failed' | 'success';
 export function run(cmd: string, params: ICommandParameters): Promise<Result> {
 
     if(REGISTERED_COMMANDS[cmd] === undefined) {
-        return Promise.reject('Unknown command: ' + cmd);
+        return Promise.reject(new UnknownCommandError(cmd));
     }
 
     const command = REGISTERED_COMMANDS[cmd];
