@@ -3,7 +3,7 @@
  * CLI entry point
  */
 import * as meow from 'meow';
-import {CommandRunner} from './commands';
+import {CommandRunner, UnknownCommandError} from './commands';
 import {Global} from './Global';
 import * as updateNotifier from 'update-notifier';
 import * as fs from 'fs';
@@ -171,9 +171,9 @@ const cli = meow(
                 corresponding IDEA module among all currently known referenced repositories.
                 If --all is set, then all dependencies of the plugin will also be added as dependencies.
 
-            --merge-skeleton|-m --base-branch=<base-branch> [--target-branch=<target-branch>] 
+            --merge-skeleton|-m [--base-branch=<base-branch>] [--target-branch=<target-branch>] 
                                 [--skeleton-branch=<skeleton-branch-name] [--ours=<file-name>] 
-                                [--pull-request] [--push]:
+                                [--pull-request] [--push] [--interactive]:
                 Merges a branch from the skeleton repo to the specified base branch, or to a specified target branch
                 that will be branched from the base branch. A skeleton branch will be selected automatically based on 
                 the cplace version. 
@@ -195,6 +195,9 @@ const cli = meow(
                                  target branch is specified with --target-branch and if that branch is not 
                                  already tracked.
                 --push - if specified, the changes will be pushed to the target branch if the merge was successful
+                --interactive - if specified, the command will ask for a decision for each newly added or conflicting file.
+                                The choices provided are accept our (local) version, accept their (remote) version,
+                                or leave the conflict to be resolved manually.
 
                 ex: cplace-cli repos --merge-skeleton --base-branch=release/23.1 --push 
                     (merge auto detected skeleton version to release/23.1 and push to remote)
@@ -350,7 +353,12 @@ if (!cli.input.length) {
                     // the promise can reject with a string
                     console.error('\t' + e);
                 }
-                cli.showHelp();
+
+                // Only show help for unknown command errors
+                if (e instanceof UnknownCommandError) {
+                    cli.showHelp();
+                }
+
                 process.exit(1);
             }
         );
