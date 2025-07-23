@@ -1,0 +1,19 @@
+/**
+ * Promisified declarations for Node fs module using native fs/promises
+ */
+import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
+// Re-export native fs for synchronous operations
+export { fs };
+// Export promisified fs methods using native fs/promises
+export const statAsync = fsPromises.stat;
+export const readFileAsync = (filename, encoding) => fsPromises.readFile(filename, encoding);
+export const appendFileAsync = (file, data, options) => fsPromises.appendFile(file, data, options);
+export const writeFileAsync = (file, data, options) => fsPromises.writeFile(file, data, options);
+export const mkdirAsync = fsPromises.mkdir;
+export const readdirAsync = fsPromises.readdir;
+export const renameAsync = fsPromises.rename;
+export const unlinkAsync = fsPromises.unlink;
+// Keep the sync method as-is
+export const readFileSync = fs.readFileSync;
+//# sourceMappingURL=fs.js.map

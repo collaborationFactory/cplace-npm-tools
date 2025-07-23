@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import type { IReposDescriptor } from '../models.js';
 import { Repository } from '@cplace-cli/git-utils';
 import * as path from 'path';
-import * as eol from 'eol-converter-cli';
+import * as eol from 'eol';
 import type { StatusResult } from 'simple-git';
 
 export abstract class AbstractReposCommand implements ICommand {
@@ -122,8 +122,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected convertLineEndings(content: string): string {
         const isWindows = process.platform === 'win32';
         if (isWindows) {
-            // Convert to CRLF for Windows
-            return content.replace(/\r?\n/g, '\r\n');
+            return eol.crlf(content);
         }
         return content;
     }

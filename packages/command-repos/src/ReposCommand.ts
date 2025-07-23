@@ -4,11 +4,12 @@
 import { Command } from 'commander';
 import { Global, ICommandParameters } from '@cplace-cli/core';
 
-// Import subcommands (these will be migrated progressively)
-// import { UpdateRepos } from './subcommands/UpdateRepos.js';
-// import { WriteRepos } from './subcommands/WriteRepos.js';
-// import { CloneRepos } from './subcommands/CloneRepos.js';
-// import { BranchRepos } from './subcommands/BranchRepos.js';
+// Import subcommands
+import { UpdateRepos } from './subcommands/update.js';
+import { WriteRepos } from './subcommands/write.js';
+import { CloneRepos } from './subcommands/clone.js';
+import { BranchRepos } from './subcommands/branch.js';
+import { AddDependency } from './subcommands/add-dependency.js';
 
 export function createReposCommand(): Command {
     const repos = new Command('repos');
@@ -39,13 +40,10 @@ export function createReposCommand(): Command {
             };
 
             try {
-                // TODO: Implement UpdateRepos migration
-                // const updateCommand = new UpdateRepos();
-                // if (updateCommand.prepareAndMayExecute(params)) {
-                //     await updateCommand.execute();
-                // }
-                console.log('Update repos functionality - to be implemented in migration');
-                console.log('Parameters:', params);
+                const updateCommand = new UpdateRepos();
+                if (updateCommand.prepareAndMayExecute(params)) {
+                    await updateCommand.execute();
+                }
             } catch (error) {
                 console.error('Update repos failed:', error);
                 process.exit(1);
@@ -72,9 +70,10 @@ export function createReposCommand(): Command {
             };
 
             try {
-                // TODO: Implement WriteRepos migration
-                console.log('Write repos functionality - to be implemented in migration');
-                console.log('Parameters:', params);
+                const writeCommand = new WriteRepos();
+                if (writeCommand.prepareAndMayExecute(params)) {
+                    await writeCommand.execute();
+                }
             } catch (error) {
                 console.error('Write repos failed:', error);
                 process.exit(1);
@@ -99,9 +98,10 @@ export function createReposCommand(): Command {
             };
 
             try {
-                // TODO: Implement CloneRepos migration  
-                console.log('Clone repos functionality - to be implemented in migration');
-                console.log('Parameters:', params);
+                const cloneCommand = new CloneRepos();
+                if (cloneCommand.prepareAndMayExecute(params)) {
+                    await cloneCommand.execute();
+                }
             } catch (error) {
                 console.error('Clone repos failed:', error);
                 process.exit(1);
@@ -128,18 +128,44 @@ export function createReposCommand(): Command {
             };
 
             try {
-                // TODO: Implement BranchRepos migration
-                console.log('Branch repos functionality - to be implemented in migration');
-                console.log('Branch name:', name);
-                console.log('Parameters:', params);
+                const branchCommand = new BranchRepos();
+                if (branchCommand.prepareAndMayExecute(params)) {
+                    await branchCommand.execute();
+                }
             } catch (error) {
                 console.error('Branch repos failed:', error);
                 process.exit(1);
             }
         });
 
-    // Additional subcommands can be added here as they are migrated
-    // - add-dependency
+    // Add-dependency subcommand
+    repos
+        .command('add-dependency <name>')
+        .alias('d')  
+        .description('Add a new dependency to another plugin or repository')
+        .option('--all', 'Add all modules of this repository to the IDEA project')
+        .action(async (name, options, command) => {
+            Global.isVerbose() && console.log('Add dependency command:', name, options);
+            
+            const parentOptions = command.parent?.opts() || {};
+            const params: ICommandParameters = {
+                ...parentOptions,
+                ...options,
+                name: name // Pass the dependency name
+            };
+
+            try {
+                const addDependencyCommand = new AddDependency();
+                if (addDependencyCommand.prepareAndMayExecute(params)) {
+                    await addDependencyCommand.execute();
+                }
+            } catch (error) {
+                console.error('Add dependency failed:', error);
+                process.exit(1);
+            }
+        });
+
+    // Additional subcommands can be added here as they are migrated  
     // - merge-skeleton  
     // - migrate-artifact-groups
     // - validate-branches

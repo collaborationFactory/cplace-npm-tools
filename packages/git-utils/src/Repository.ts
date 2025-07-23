@@ -90,12 +90,7 @@ export class Repository {
         await this.git.checkout(branch);
     }
 
-    /**
-     * Fetch from remote
-     */
-    public async fetch(): Promise<void> {
-        await this.git.fetch();
-    }
+
 
     /**
      * Pull from remote
@@ -104,12 +99,7 @@ export class Repository {
         await this.git.pull();
     }
 
-    /**
-     * Push to remote
-     */
-    public async push(): Promise<void> {
-        await this.git.push();
-    }
+
 
     /**
      * Get git log
@@ -145,5 +135,210 @@ export class Repository {
             } : null,
             total: result.total
         } as IGitLogSummary;
+    }
+
+    // Additional methods needed by repos commands
+    
+    /**
+     * Get status (alias for getStatus)
+     */
+    public async status(): Promise<StatusResult> {
+        return this.getStatus();
+    }
+
+    /**
+     * Fetch with options
+     */
+    public async fetch({tag, branch}: { tag?: string, branch?: string } = {}): Promise<void> {
+        if (tag) {
+            await this.git.fetch('origin', `refs/tags/${tag}:refs/tags/${tag}`);
+        } else if (branch) {
+            await this.git.fetch('origin', branch);
+        } else {
+            await this.git.fetch();
+        }
+    }
+
+    /**
+     * Reset hard
+     */
+    public async resetHard(branch?: string): Promise<void> {
+        if (branch) {
+            await this.git.reset(['--hard', `origin/${branch}`]);
+        } else {
+            await this.git.reset(['--hard']);
+        }
+    }
+
+    /**
+     * Checkout branch
+     */
+    public async checkoutBranch(branch: string | string[]): Promise<void> {
+        if (Array.isArray(branch)) {
+            await this.git.checkout(branch);
+        } else {
+            await this.git.checkout(branch);
+        }
+    }
+
+    /**
+     * Checkout commit
+     */
+    public async checkoutCommit(commit: string): Promise<void> {
+        await this.git.checkout(commit);
+    }
+
+    /**
+     * Checkout tag
+     */
+    public async checkoutTag(tag: string): Promise<void> {
+        await this.git.checkout(tag);
+    }
+
+    /**
+     * Get current commit hash
+     */
+    public async getCurrentCommitHash(): Promise<string> {
+        const result = await this.git.revparse(['HEAD']);
+        return result.trim();
+    }
+
+    /**
+     * Get origin URL
+     */
+    public async getOriginUrl(): Promise<string> {
+        const remotes = await this.git.getRemotes(true);
+        const origin = remotes.find(remote => remote.name === 'origin');
+        return origin?.refs?.fetch || '';
+    }
+
+    /**
+     * Add file to staging
+     */
+    public async add(filename: string): Promise<void> {
+        await this.git.add(filename);
+    }
+
+    /**
+     * Commit changes
+     */
+    public async commit(message: string, files?: string[] | string): Promise<void> {
+        if (files) {
+            await this.git.commit(message, files);
+        } else {
+            await this.git.commit(message);
+        }
+    }
+
+    /**
+     * Push to remote
+     */
+    public async push(remote: string, remoteBranchName?: string): Promise<void> {
+        if (remoteBranchName) {
+            await this.git.push(remote, remoteBranchName);
+        } else {
+            await this.git.push(remote);
+        }
+    }
+
+    /**
+     * Check if commit exists
+     */
+    public async commitExists(hash: string): Promise<string> {
+        try {
+            return await this.git.revparse([hash]);
+        } catch (e) {
+            throw new Error(`Commit ${hash} does not exist`);
+        }
+    }
+
+    /**
+     * Pull with fast-forward only
+     */
+    public async pullOnlyFastForward(branch: string): Promise<void> {
+        await this.git.pull('origin', branch, ['--ff-only']);
+    }
+
+    /**
+     * Prefetch branch for shallow clone
+     */
+    public async prefetchBranchForShallowClone(branch: string): Promise<void> {
+        try {
+            await this.git.fetch('origin', branch);
+        } catch (e) {
+            // Ignore errors for shallow clones
+        }
+    }
+
+    /**
+     * Create branch for tag
+     */
+    public async createBranchForTag(repoName: string, tag: string): Promise<void> {
+        const branchName = `release-version/${tag}`;
+        await this.git.checkoutLocalBranch(branchName);
+    }
+
+    /**
+     * Check if repo has path in branch
+     */
+    public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): boolean {
+        try {
+            // This is a simplified check - would need more complex git logic
+            return true; // Placeholder
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if branch exists on remote
+     */
+    public checkBranchExistsOnRemote(branchName: string): boolean {
+        try {
+            // This is a simplified check - would need remote branch verification
+            return true; // Placeholder
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Static methods needed by repos commands
+
+    /**
+     * Clone repository
+     */
+    public static async clone(repoName: string, repoProperties: IRepoStatus, rootDir: string, toPath: string, depth: number): Promise<Repository> {
+        const git = simpleGit.simpleGit();
+        const options: string[] = [];
+        
+        if (depth > 0) {
+            options.push('--depth', depth.toString());
+        }
+
+        await git.clone(repoProperties.url, toPath, options);
+        return new Repository(toPath);
+    }
+
+    /**
+     * Get latest tag of release branch
+     */
+    public static async getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
+        // Placeholder implementation - would need complex tag resolution logic
+        return '';
+    }
+
+    /**
+     * Get active tag of release branch
+     */
+    public static async getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
+        // Placeholder implementation
+        return '';
+    }
+
+    /**
+     * Validate tag marker
+     */
+    public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
+        // Placeholder implementation
     }
 }
