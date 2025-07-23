@@ -1,7 +1,6 @@
 /**
  * Command Runner implementation
  */
-import * as Promise from 'bluebird';
 import {Flow} from './flow';
 import {ICommand, ICommandParameters} from './models';
 import {ReleaseNotes} from './release-notes';

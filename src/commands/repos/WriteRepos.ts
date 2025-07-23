@@ -1,4 +1,3 @@
-import * as Promise from 'bluebird';
 import {Repository} from '../../git';
 import {Global} from '../../Global';
 import {AbstractReposCommand} from './AbstractReposCommand';
@@ -21,19 +20,23 @@ export class WriteRepos extends AbstractReposCommand {
     private unFreeze: boolean = false;
     private useTags: boolean = false;
 
-    public execute(): Promise<void> {
-        return Promise
-            .resolve(Object.keys(this.parentRepos))
-            .map((repoName: string) => this.handleRepo(repoName), {concurrency: 1})
-            .then((states) => {
-                const newParentRepos: IReposDescriptor = {};
-                states.forEach((s) => {
-                    newParentRepos[s.repoName] = s.status;
-                });
+    public async execute(): Promise<void> {
+        const repoNames = Object.keys(this.parentRepos);
+        const states: Array<{ repoName: string; status: IRepoStatus }> = [];
+        
+        // Process repos sequentially (same as {concurrency: 1})
+        for (const repoName of repoNames) {
+            const result = await this.handleRepo(repoName);
+            states.push(result);
+        }
+        
+        const newParentRepos: IReposDescriptor = {};
+        states.forEach((s) => {
+            newParentRepos[s.repoName] = s.status;
+        });
 
-                Global.isVerbose() && console.log('status and revparse successfully completed');
-                return this.writeNewParentRepos(newParentRepos);
-            });
+        Global.isVerbose() && console.log('status and revparse successfully completed');
+        return this.writeNewParentRepos(newParentRepos);
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
@@ -51,7 +54,7 @@ export class WriteRepos extends AbstractReposCommand {
         Global.isVerbose() && console.log(`[${repoName}]:`, 'repoProperties', repoProperties);
 
         if (this.unFreeze) {
-            return new Promise<IRepoStatus>((resolve) => {
+            return new Promise<{ repoName: string; status: IRepoStatus }>((resolve) => {
                 const current = this.parentRepos[repoName];
                 let currentBranch = current.branch;
                 if (currentBranch.startsWith('release-version/')) {

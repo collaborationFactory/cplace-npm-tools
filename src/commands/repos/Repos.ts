@@ -1,7 +1,6 @@
 /**
  * General repo based command
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {CloneRepos} from './CloneRepos';
 import {UpdateRepos} from './UpdateRepos';

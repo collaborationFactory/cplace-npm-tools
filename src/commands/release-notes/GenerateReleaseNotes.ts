@@ -3,7 +3,7 @@
  */
 import { IGitLogEntry, IGitLogSummary, Repository } from '../../git';
 import { Global } from '../../Global';
-import { fs } from '../../p/fs';
+import { fs, statAsync } from '../../p/fs';
 import { ICommand, ICommandParameters } from '../models';
 import { ReleaseNotesMessagesFile } from './ReleaseNotesMessagesFile';
 import { ReleaseNumber } from '../flow/ReleaseNumber';
@@ -166,7 +166,7 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile; explicits: ReleaseNotesMessagesFile }> {
-        await fs.statAsync(this.explicitsFile);
+        await statAsync(this.explicitsFile);
 
         const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
         try {

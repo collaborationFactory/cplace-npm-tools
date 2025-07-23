@@ -1,4 +1,3 @@
-import * as Promise from 'bluebird';
 import {Global} from '../../Global';
 import {AbstractReposCommand} from './AbstractReposCommand';
 import {IReposDescriptor, IRepoStatus} from './models';
@@ -26,24 +25,26 @@ export class MigrateArtifactGroup extends AbstractReposCommand {
     protected repoToGroupMap: Map<string, unknown> = new Map<string, unknown>();
     protected notUpdatedRepos: string[] = [];
 
-    public execute(): Promise<void> {
-        return Promise
-            .resolve(Object.keys(this.parentRepos))
-            .map((repoName: string) => this.handleRepo(repoName), {concurrency: 1})
-            .then((states) => {
-                const newParentRepos: IReposDescriptor = {};
-                states.forEach((s) => {
-                    newParentRepos[s.repoName] = s.status;
-                });
+    public async execute(): Promise<void> {
+        const repoNames = Object.keys(this.parentRepos);
+        const states: Array<{ repoName: string; status: IRepoStatus }> = [];
+        
+        // Process repos sequentially (same as {concurrency: 1})
+        for (const repoName of repoNames) {
+            const result = await this.handleRepo(repoName);
+            states.push(result);
+        }
+        
+        const newParentRepos: IReposDescriptor = {};
+        states.forEach((s) => {
+            newParentRepos[s.repoName] = s.status;
+        });
 
-                console.log('Updated artifact groups for repositories');
-                this.writeNewParentRepos(newParentRepos);
-                if (this.notUpdatedRepos.length > 0) {
-                    console.log(`Repositories not found and not updated: ${this.notUpdatedRepos}`);
-                }
-
-                return Promise.resolve();
-            });
+        console.log('Updated artifact groups for repositories');
+        this.writeNewParentRepos(newParentRepos);
+        if (this.notUpdatedRepos.length > 0) {
+            console.log(`Repositories not found and not updated: ${this.notUpdatedRepos}`);
+        }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

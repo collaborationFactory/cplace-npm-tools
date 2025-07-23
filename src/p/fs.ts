@@ -1,42 +1,24 @@
 /**
- * Promisified declarations for Node fs module
+ * Promisified declarations for Node fs module using native fs/promises
  */
-import * as Promise from 'bluebird';
 import * as fs from 'fs';
-import {PathLike} from 'fs';
+import * as fsPromises from 'fs/promises';
 
-Promise.promisifyAll(fs);
-
-declare module 'fs' {
-
-    export function statAsync(path: string | Buffer): Promise<Stats>;
-
-    /*
-     * Asynchronous readFile - Asynchronously reads the entire contents of a file.
-     *
-     * @param fileName
-     * @param encoding
-     */
-    export function readFileAsync(filename: string, encoding: string): Promise<string>;
-
-    export function appendFileAsync(file: string | Buffer | number, data: string | Buffer, options: string): Promise<void>;
-
-    export function writeFileAsync(file: string | Buffer | number, data: string | Buffer, options: string): Promise<void>;
-
-    /*
-     * Asynchronous mkdir - creates the directory specified in {path}.  Parameter {mode} defaults to 0777.
-     *
-     * @param path
-     */
-    export function mkdirAsync(path: string | Buffer): Promise<void>;
-
-    export function readFileSync(filename: string, encoding: string): string;
-
-    export function readdirAsync(path: string | Buffer): Promise<string[]>;
-
-    export function renameAsync(oldPath: PathLike, newPath: PathLike): Promise<void>;
-
-    export function unlinkAsync(path: PathLike): Promise<void>;
-}
-
+// Re-export native fs for synchronous operations
 export {fs};
+
+// Export promisified fs methods using native fs/promises
+export const statAsync = fsPromises.stat;
+export const readFileAsync = (filename: string, encoding: BufferEncoding): Promise<string> => 
+    fsPromises.readFile(filename, encoding);
+export const appendFileAsync = (file: string, data: string | Buffer, options: BufferEncoding): Promise<void> => 
+    fsPromises.appendFile(file, data, options);
+export const writeFileAsync = (file: string, data: string | Buffer, options: BufferEncoding): Promise<void> => 
+    fsPromises.writeFile(file, data, options);
+export const mkdirAsync = fsPromises.mkdir;
+export const readdirAsync = fsPromises.readdir;
+export const renameAsync = fsPromises.rename;
+export const unlinkAsync = fsPromises.unlink;
+
+// Keep the sync method as-is
+export const readFileSync = fs.readFileSync;

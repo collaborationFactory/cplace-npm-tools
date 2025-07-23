@@ -1,7 +1,8 @@
 import {IReposDescriptor} from '../models';
 import * as path from 'path';
-import {IGitStatus, Repository} from '../../../git';
-import {fs} from '../../../p/fs';
+import {Repository} from '../../../git';
+import {statAsync} from '../../../p/fs';
+import {StatusResult} from 'simple-git';
 
 export abstract class DependencyManagement {
 
@@ -19,7 +20,7 @@ export abstract class DependencyManagement {
         }
 
         const repoPath = path.resolve(this.repositoryDir, '..', repositoryName);
-        return fs.statAsync(repoPath)
+        return statAsync(repoPath)
             .then((stats) => {
                 if (!stats.isDirectory()) {
                     throw new Error(`expected a repository directory named: ${repositoryName}`);
@@ -29,7 +30,7 @@ export abstract class DependencyManagement {
             })
             .then(() => new Repository(repoPath))
             .then((repo) => repo.status()
-                .then((status: IGitStatus) => ({repo, status}))
+                .then((status: StatusResult) => ({repo, status}))
             )
             .then(({repo, status}) => repo.getOriginUrl()
                 .then((url) => ({status, url}))

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import {fs} from '../p/fs';
+import {fs, readFileAsync, writeFileAsync} from '../p/fs';
 
 export class GradleBuild {
     private static readonly GRADLE_BUILD_FILE: string = 'build.gradle';
@@ -81,7 +81,7 @@ export class GradleBuild {
             ...newIncludeBuild
         ];
 
-        await fs.writeFileAsync(
+        await writeFileAsync(
             path.join(this.directory, GradleBuild.SETTINGS_FILE),
             newSettingsContent.join('\n'),
             'utf-8'
@@ -94,7 +94,7 @@ export class GradleBuild {
             return;
         }
 
-        const content = await fs.readFileAsync(
+        const content = await readFileAsync(
             path.join(this.directory, GradleBuild.SETTINGS_FILE),
             'utf-8'
         );

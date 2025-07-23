@@ -1,7 +1,6 @@
 /**
  * Command for checking whether all relevant messages are correctly set
  */
-import * as Promise from 'bluebird';
 import {IGitLogEntry, Repository} from '../../git';
 import {Global} from '../../Global';
 import {ICommand, ICommandParameters} from '../models';

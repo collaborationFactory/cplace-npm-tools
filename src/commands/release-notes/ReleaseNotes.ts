@@ -1,7 +1,6 @@
 /**
  * General release-notes command
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {CheckMessages} from './CheckMessages';
 import {GenerateReleaseNotes} from './GenerateReleaseNotes';
