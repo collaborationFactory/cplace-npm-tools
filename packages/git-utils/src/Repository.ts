@@ -341,4 +341,101 @@ export class Repository {
     public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
         // Placeholder implementation
     }
+
+    public static includeBranch(branch: string, regexForExclusion: string, regexForInclusion: string): boolean {
+        if (regexForInclusion.length > 0) {
+            const re = new RegExp(regexForInclusion);
+            const match = branch.match(re);
+            return match !== null && branch === match[0];
+        } else {
+            const re = new RegExp(regexForExclusion);
+            const match = branch.match(re);
+            return !(match !== null && branch === match[0]);
+        }
+    }
+
+    public getRemoteBranchesAndCommits(branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<IGitBranchAndCommit[]> {
+        return new Promise<IGitBranchAndCommit[]>((resolve, reject) => {
+            this.git.raw(['for-each-ref'], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'result of git for-each-ref', result);
+                    const lines: string[] = result.match(/[^\r\n]+/g) || [];
+                    const branchesAndCommits: IGitBranchAndCommit[] = [];
+
+                    lines.forEach((l) => {
+                        const trimmed = l.trim();
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'trimmed: ' + trimmed);
+                        const matched = /([a-z0-9]+)\s*commit\s*refs\/remotes\/origin\/(\S*)/.exec(trimmed);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'matched', matched);
+                        if (matched && matched.length === 3) {
+                            const branch = matched[2];
+                            const commit = matched[1];
+
+                            if (Repository.includeBranch(branch, branchRegexForExclusion, branchRegexForInclusion)) {
+                                branchesAndCommits.push({branch, commit});
+                            }
+                        }
+                    });
+
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'all branches and commits before filtering', branchesAndCommits);
+
+                    // filter out branches that are on the same commit
+                    const filteredBranchesAndCommits = branchesAndCommits.filter((branchAndCommit: IGitBranchAndCommit) => {
+                        const branches: string[] = [];
+                        for (const bac of branchesAndCommits) {
+                            if (bac.commit === branchAndCommit.commit) {
+                                branches.push(bac.branch);
+                            }
+                        }
+                        if (branches.length === 1) {
+                            return true;
+                        } else {
+                            if (branches[0] === branchAndCommit.branch) {
+                                console.log(`[${this.repoName}]:`, 'WARNING: There are multiple branches at commit ' + branchAndCommit.commit + ': ' + branches +
+                                    ', ignoring branch ' + branchAndCommit.branch);
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+                    });
+
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'all branches and commits after filtering', filteredBranchesAndCommits);
+
+                    resolve(filteredBranchesAndCommits);
+                }
+            });
+        });
+    }
+
+    public getRemoteBranchesContainingCommit(commit: string, branchRegexForExclusion: string, branchRegexForInclusion: string): Promise<string[]> {
+        return new Promise<string[]>((resolve, reject) => {
+            this.git.raw(['branch', '-a', '--contains', commit], (err, result: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'result of git branch -a --contains ' + commit, result);
+                    const lines: string[] = result.match(/[^\r\n]+/g) || [];
+                    const branches: string[] = [];
+
+                    lines.forEach((l) => {
+                        const trimmed = l.trim();
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'trimmed: ' + trimmed);
+                        const matched = /remotes\/origin\/(\S*)/.exec(trimmed);
+                        Global.isVerbose() && console.log(`[${this.repoName}]:`, 'matched', matched);
+                        if (matched && matched.length === 2) {
+                            if (Repository.includeBranch(matched[1], branchRegexForExclusion, branchRegexForInclusion)) {
+                                branches.push(matched[1]);
+                            }
+                        }
+                    });
+
+                    Global.isVerbose() && console.log(`[${this.repoName}]:`, 'branches', branches);
+                    resolve(branches);
+                }
+            });
+        });
+    }
 }

@@ -1,8 +1,15 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/git-utils"
+    "outDir": "../../dist/packages/git-utils",
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "tsBuildInfoFile": "../../dist/packages/git-utils/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"],
+  "references": [
+    { "path": "../core" }
+  ]
 }
