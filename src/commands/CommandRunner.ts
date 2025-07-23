@@ -7,7 +7,6 @@ import {ReleaseNotes} from './release-notes';
 import {Repos} from './repos';
 import {VisualizeDelegate} from './visualize';
 import {RefactorDelegate} from './refactor';
-import {E2E} from './e2e';
 import {Version} from "./version";
 
 export class UnknownCommandError extends Error {
@@ -23,7 +22,6 @@ const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'flow': new Flow(),
     'visualize': new VisualizeDelegate(),
     'refactor': new RefactorDelegate(),
-    'e2e': new E2E(),
     'version': new Version()
 };
 

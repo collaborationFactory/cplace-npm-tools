@@ -73,7 +73,6 @@ The CLI uses a command-based architecture where each major feature is a separate
   - `flow` - Upmerge operations between releases
   - `visualize` - Branch dependency visualization
   - `refactor` - Plugin refactoring utilities
-  - `e2e` - End-to-end testing framework
   - `version` - Version management utilities
 
 ### Key Components

@@ -234,35 +234,6 @@ $  cplace-cli --help
             2. Setting their version to major.minor.999 in version.gradle
             3. Updating artifactVersion in all parent-repos.json files
             4. Removing useSnapshot flag for affected repositories
-            
-        e2e [--baseUrl <baseUrl>] [--context <context>] [--tenantId <tenantId>] [--e2eToken <token>]
-            [--browser <browser>] [--plugins <plugins>] [--specs <specs>] [--timeout <timeout>] [--headless]
-            [--noInstall] [--jUnit <?reportsPath>] [--screenshot <?screenshotPath>] [--allure <?allureOutputPath>]
-
-            --baseUrl to configure where to run the tests against (default: 'http://localhost:8083')
-            --context to define in which context cplace is running (default: '/intern/tricia/')
-            --tenantId to define against which tenant the tests are run (default: '' single tenant mode)
-            --e2eToken to define the Test Setup Handler E2E token (default: '')
-            --browser to specify which browser to use (default: Chrome)
-            --plugins to specify a comma separated list of plugins to run tests for
-              (default: all plugins in the current repository)
-            --specs to specify the pattern used to search for specification files inside plugins
-              (default: '**/*.spec.ts')
-            --timeout to specify a global Timeout for Test Execution
-            --headless currently only possible in Chrome and Firefox
-            --noInstall will skip the check for new Selenium Drivers (required to run offline, default: false)
-            --jUnit will create jUnit reports and allows you to specify the location where the reports are stored
-              (default: './e2eJunitReports')
-            --screenshot will create Screenshots on each failed Test and store them in given path
-              (default: './e2eScreenshots')
-            --allure will create Allure Reporter output files and store them in the given path
-              (default: './allure-output')
-            --logLevel will adjust the logLevel in wdio configuraiton
-              (default: 'error', supported options: 'trace | debug | info | warn | error | silent')
-            --specFileRetries The number of times to retry the entire specfile when it fails as a whole
-              (default: 0)
-            --chromeDriverVersion will adjust the version of the Chrome driver
-              (default: latest version)
 
     Global options:
         --verbose
