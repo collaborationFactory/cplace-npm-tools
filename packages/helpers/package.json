@@ -3,8 +3,8 @@
   "version": "2.0.0-dev",
   "description": "Shared helper utilities for cplace CLI",
   "type": "module",
-  "main": "../../dist/packages/helpers/index.js",
-  "types": "../../dist/packages/helpers/index.d.ts",
+  "main": "../../dist/packages/helpers/src/index.js",
+  "types": "../../dist/packages/helpers/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf ../../dist/packages/helpers"

@@ -41,7 +41,7 @@ export class GradleBuild {
     public async getIncludedCompositeRepoPaths(): Promise<string[]> {
         await this.ensureSettingsGradleContentRead();
 
-        return this.settingsGradleContent
+        return this.settingsGradleContent!
             .map((line) => {
                 return GradleBuild.REGEX_INCLUDE_BUILD.exec(line);
             })
@@ -49,7 +49,7 @@ export class GradleBuild {
                 return !!match && match.length > 1;
             })
             .map((match) => {
-                return match[1];
+                return match![1];
             });
     }
 
@@ -77,7 +77,7 @@ export class GradleBuild {
         ];
 
         const newSettingsContent = [
-            ...this.settingsGradleContent,
+            ...this.settingsGradleContent!,
             ...newIncludeBuild
         ];
 

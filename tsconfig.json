@@ -16,8 +16,10 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
     "paths": {
       "@cplace-cli/core": ["./packages/core/src/index.ts"],
+      "@cplace-cli/core/p/fs": ["./packages/core/src/p/fs.ts"],
       "@cplace-cli/git-utils": ["./packages/git-utils/src/index.ts"],
       "@cplace-cli/command-repos": ["./packages/command-repos/src/index.ts"],
       "@cplace-cli/helpers": ["./packages/helpers/src/index.ts"]

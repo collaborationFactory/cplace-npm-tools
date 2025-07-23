@@ -1,0 +1,17 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "@cplace-cli/helpers",
+  "projectType": "library",
+  "sourceRoot": "packages/helpers/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/helpers",
+        "main": "packages/helpers/src/index.ts",
+        "tsConfig": "packages/helpers/tsconfig.json"
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ You are refactoring action handlers to use proper Commander.js patterns instead 
 
 ## Your Task
 
-Replace legacy action handler patterns with modern Commander.js action handlers that use proper TypeScript typing and eliminate manual parameter conversion.
+Replace legacy action handler for $ARGUMENTS  patterns with modern Commander.js action handlers that use proper TypeScript typing and eliminate manual parameter conversion.
 
 ### Convert Legacy Action Handlers
 **Before (Legacy Pattern):**

@@ -70,7 +70,7 @@ export class CplaceVersion {
      * @param {string} versionFilePath - Path to version.gradle file.
      * @returns {string | undefined} Extracted version string, or undefined if not found.
      */
-    public static determineVersion(buildFilePath: string, versionFilePath: string): string {
+    public static determineVersion(buildFilePath: string, versionFilePath: string): string | undefined {
         // search for version string in build.gradle
         const buildFileContent = fs.readFileSync(buildFilePath, 'utf8');
         let versionString = this.getVersionString(buildFileContent, ['version']);
@@ -95,7 +95,7 @@ export class CplaceVersion {
         const content = fs.readFileSync(versionGradlePath, 'utf8');
         let updated = false;
         const lines = content.split('\n');
-        const result = [];
+        const result: string[] = [];
 
         for (const line of lines) {
             if (/^[ \t]+currentVersion[ \t]*=/.test(line)) {
@@ -142,6 +142,9 @@ export class CplaceVersion {
     }
 
     public static compareTo(otherVersion: { major: number, minor: number, patch: number }): number {
+        if (!this._version) {
+            throw new Error('version has not yet been initialized');
+        }
         if (this._version.major !== otherVersion.major) {
             return this._version.major - otherVersion.major;
         } else if (this._version.minor !== otherVersion.minor) {

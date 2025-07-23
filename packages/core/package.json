@@ -5,6 +5,16 @@
   "type": "module",
   "main": "../../dist/packages/core/src/index.js",
   "types": "../../dist/packages/core/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./../../dist/packages/core/src/index.d.ts",
+      "import": "./../../dist/packages/core/src/index.js"
+    },
+    "./p/fs": {
+      "types": "./../../dist/packages/core/src/p/fs.d.ts",
+      "import": "./../../dist/packages/core/src/p/fs.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf ../../dist/packages/core"
