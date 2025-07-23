@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x ../../dist/packages/cli/src/cli.js",
+    "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --outfile=../../dist/cplace-cli.js --format=esm --external:fs --external:path --external:os --external:child_process --external:util --external:url --external:stream --external:events --external:buffer --external:crypto --external:assert --external:zlib --external:readline --external:tty --banner:js=\"#!/usr/bin/env node\" && chmod +x ../../dist/cplace-cli.js",
     "clean": "rm -rf ../../dist/packages/cli"
   },
   "dependencies": {

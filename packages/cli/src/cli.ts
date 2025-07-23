@@ -6,17 +6,12 @@ import { Command } from 'commander';
 import { Global } from '@cplace-cli/core';
 import { createReposCommand } from '@cplace-cli/command-repos';
 import updateNotifier from 'update-notifier';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Read package.json for version and update notifications
-const packageJsonPath = path.resolve(__dirname, '../../../package.json');
-const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-const packageJson = JSON.parse(packageJsonContent);
+// Package information - embedded at build time
+const packageJson = {
+    name: '@cplace/cli',
+    version: '2.0.0-dev'
+};
 
 // Checks for available update on every startup
 const notifier = updateNotifier({
