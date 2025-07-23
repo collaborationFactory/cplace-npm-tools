@@ -1,13 +1,13 @@
 /**
  * Branch visualization command using Commander.js
  */
-import { Command } from 'commander';
-import { Global } from '@cplace-cli/core';
-import { Visualize } from './Visualize.js';
+import {Command} from 'commander';
+import {Global} from '@cplace-cli/core';
+import {Visualize} from './Visualize.js';
 
 export function createVisualizeCommand(): Command {
     const visualize = new Command('visualize');
-    
+
     visualize
         .description('Create branch dependency visualization')
         .option('--regex-for-exclusion <regex>', 'Regex for excluding branches', 'HEAD|attic/.*')
@@ -15,14 +15,14 @@ export function createVisualizeCommand(): Command {
         .option('--pdf', 'Generate PDF output instead of DOT file')
         .action(async (options) => {
             Global.isVerbose() && console.log('Visualize command options:', options);
-            
+
             try {
                 const visualizer = new Visualize({
                     regexForExclusion: options.regexForExclusion,
                     regexForInclusion: options.regexForInclusion,
                     pdf: options.pdf
                 });
-                
+
                 await visualizer.execute();
             } catch (error) {
                 console.error('Visualization failed:', error);
@@ -32,6 +32,6 @@ export function createVisualizeCommand(): Command {
                 process.exit(1);
             }
         });
-    
+
     return visualize;
 }

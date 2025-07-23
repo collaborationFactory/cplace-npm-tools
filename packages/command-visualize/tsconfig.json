@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/packages/command-visualize",
+    "rootDir": "src",
+    "composite": true,
+    "declaration": true,
+    "tsBuildInfoFile": "../../dist/packages/command-visualize/tsconfig.tsbuildinfo"
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../core" },
+    { "path": "../git-utils" }
+  ]
+}

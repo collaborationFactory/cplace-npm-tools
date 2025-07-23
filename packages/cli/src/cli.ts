@@ -5,6 +5,7 @@
 import { Command } from 'commander';
 import { Global } from '@cplace-cli/core';
 import { createReposCommand } from '@cplace-cli/command-repos';
+import { createVisualizeCommand } from '@cplace-cli/command-visualize';
 import updateNotifier from 'update-notifier';
 
 // Package information - embedded at build time
@@ -67,16 +68,8 @@ program
         console.log('This command will be implemented in the migration phase.');
     });
 
-program
-    .command('visualize')
-    .description('Create branch dependency visualization')
-    .option('--regex-for-exclusion <regex>', 'Regex for exclusion (default: HEAD|attic/.*)')
-    .option('--regex-for-inclusion <regex>', 'Regex for inclusion')
-    .option('--pdf', 'Create PDF output')
-    .action(async (options) => {
-        console.log('Visualize command with options:', options);
-        console.log('This command will be implemented in the migration phase.');
-    });
+// Add the visualize command
+program.addCommand(createVisualizeCommand());
 
 program
     .command('version')

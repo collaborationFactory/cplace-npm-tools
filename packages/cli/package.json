@@ -16,6 +16,7 @@
   "dependencies": {
     "@cplace-cli/core": "file:../core",
     "@cplace-cli/command-repos": "file:../command-repos",
+    "@cplace-cli/command-visualize": "file:../command-visualize",
     "commander": "^14.0.0",
     "update-notifier": "^4.1.3"
   },
