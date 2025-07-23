@@ -32,6 +32,14 @@ It allows developers to create CLI tools with features such as options, commands
 - Do the migration in small steps, step by step. Always we want to review the plan for the changes before any actual changes are done. We will move and adopt files and business logic command by command, starting with the shared implementations.
 - the original project structure in src and test must be retained during the migration as knowledge base but not be build and used anymore.
 
+### Multi-Developer Collaboration
+
+- **Three-developer parallel migration** strategy outlined in `MIGRATION_PLAN.md`
+- **Developer assignments**: Infrastructure (Dev 1), Release Notes & Flow (Dev 2), Version & Visualize (Dev 3)
+- **Critical path management**: Runtime module resolution must be completed before other developers can proceed
+- **Daily coordination**: 15-minute morning syncs to manage dependencies and shared resources
+- **Branch strategy**: Feature branches per developer with coordinated merge timing
+
 ### Code Quality Standards
 
 1. **TypeScript Best Practices**: Strict typing, proper error handling
@@ -49,9 +57,9 @@ It allows developers to create CLI tools with features such as options, commands
   2. Run required tests after modifications when sensible.
 
 
-### Developemnet Environment
+### Development Environment
 
-- Use node 22
+- **Use Node.js v22.12.0** (specified in `.nvmrc` - use `nvm use` to switch)
 - Use nx as build tool
 - Use tsconfig
   - "target": "ES2022"
@@ -250,6 +258,8 @@ The CLI uses a command-based architecture where each major feature is a separate
 - `parent-repos.json` - Repository dependency configuration
 - `release-notes/messages_*.db` - Release notes message databases
 - `version.gradle` - Version configuration files
+- `MIGRATION_PLAN.md` - Three-developer migration coordination plan
+- `CLAUDE.md` - This file with development guidelines
 
 ## Linting and Type Checking
 - Uses ESLint with TypeScript support (`@typescript-eslint/*`)
