@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import { Global } from '@cplace-cli/core';
 import { createReposCommand } from '@cplace-cli/command-repos';
 import { createVisualizeCommand } from '@cplace-cli/command-visualize';
+import { createVersionCommand } from '@cplace-cli/command-version';
 import updateNotifier from 'update-notifier';
 
 // Package information - embedded at build time
@@ -71,14 +72,8 @@ program
 // Add the visualize command
 program.addCommand(createVisualizeCommand());
 
-program
-    .command('version')
-    .description('Version management operations')
-    .option('--rewrite-versions', 'Rewrite versions for custom branches')
-    .action(async (options) => {
-        console.log('Version command with options:', options);
-        console.log('This command will be implemented in the migration phase.');
-    });
+// Add the version command
+program.addCommand(createVersionCommand());
 
 // Error handling
 program.exitOverride();

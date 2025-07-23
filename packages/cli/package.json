@@ -17,6 +17,7 @@
     "@cplace-cli/core": "file:../core",
     "@cplace-cli/command-repos": "file:../command-repos",
     "@cplace-cli/command-visualize": "file:../command-visualize",
+    "@cplace-cli/command-version": "file:../command-version",
     "commander": "^14.0.0",
     "update-notifier": "^4.1.3"
   },

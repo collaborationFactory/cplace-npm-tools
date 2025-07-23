@@ -23,6 +23,7 @@
       "@cplace-cli/git-utils": ["./packages/git-utils/src/index.ts"],
       "@cplace-cli/command-repos": ["./packages/command-repos/src/index.ts"],
       "@cplace-cli/command-visualize": ["./packages/command-visualize/src/index.ts"],
+      "@cplace-cli/command-version": ["./packages/command-version/src/index.ts"],
       "@cplace-cli/helpers": ["./packages/helpers/src/index.ts"]
     }
   },
