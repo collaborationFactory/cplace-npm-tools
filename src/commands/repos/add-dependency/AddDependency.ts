@@ -5,8 +5,6 @@ import {Global} from '../../../Global';
 import {ICommandParameters} from '../../models';
 import {Repos} from '../Repos';
 import {DependencyManagement} from './DependencyManagement';
-import {IdeaDependencyManagement} from './IdeaDependencyManagement';
-import {GradleBuild} from '../../../helpers/GradleBuild';
 import {GradleDependencyManagement} from './GradleDependencyManagement';
 
 /**
@@ -28,14 +26,8 @@ export class AddDependency extends AbstractReposCommand {
     }
 
     protected doPrepareAndMayExecute(params: ICommandParameters): boolean {
-        const potentialGradleBuild = new GradleBuild(process.cwd());
-        if (potentialGradleBuild.containsGradleBuild()) {
-            Global.isVerbose() && console.log('Detected Gradle-based build...');
-            this.dependencyManagement = new GradleDependencyManagement(process.cwd(), this.parentRepos);
-        } else {
-            Global.isVerbose() && console.log('Detected IDEA-based build...');
-            this.dependencyManagement = new IdeaDependencyManagement(process.cwd(), this.parentRepos);
-        }
+        Global.isVerbose() && console.log('Detected Gradle-based build...');
+        this.dependencyManagement = new GradleDependencyManagement(process.cwd(), this.parentRepos);
 
         if (params[Repos.PARAMETER_ADD_DEPENDENCY]) {
             this.pluginOrRepoToAdd = params[Repos.PARAMETER_ADD_DEPENDENCY] as string;

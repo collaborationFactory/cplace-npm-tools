@@ -6,8 +6,7 @@ import {AbstractReposCommand} from './AbstractReposCommand';
 import {ICommandParameters} from '../models';
 import {Repository} from '../../git';
 import {Repos} from './Repos';
-import {fs} from '../../p/fs';
-import * as Promise from 'bluebird';
+import {fs, readdirAsync, writeFileAsync} from '../../p/fs';
 import {IReposDescriptor} from './models';
 import {enforceNewline} from '../../util';
 import * as path from 'path';
@@ -47,18 +46,40 @@ export class BranchRepos extends AbstractReposCommand {
         return true;
     }
 
-    public execute(): Promise<void> {
-        return this.findRepos()
-            .map((repo) => this.validateRepoClean(repo))
-            .map((repo) => this.checkoutBranch(repo), {concurrency: 1})
-            .map((repo) => this.adjustParentReposJsonAndCommit(repo), {concurrency: 1})
-            .map((repo) => this.push ? repo.push('origin', this.branchName) : Promise.resolve(), {concurrency: 1});
+    public async execute(): Promise<void> {
+        const repos = await this.findRepos();
+        
+        // Validate all repos concurrently (no concurrency restriction on original line 52)
+        const validatedRepos = await Promise.all(repos.map(repo => this.validateRepoClean(repo)));
+        
+        // Process sequentially (concurrency: 1)
+        const checkedOutRepos: Repository[] = [];
+        for (const repo of validatedRepos) {
+            const result = await this.checkoutBranch(repo);
+            checkedOutRepos.push(result);
+        }
+        
+        // Process sequentially (concurrency: 1)
+        const adjustedRepos: Repository[] = [];
+        for (const repo of checkedOutRepos) {
+            const result = await this.adjustParentReposJsonAndCommit(repo);
+            adjustedRepos.push(result);
+        }
+        
+        // Process sequentially (concurrency: 1)
+        if (this.push) {
+            for (const repo of adjustedRepos) {
+                await repo.push('origin', this.branchName);
+            }
+        }
     }
 
-    private findRepos(): Promise<Repository[]> {
-        return fs.readdirAsync('../')
+    private async findRepos(): Promise<Repository[]> {
+        const dirs = await readdirAsync('../');
+        const repos = dirs
             .map((dir: string) => this.checkRepo(dir))
             .filter((repo) => repo);
+        return repos;
     }
 
     private checkRepo(dir: string): Repository {
@@ -99,7 +120,7 @@ export class BranchRepos extends AbstractReposCommand {
             });
 
             const newReposDescriptorContent = enforceNewline(JSON.stringify(reposDescriptor, null, 2));
-            return fs.writeFileAsync(filename, newReposDescriptorContent, 'utf8')
+            return writeFileAsync(filename, newReposDescriptorContent, 'utf8')
                 .then(() => repo.add(AbstractReposCommand.PARENT_REPOS_FILE_NAME))
                 .then(() => repo.commit(`Adjust parent-repos.json to new branch ${this.branchName}`, AbstractReposCommand.PARENT_REPOS_FILE_NAME))
                 .then(() => repo);
