@@ -1,0 +1,23 @@
+{
+  "name": "@cplace-cli/command-version",
+  "version": "2.0.0-dev",
+  "description": "Version management commands for cplace CLI",
+  "type": "module",
+  "main": "../../dist/packages/command-version/command-version/src/index.js",
+  "types": "../../dist/packages/command-version/command-version/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf ../../dist/packages/command-version"
+  },
+  "dependencies": {
+    "@cplace-cli/core": "file:../core",
+    "@cplace-cli/git-utils": "file:../git-utils",
+    "@cplace-cli/helpers": "file:../helpers",
+    "@cplace-cli/command-repos": "file:../command-repos",
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "~22.0.0",
+    "typescript": "~5.1.0"
+  }
+}

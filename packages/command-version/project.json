@@ -1,0 +1,22 @@
+{
+  "name": "@cplace-cli/command-version",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/command-version/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-script",
+      "outputs": ["{workspaceRoot}/dist/packages/command-version"],
+      "options": {
+        "script": "build"
+      },
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "clean"
+      }
+    }
+  }
+}
