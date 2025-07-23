@@ -10,6 +10,9 @@ import { WriteRepos } from './subcommands/write.js';
 import { CloneRepos } from './subcommands/clone.js';
 import { BranchRepos } from './subcommands/branch.js';
 import { AddDependency } from './subcommands/add-dependency.js';
+import { MergeSkeleton } from './subcommands/merge-skeleton.js';
+import { MigrateArtifactGroup } from './subcommands/migrate-artifact-groups.js';
+import { ValidateBranches } from './subcommands/validate-branches.js';
 
 export function createReposCommand(): Command {
     const repos = new Command('repos');
@@ -165,10 +168,89 @@ export function createReposCommand(): Command {
             }
         });
 
-    // Additional subcommands can be added here as they are migrated  
-    // - merge-skeleton  
-    // - migrate-artifact-groups
-    // - validate-branches
+    // Merge-skeleton subcommand
+    repos
+        .command('merge-skeleton')
+        .alias('ms')
+        .description('Merge skeleton repo to current repo')
+        .option('--base-branch <branch>', 'Base branch for pull request')
+        .option('--target-branch <branch>', 'Target branch name')
+        .option('--skeleton-branch <branch>', 'Skeleton branch to merge')
+        .option('--pull-request', 'Create pull request after merge')
+        .option('--push', 'Push changes after merge')
+        .option('--ours <files...>', 'Files to accept "ours" version')
+        .option('--interactive', 'Interactive conflict resolution')
+        .action(async (options, command) => {
+            Global.isVerbose() && console.log('Merge skeleton command:', options);
+            
+            const parentOptions = command.parent?.opts() || {};
+            const params: ICommandParameters = {
+                ...parentOptions,
+                ...options
+            };
+
+            try {
+                const mergeSkeletonCommand = new MergeSkeleton();
+                if (mergeSkeletonCommand.prepareAndMayExecute(params)) {
+                    await mergeSkeletonCommand.execute();
+                }
+            } catch (error) {
+                console.error('Merge skeleton failed:', error);
+                process.exit(1);
+            }
+        });
+
+    // Migrate-artifact-groups subcommand
+    repos
+        .command('migrate-artifact-groups')
+        .alias('mag')
+        .description('Migrate artifact groups from build.gradle to parent-repos.json')
+        .action(async (options, command) => {
+            Global.isVerbose() && console.log('Migrate artifact groups command:', options);
+            
+            const parentOptions = command.parent?.opts() || {};
+            const params: ICommandParameters = {
+                ...parentOptions,
+                ...options
+            };
+
+            try {
+                const migrateCommand = new MigrateArtifactGroup();
+                if (migrateCommand.prepareAndMayExecute(params)) {
+                    await migrateCommand.execute();
+                }
+            } catch (error) {
+                console.error('Migrate artifact groups failed:', error);
+                process.exit(1);
+            }
+        });
+
+    // Validate-branches subcommand
+    repos
+        .command('validate-branches')
+        .alias('vb')
+        .description('Validate branch consistency across repository dependencies')
+        .option('--include <filters>', 'Include specific fields to validate (space-separated)')
+        .option('--exclude <filters>', 'Exclude specific fields from validation (space-separated)')  
+        .action(async (options, command) => {
+            Global.isVerbose() && console.log('Validate branches command:', options);
+            
+            const parentOptions = command.parent?.opts() || {};
+            const params: ICommandParameters = {
+                ...parentOptions,
+                ...options
+            };
+
+            try {
+                const validateCommand = new ValidateBranches();
+                if (validateCommand.prepareAndMayExecute(params)) {
+                    await validateCommand.execute();
+                }
+            } catch (error) {
+                console.error('Validate branches failed:', error);
+                process.exit(1);
+            }
+        });
 
     return repos;
 }
