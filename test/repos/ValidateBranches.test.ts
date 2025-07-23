@@ -25,8 +25,8 @@ function assertBasicStructureConsistency(validationResult: IReposValidationResul
     // tslint:enable:no-backbone-get-set-outside-model
 
     // tests if the first level of repositories status is applied correctly from the root parent repos to the transitive structure
-    Object.entries(validationResult.rootDependencies.reposDescriptor).forEach(([repoName, repoStatus]) => {
-        expect(validationResult.rootDependencies.transitiveDependencies.get(repoName).repoStatus).toEqual(repoStatus);
+    Object.entries(validationResult.rootDependencies.reposDescriptor!).forEach(([repoName, repoStatus]) => {
+        expect(validationResult.rootDependencies.transitiveDependencies!.get(repoName)?.repoStatus).toEqual(repoStatus);
     });
 }
 
@@ -125,7 +125,7 @@ describe('validate the transitive of the root parent repos json for a basic setu
 
             try {
                 vb.validateAndReport();
-            } catch (e) {
+            } catch (e: any) {
                 if (e?.message?.includes('[rootRepo]: Missing repositories! Reference paths:')
                     && e?.message?.includes('rootRepo -> test_1 -> * missing')
                     && e?.message?.includes('rootRepo -> test_2 -> test_1 -> * missing')

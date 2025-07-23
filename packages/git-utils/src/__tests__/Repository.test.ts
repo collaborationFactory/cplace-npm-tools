@@ -7,13 +7,7 @@ const GIT_VIA_SSH_URI = `git@github.com:collaborationFactory/${ROOT_REPO}.git`;
 const GIT_VIA_HTTPS_URI = `https://github.com/collaborationFactory/${ROOT_REPO}.git`;
 
 async function remoteSetUrl(rootDir: string, remoteUri: string): Promise<void> {
-    await simpleGit.simpleGit(rootDir).remote(['set-url', 'origin', remoteUri], (err, execResult: string) => {
-        if (err) {
-            throw err;
-        } else {
-            console.log('remote set-utl result:', execResult);
-        }
-    });
+    await simpleGit.simpleGit(rootDir).remote(['set-url', 'origin', remoteUri]);
 }
 
 describe('testing the repository helpers', () => {
@@ -38,13 +32,7 @@ describe('testing the repository helpers', () => {
 
     test('test that getLocalOriginUrl does not fail if no remote urls are configured', async () => {
         const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
-            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
-                if (err) {
-                    throw err;
-                } else {
-                    console.log('remote set-utl result:', execResult);
-                }
-            });
+            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin']);
 
             const result = await Repository.getLocalOriginUrl(ROOT_REPO, rootDir);
             console.log(result);
@@ -62,20 +50,8 @@ describe('testing the repository helpers', () => {
 
     test('test that getLocalOriginUrl does not fail for unexpected origins', async () => {
         const testGetLocalOriginUrl = async (rootDir: string): Promise<string> => {
-            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin'], (err, execResult: string) => {
-                if (err) {
-                    throw err;
-                } else {
-                    console.log('remote set-utl result:', execResult);
-                }
-            });
-            await simpleGit.simpleGit(rootDir).remote(['add', 'uncommon', GIT_VIA_SSH_URI], (err, execResult: string) => {
-                if (err) {
-                    throw err;
-                } else {
-                    console.log('remote set-utl result:', execResult);
-                }
-            });
+            await simpleGit.simpleGit(rootDir).remote(['remove', 'origin']);
+            await simpleGit.simpleGit(rootDir).remote(['add', 'uncommon', GIT_VIA_SSH_URI]);
 
             const result = await Repository.getLocalOriginUrl(ROOT_REPO, rootDir);
             console.log(result);

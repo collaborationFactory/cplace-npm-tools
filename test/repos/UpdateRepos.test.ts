@@ -116,7 +116,7 @@ describe('updating the parent repos', () => {
                 checkoutParentRepos[repo].branch = 'release/22.2';
             });
             Object.keys(updateParentRepos).forEach((repo) => {
-                updateParentRepos[repo].branch = null;
+                updateParentRepos[repo].branch = null as any;
             });
 
             // no branch or tag given in parent-repos.json

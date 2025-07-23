@@ -47,8 +47,8 @@ class PromiseAllSettled<K, T> {
     private readonly promiseFactory: (key: K) => Promise<T>;
     private readonly sequential: boolean;
 
-    private error: string;
-    private results: T[];
+    private error!: string;
+    private results!: T[];
     private concurrency: number;
 
     constructor(keys: K[], promiseFactory: (key: K) => Promise<T>, sequential: boolean, concurrency: number = -1) {

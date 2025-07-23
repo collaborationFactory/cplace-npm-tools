@@ -21,16 +21,16 @@ export class GenerateReleaseNotes implements ICommand {
 
     private static readonly FILE_NAME_CHANGELOG: string = 'CHANGELOG.md';
 
-    private fromHash: string;
-    private toHash: string;
-    private lang: string;
-    private force: boolean;
-    private release: ReleaseNumber = null;
+    private fromHash!: string;
+    private toHash!: string;
+    private lang!: string;
+    private force!: boolean;
+    private release: ReleaseNumber | null = null;
 
-    private messagesFile: string;
-    private explicitsFile: string;
-    private repo: Repository;
-    private changelog: string[];
+    private messagesFile!: string;
+    private explicitsFile!: string;
+    private repo!: Repository;
+    private changelog!: string[];
     private generateMarkdownForDocs: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
@@ -116,7 +116,7 @@ export class GenerateReleaseNotes implements ICommand {
             .sort((a, b) => {
                 const dateA = new Date(a.date).getTime();
                 const dateB = new Date(b.date).getTime();
-                if (a.squad.toLowerCase() === b.squad.toLowerCase()) {
+                if (a.squad?.toLowerCase() === b.squad?.toLowerCase()) {
                     return dateA < dateB ? -1 : 1;
                 } else {
                     return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
@@ -165,7 +165,7 @@ export class GenerateReleaseNotes implements ICommand {
         }
     }
 
-    private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile; explicits: ReleaseNotesMessagesFile }> {
+    private async readExplicits(messages: ReleaseNotesMessagesFile): Promise<{ messages: ReleaseNotesMessagesFile; explicits: ReleaseNotesMessagesFile | null }> {
         await statAsync(this.explicitsFile);
 
         const explicits = new ReleaseNotesMessagesFile(this.explicitsFile);
@@ -217,10 +217,10 @@ export class GenerateReleaseNotes implements ICommand {
         this.changelog.push(' ', `_Commit range: ${this.fromHash} - ${this.toHash}_`, '');
 
         for (const log of gitLogEntries) {
-            log.message = (releaseNotesMessagesFile.getMessage(log.hash) || (explicits && explicits.getMessage(log.hash)));
+            log.message = (releaseNotesMessagesFile.getMessage(log.hash) || (explicits && explicits.getMessage(log.hash))) || '';
             const regExp = /^[\s\w-]+:/;
             if (log.message?.match(regExp)) {
-                log.squad = log.message.match(regExp)[0]?.replace(':', '')
+                log.squad = log.message.match(regExp)?.[0]?.replace(':', '')
                     .trim();
             }
         }
