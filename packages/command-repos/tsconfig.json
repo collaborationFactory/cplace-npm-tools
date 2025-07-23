@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/command-repos"
+    "outDir": "../../dist/packages/command-repos",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]

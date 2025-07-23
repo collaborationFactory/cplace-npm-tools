@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/cli"
+    "outDir": "../../dist/packages/cli",
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]

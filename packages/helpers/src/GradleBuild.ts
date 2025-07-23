@@ -1,5 +1,12 @@
 import * as path from 'path';
-import {fs, readFileAsync, writeFileAsync} from '@cplace-cli/core/p/fs';
+import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
+
+// Avoid circular dependency with core package
+const readFileAsync = (filename: string, encoding: BufferEncoding): Promise<string> => 
+    fsPromises.readFile(filename, encoding);
+const writeFileAsync = (file: string, data: string | Buffer, options: BufferEncoding): Promise<void> => 
+    fsPromises.writeFile(file, data, options);
 
 export class GradleBuild {
     private static readonly GRADLE_BUILD_FILE: string = 'build.gradle';
