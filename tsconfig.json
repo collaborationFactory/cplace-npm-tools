@@ -1,19 +1,25 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES2022",
     "declaration": true,
-    "module": "commonjs",
+    "module": "ESNext",
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "outDir": "dist",
     "noImplicitAny": false,
-    "rootDirs": ["src", "test"],
-    "lib": ["ES6"]
+    "rootDirs": ["src", "test", "packages"],
+    "lib": ["ES2022"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "packages/**/*.ts"
   ],
   "exclude": [
     "src/**/*.test.ts",

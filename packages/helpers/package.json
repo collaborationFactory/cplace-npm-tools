@@ -1,0 +1,19 @@
+{
+  "name": "@cplace-cli/helpers",
+  "version": "2.0.0-dev",
+  "description": "Shared helper utilities for cplace CLI",
+  "type": "module",
+  "main": "../../dist/packages/helpers/index.js",
+  "types": "../../dist/packages/helpers/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf ../../dist/packages/helpers"
+  },
+  "dependencies": {
+    "@cplace-cli/core": "file:../core"
+  },
+  "devDependencies": {
+    "@types/node": "~22.0.0",
+    "typescript": "~5.1.0"
+  }
+}

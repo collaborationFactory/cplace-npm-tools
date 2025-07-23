@@ -1,0 +1,19 @@
+{
+  "name": "@cplace-cli/core",
+  "version": "2.0.0-dev",
+  "description": "Core functionality for cplace CLI",
+  "type": "module",
+  "main": "../../dist/packages/core/index.js",
+  "types": "../../dist/packages/core/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf ../../dist/packages/core"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.5.3"
+  },
+  "devDependencies": {
+    "@types/node": "~22.0.0",
+    "typescript": "~5.1.0"
+  }
+}

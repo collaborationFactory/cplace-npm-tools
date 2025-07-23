@@ -1,0 +1,25 @@
+{
+  "name": "@cplace-cli/cli",
+  "version": "2.0.0-dev",
+  "description": "Main CLI entry point for cplace CLI",
+  "type": "module",
+  "main": "../../dist/packages/cli/index.js",
+  "types": "../../dist/packages/cli/index.d.ts",
+  "bin": {
+    "cplace-cli": "../../dist/packages/cli/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x ../../dist/packages/cli/cli.js",
+    "clean": "rm -rf ../../dist/packages/cli"
+  },
+  "dependencies": {
+    "@cplace-cli/core": "file:../core",
+    "commander": "^14.0.0",
+    "update-notifier": "^4.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "~22.0.0",
+    "@types/update-notifier": "^4.1.0",
+    "typescript": "~5.1.0"
+  }
+}
