@@ -5,7 +5,6 @@ import {Repository} from '../../git';
 import {ICommand, ICommandParameters} from '../models';
 import {ReleaseNumber} from './ReleaseNumber';
 import {IGitBranchDetails} from '../../git/models';
-import * as randomatic from 'randomatic';
 import {IBranchDetails} from './models';
 import {Global} from '../../Global';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
@@ -34,7 +33,7 @@ export class Upmerge implements ICommand {
 
     private remoteReleaseBranchPattern: RegExp;
 
-    private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
+    private prefix: string = 'upmerge-' + this.generateRandomString(6) + '/';
     private static readonly REPO_DIVIDER = '='.repeat(20);
     private static readonly BRANCH_DIVIDER = '-'.repeat(20);
 
@@ -190,6 +189,15 @@ export class Upmerge implements ICommand {
             }
         }
         return Promise.resolve(branches);
+    }
+
+    private generateRandomString(length: number): string {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
     }
 
     private tempBranchName(remoteBranchName: string): string {

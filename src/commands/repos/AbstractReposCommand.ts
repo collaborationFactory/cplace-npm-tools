@@ -7,7 +7,6 @@ import {ICommand, ICommandParameters} from '../models';
 import {IReposDescriptor} from './models';
 import {Repository} from '../../git';
 import * as path from 'path';
-import * as rimraf from 'rimraf';
 import * as eol from 'eol';
 import {StatusResult} from 'simple-git';
 
@@ -90,7 +89,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected removeFolderInRepo(repo: Repository, folderName: string): void {
         if (fs.existsSync(path.join(repo.workingDir, folderName))) {
             console.log(`[${repo.repoName}]: Removing ${folderName} folder`);
-            rimraf.sync(path.join(repo.workingDir, folderName));
+            fs.rmSync(path.join(repo.workingDir, folderName), { recursive: true, force: true });
         }
     }
 

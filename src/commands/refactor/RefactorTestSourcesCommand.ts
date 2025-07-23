@@ -4,7 +4,6 @@ import * as cpr from 'cpr';
 import * as path from 'path';
 import {fs, statAsync, mkdirAsync, readFileAsync, writeFileAsync, renameAsync} from '../../p/fs';
 import {Global} from '../../Global';
-import * as rimraf from 'rimraf';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
 
 /**
@@ -182,32 +181,19 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
             pathToRemove = path.resolve(this.sourcesPath, this.pluginName.split('.')[0]);
         }
 
-        const sourcePromise = new Promise<void>((resolve, reject) => {
-            rimraf(pathToRemove, (e) => {
-                if (!e) {
-                    console.log(`Removed old source directory ${pathToRemove}`);
-                    resolve();
-                } else {
-                    reject(e);
-                }
-            });
+        const sourcePromise = Promise.resolve().then(() => {
+            if (fs.existsSync(pathToRemove)) {
+                fs.rmSync(pathToRemove, { recursive: true, force: true });
+                console.log(`Removed old source directory ${pathToRemove}`);
+            }
         });
 
-        const buildPromise = new Promise<void>((resolve, reject) => {
+        const buildPromise = Promise.resolve().then(() => {
             const buildPath = path.resolve(this.pluginPath, 'build');
-            if (!fs.existsSync(buildPath)) {
-                resolve();
-                return;
+            if (fs.existsSync(buildPath)) {
+                fs.rmSync(buildPath, { recursive: true, force: true });
+                console.log(`Removed old build directory ${buildPath}`);
             }
-
-            rimraf(buildPath, (e) => {
-                if (!e) {
-                    console.log(`Removed old build directory ${buildPath}`);
-                    resolve();
-                } else {
-                    reject(e);
-                }
-            });
         });
 
         await promiseAllSettledParallel([sourcePromise, buildPromise]);
@@ -232,14 +218,10 @@ export class RefactorTestSourcesCommand implements IRefactoringCommand {
                     resolve();
                 }
             });
-        }).then(() => new Promise<void>((resolve, reject) => {
-            rimraf(fromPath, (err) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        }));
+        }).then(() => {
+            if (fs.existsSync(fromPath)) {
+                fs.rmSync(fromPath, { recursive: true, force: true });
+            }
+        });
     }
 }
