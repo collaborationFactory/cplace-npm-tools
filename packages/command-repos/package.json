@@ -1,0 +1,26 @@
+{
+  "name": "@cplace-cli/command-repos",
+  "version": "2.0.0-dev",
+  "description": "Repository management commands for cplace CLI",
+  "type": "module",
+  "main": "../../dist/packages/command-repos/index.js",
+  "types": "../../dist/packages/command-repos/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf ../../dist/packages/command-repos"
+  },
+  "dependencies": {
+    "@cplace-cli/core": "file:../core",
+    "@cplace-cli/git-utils": "file:../git-utils",
+    "simple-git": "^3.25.0",
+    "cpr": "^3.0.1",
+    "xml2js": "^0.6.2",
+    "@inquirer/prompts": "^7.5.3",
+    "eol-converter-cli": "^1.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "~22.0.0",
+    "@types/xml2js": "^0.4.14",
+    "typescript": "~5.1.0"
+  }
+}

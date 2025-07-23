@@ -4,7 +4,8 @@
  */
 import { Command } from 'commander';
 import { Global } from '@cplace-cli/core';
-import * as updateNotifier from 'update-notifier';
+import { createReposCommand } from '@cplace-cli/command-repos';
+import updateNotifier from 'update-notifier';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,18 +58,8 @@ program
         console.log('This command will be implemented in the migration phase.');
     });
 
-program
-    .command('repos')
-    .description('Repository operations')
-    .option('-u, --update', 'Update all parent repos')
-    .option('-w, --write', 'Write parent repo states')
-    .option('-c, --clone', 'Clone missing parent repos')
-    .option('-b, --branch <name>', 'Create new branch')
-    .option('--force', 'Force operation')
-    .action(async (options) => {
-        console.log('Repos command with options:', options);
-        console.log('This command will be implemented in the migration phase.');
-    });
+// Add the repos command
+program.addCommand(createReposCommand());
 
 program
     .command('flow')

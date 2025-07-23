@@ -6,14 +6,15 @@
   "main": "../../dist/packages/cli/index.js",
   "types": "../../dist/packages/cli/index.d.ts",
   "bin": {
-    "cplace-cli": "../../dist/packages/cli/cli.js"
+    "cplace-cli": "../../dist/packages/cli/src/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && chmod +x ../../dist/packages/cli/cli.js",
+    "build": "tsc -p tsconfig.json && chmod +x ../../dist/packages/cli/src/cli.js",
     "clean": "rm -rf ../../dist/packages/cli"
   },
   "dependencies": {
     "@cplace-cli/core": "file:../core",
+    "@cplace-cli/command-repos": "file:../command-repos",
     "commander": "^14.0.0",
     "update-notifier": "^4.1.3"
   },

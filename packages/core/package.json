@@ -3,8 +3,8 @@
   "version": "2.0.0-dev",
   "description": "Core functionality for cplace CLI",
   "type": "module",
-  "main": "../../dist/packages/core/index.js",
-  "types": "../../dist/packages/core/index.d.ts",
+  "main": "../../dist/packages/core/src/index.js",
+  "types": "../../dist/packages/core/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf ../../dist/packages/core"
