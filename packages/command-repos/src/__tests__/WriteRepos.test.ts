@@ -145,7 +145,7 @@ describe('writing the parent repos json for a complex setup', () => {
             });
             assertTagVersion('main', 'version/22.2.1', parentReposJson);
             assertTagVersion('test_1', 'version/22.2.3', parentReposJson);
-            assertTagVersion('test_2', undefined, parentReposJson);
+            assertTagVersion('test_2', '', parentReposJson);
         };
 
         await testWith(multiBranchTestSetupData)
