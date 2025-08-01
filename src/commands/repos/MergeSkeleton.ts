@@ -112,9 +112,12 @@ export class MergeSkeleton extends AbstractReposCommand {
                 await repo.pullOnlyFastForward(this.status.current)
                     .catch((err) => console.log(`Error when pulling target branch ${err}`));
             }
-            await this.mergeSkeletonBranch(repo, `${MergeSkeleton.SKELETON_REMOTE_NAME}/${this.selectedSkeletonBranch}`, true)
+            await this.mergeSkeletonBranch(repo, MergeSkeleton.SKELETON_REMOTE_NAME, this.selectedSkeletonBranch, true)
                 .catch((err) => {
-                    console.log(`Cannot merge skeleton branch: ${err}`);
+                    console.error(`Cannot merge skeleton branch: ${err.message || err}`);
+                    if (Global.isVerbose()) {
+                        console.error('Full error details:', err);
+                    }
                 });
         }
 
@@ -345,9 +348,9 @@ export class MergeSkeleton extends AbstractReposCommand {
         return `${skeletonVerion}`;
     }
 
-    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string, noCommit: boolean): Promise<void> {
+    private mergeSkeletonBranch(repo: Repository, remote: string, skeletonBranch: string, noCommit: boolean): Promise<void> {
         console.log(`Merging skeleton branch ${skeletonBranch}`);
-        return repo.merge(skeletonBranch, {noEdit: true, noCommit: noCommit});
+        return repo.merge(remote, skeletonBranch, {noEdit: true, noCommit: noCommit});
     }
 
     private async acceptDecisionsAndContinueMerge(repo: Repository): Promise<void> {

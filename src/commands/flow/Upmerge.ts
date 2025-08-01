@@ -287,7 +287,7 @@ export class Upmerge implements ICommand {
                     return upmergeChecker.analyzeRequiredMerge(tempSrcBranch, branch.name)
                 }
             })
-            .then(() => this.repo.merge(tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
+            .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
             .then(() => {
                 const targetBranchName = branch.name.substr(this.remote.length + 1);
                 return this.push

@@ -550,50 +550,87 @@ export class Repository {
         });
     }
 
-    public merge(otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
+    public async merge(remote: string, otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
         opts = opts || {};
-        return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
-            const options = [otherBranch];
-            opts.noFF && options.push('--no-ff');
-            opts.ffOnly && options.push('--ff-only');
-            opts.noEdit && options.push('--no-edit');
-            opts.noCommit && options.push('--no-commit');
-            options.push('--allow-unrelated-histories');
-            this.git.merge(options, async (err, data) => {
-                if (err) {
-                    Global.isVerbose() && console.log(`[${this.repoName}]: merge failed`, err);
-                }
+        Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
+        
+        // Check if the branch exists locally or on the remote
+        const existsLocally = await this.checkBranchExistsLocally(otherBranch);
+        const existsOnRemote = this.checkBranchExistsOnRemote(remote, otherBranch);
+        
+        if (!existsLocally && !existsOnRemote) {
+            const errorMessage = `Branch '${otherBranch}' does not exist locally or on the remote`;
+            console.error(`[${this.repoName}]: ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
 
-                // Merge conflict not detected correctly by simple-git
-                // see https://github.com/steveukx/git-js/issues/715
-                // therefore we need to check the status manually
-                const status = await this.status();
-                if (status.conflicted.length > 0) {
-                    console.log(`Files to merge (${status.files.length}):`);
-                    status.files.forEach((file) => {
-                        console.log(`  ${file.path}`);
-                    })
-                    console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
-                    status.conflicted.forEach((file) => {
-                        console.log(`  ${file}`);
-                    });
-                    console.log('\nPlease resolve conflicts and try the merge again\n');
-                    reject(new Error(`Merge conflict detected when merging ${otherBranch} into ${status.current}`));
-                } else {
-                    Global.isVerbose() && console.log(`Merged ${otherBranch} into ${status.current}`);
-                    if (opts.listFiles) {
-                        if (data.files.length > 0) {
-                            console.log(`Merged files (${data.files.length}): `);
-                            data.files.forEach((file) => console.log(`  ${file}`));
-                        } else {
-                            console.log(`Nothing to merge.`);
-                        }
+        const options = [remote ? `${remote}/${otherBranch}` : otherBranch];
+        opts.noFF && options.push('--no-ff');
+        opts.ffOnly && options.push('--ff-only');
+        opts.noEdit && options.push('--no-edit');
+        opts.noCommit && options.push('--no-commit');
+        options.push('--allow-unrelated-histories');
+        
+        let mergeData;
+        try {
+            mergeData = await new Promise<any>((resolve, reject) => {
+                this.git.merge(options, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(data);
                     }
-                    resolve();
-                }
+                });
             });
-        });
+        } catch (err) {
+            const errorMessage = `Merge failed when merging ${otherBranch}`;
+            if (Global.isVerbose()) {
+                console.error(`[${this.repoName}]: ${errorMessage}:`, err);
+            } else {
+                console.error(`[${this.repoName}]: ${errorMessage}`);
+            }
+            throw new Error(errorMessage);
+        }
+
+        try {
+            // Merge conflict not detected correctly by simple-git
+            // see https://github.com/steveukx/git-js/issues/715
+            // therefore we need to check the status manually
+            const status = await this.status();
+            if (status.conflicted.length > 0) {
+                console.log(`Files to merge (${status.files.length}):`);
+                status.files.forEach((file) => {
+                    console.log(`  ${file.path}`);
+                })
+                console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
+                status.conflicted.forEach((file) => {
+                    console.log(`  ${file}`);
+                });
+                console.log('\nPlease resolve conflicts and try the merge again\n');
+                throw new Error(`Merge conflict detected when merging ${otherBranch} into ${status.current}`);
+            } else {
+                Global.isVerbose() && console.log(`Merged ${otherBranch} into ${status.current}`);
+                if (opts.listFiles) {
+                    if (mergeData.files.length > 0) {
+                        console.log(`Merged files (${mergeData.files.length}): `);
+                        mergeData.files.forEach((file) => console.log(`  ${file}`));
+                    } else {
+                        console.log(`Nothing to merge.`);
+                    }
+                }
+            }
+        } catch (statusErr) {
+            if (statusErr.message && statusErr.message.includes('Merge conflict detected')) {
+                throw statusErr;
+            }
+            const errorMessage = `Error checking merge status`;
+            if (Global.isVerbose()) {
+                console.error(`[${this.repoName}]: ${errorMessage}:`, statusErr);
+            } else {
+                console.error(`[${this.repoName}]: ${errorMessage}`);
+            }
+            throw new Error(errorMessage);
+        }
     }
 
     public push(remote: string, remoteBranchName?: string): Promise<void> {
@@ -936,15 +973,23 @@ export class Repository {
         });
     }
 
-    public checkBranchExistsOnRemote(branchName: string): boolean {
+    public checkBranchExistsLocally(branchName: string): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            this.git.revparse(['-q', '--verify', `${branchName}^{commit}`], (err, data) => {
+                resolve(!err && !!data);
+            });
+        });
+    }
+
+    public checkBranchExistsOnRemote(remote: string, branchName: string): boolean {
         let result = '';
         try {
-            result = execSync(`git rev-parse origin/${branchName}`, {
+            result = execSync(`git rev-parse ${remote}/${branchName}`, {
                 cwd: this.workingDir,
                 stdio: 'pipe'
             }).toString();
         } catch (e) {
-            throw new Error(`Branch ${branchName} doesn't exist. ${e}`);
+            return false;
         }
         return result !== '';
     }
