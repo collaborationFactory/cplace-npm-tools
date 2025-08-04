@@ -592,16 +592,32 @@ export class Repository {
             throw new Error(errorMessage);
         }
 
+        await this.checkMergeStatus(otherBranch, opts.listFiles, mergeData);
+    }
+
+    /**
+     * Checks the status of a merge operation and handles conflicts or success scenarios.
+     *
+     * @param otherBranch - The name of the branch being merged into the current branch
+     * @param listFiles - Whether to list the files that were merged
+     *
+     * @throws {Error} When merge conflicts are detected or when unable to check merge status
+     *
+     * @remarks
+     * This method performs the following actions:
+     * - Checks the repository status for conflicts
+     * - If conflicts exist, logs conflict details and throws an error
+     * - If no conflicts, logs success message (in verbose mode) and optionally lists merged files
+     * - Handles errors during status checking and re-throws with appropriate context
+     */
+    private async checkMergeStatus(otherBranch: string, listFiles: boolean, mergeData: any) {
         try {
-            // Merge conflict not detected correctly by simple-git
-            // see https://github.com/steveukx/git-js/issues/715
-            // therefore we need to check the status manually
             const status = await this.status();
             if (status.conflicted.length > 0) {
                 console.log(`Files to merge (${status.files.length}):`);
                 status.files.forEach((file) => {
                     console.log(`  ${file.path}`);
-                })
+                });
                 console.log(`Merge conflict detected in ${status.conflicted.length} files:`);
                 status.conflicted.forEach((file) => {
                     console.log(`  ${file}`);
@@ -610,7 +626,7 @@ export class Repository {
                 throw new Error(`Merge conflict detected when merging ${otherBranch} into ${status.current}`);
             } else {
                 Global.isVerbose() && console.log(`Merged ${otherBranch} into ${status.current}`);
-                if (opts.listFiles) {
+                if (listFiles) {
                     if (mergeData.files.length > 0) {
                         console.log(`Merged files (${mergeData.files.length}): `);
                         mergeData.files.forEach((file) => console.log(`  ${file}`));
