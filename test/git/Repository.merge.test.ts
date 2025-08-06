@@ -5,6 +5,7 @@ import * as simpleGit from 'simple-git';
 import { execSync } from 'child_process';
 import { promisify } from 'util';
 import * as os from 'os';
+import { Global } from '../../src/Global';
 
 const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
@@ -360,17 +361,15 @@ describe('Repository.merge() tests', () => {
 
     describe('verbose mode behavior', () => {
         let originalIsVerbose: () => boolean;
-
+        
         beforeEach(() => {
             // Mock Global.isVerbose to return true
-            const Global = require('../../src/Global').Global;
             originalIsVerbose = Global.isVerbose;
             Global.isVerbose = jest.fn(() => true);
         });
 
         afterEach(() => {
             // Restore original
-            const Global = require('../../src/Global').Global;
             Global.isVerbose = originalIsVerbose;
         });
 
