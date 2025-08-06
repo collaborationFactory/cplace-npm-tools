@@ -550,7 +550,7 @@ export class Repository {
         });
     }
 
-    public async merge(remote: string, otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
+    public async merge(remote: string | null, otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
         opts = opts || {};
         Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
         

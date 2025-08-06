@@ -37,6 +37,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         [{major: 24, minor: 1, patch: 0}, 'version/24.1'],
         [{major: 25, minor: 2, patch: 0}, 'version/25.2'],
         [{major: 25, minor: 3, patch: 0}, 'version/25.3'],
+        [{major: 25, minor: 4, patch: 0}, 'version/25.4'],
     ]);
 
     protected static readonly FILE_MERGE_STATUS_MAP: Map<string, { description: string, defaultAction: string, defaultActionLong: string }> = new Map([
