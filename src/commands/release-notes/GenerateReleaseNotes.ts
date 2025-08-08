@@ -80,7 +80,7 @@ export class GenerateReleaseNotes implements ICommand {
         if (this.release) {
             console.log('generating changelogs for release branch: ', this.release.releaseBranchName());
             const predecessorReleaseBranch = this.release.getMajorOrMinorPredecessorRelease().releaseBranchName();
-            if (this.repo.checkBranchExistsOnRemote(this.release.releaseBranchName()) && this.repo.checkBranchExistsOnRemote(predecessorReleaseBranch)) {
+            if (this.repo.checkBranchExistsOnRemote('origin', this.release.releaseBranchName()) && this.repo.checkBranchExistsOnRemote('origin', predecessorReleaseBranch)) {
                 const fetchAll = execSync(`git fetch --all`).toString();
                 Global.isVerbose() && console.log(fetchAll);
                 this.fromHash = execSync(`git log -n 1 --pretty=format:"%H" origin/${this.release.getMajorOrMinorPredecessorRelease().releaseBranchName()}`).toString();
