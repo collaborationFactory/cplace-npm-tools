@@ -1,7 +1,6 @@
 /**
  * Main flow command
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Upmerge} from './Upmerge';
 import {SplitRepository} from './SplitRepository';

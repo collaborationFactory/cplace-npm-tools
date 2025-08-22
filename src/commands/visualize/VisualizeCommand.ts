@@ -1,12 +1,11 @@
 /**
  * General branches command
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
 import {Repository} from '../../git';
 import * as os from 'os';
-import {fs} from '../../p/fs';
+import {writeFileAsync} from '../../p/fs';
 import {exec} from 'child_process';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
 import { ReleaseNumber } from '../flow/ReleaseNumber';
@@ -84,8 +83,7 @@ export class VisualizeCommand implements ICommand {
                     this.reduce();
                 }).then(() => {
                     console.log('Generating dot file...');
-                    return fs
-                        .writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(), 'utf8')
+                    return writeFileAsync(VisualizeCommand.FILE_NAME_BRANCHES_DOT, this.generateDot(), 'utf8')
                         .then(() => {
                             if (this.pdf) {
                                 return this.generatePdf();

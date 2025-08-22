@@ -1,7 +1,6 @@
 /**
  * Visualize command
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {VisualizeCommand} from './VisualizeCommand';
 

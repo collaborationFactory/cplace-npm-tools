@@ -2,7 +2,7 @@ import { ICommand, ICommandParameters } from '../models';
 import { AbstractReposCommand } from '../repos/AbstractReposCommand';
 import { IReposDescriptor } from '../repos/models';
 import * as path from 'path';
-import { fs } from '../../p/fs';
+import { fs, readFileAsync, writeFileAsync } from '../../p/fs';
 import { Global } from '../../Global';
 import { CplaceVersion } from "../../helpers/CplaceVersion";
 
@@ -74,7 +74,7 @@ export class RewriteVersions extends AbstractReposCommand implements ICommand {
     private async readCplaceVersion(): Promise<void> {
         try {
             const versionGradlePath = path.join(this.rootDir, RewriteVersions.VERSION_GRADLE_NAME);
-            const content = await fs.readFileAsync(versionGradlePath, 'utf8');
+            const content = await readFileAsync(versionGradlePath, 'utf8');
             const cplaceVersionMatch = content.match(/cplaceVersion\s*=\s*['"](\d+)\.(\d+)['"]/);
 
             if (cplaceVersionMatch) {
@@ -142,7 +142,7 @@ export class RewriteVersions extends AbstractReposCommand implements ICommand {
             const parentReposPath = path.join(dirPath, 'parent-repos.json');
             try {
                 if (fs.existsSync(parentReposPath)) {
-                    const content = await fs.readFileAsync(parentReposPath, 'utf8');
+                    const content = await readFileAsync(parentReposPath, 'utf8');
                     const reposDescriptor: IReposDescriptor = JSON.parse(content);
 
                     let modified = false;
@@ -155,7 +155,7 @@ export class RewriteVersions extends AbstractReposCommand implements ICommand {
                     });
 
                     if (modified) {
-                        await fs.writeFileAsync(parentReposPath, JSON.stringify(reposDescriptor, null, 2), 'utf8');
+                        await writeFileAsync(parentReposPath, JSON.stringify(reposDescriptor, null, 2), 'utf8');
                         Global.isVerbose() && console.log(`Updated parent-repos.json in ${dirPath}`);
                     } else {
                         Global.isVerbose() && console.log(`No updates needed in parent-repos.json in ${dirPath}`);

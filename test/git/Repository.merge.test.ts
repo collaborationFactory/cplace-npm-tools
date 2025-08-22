@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { Repository } from '../../src/git/Repository';
+import { Repository } from '../../src/git';
 import * as simpleGit from 'simple-git';
 import { execSync } from 'child_process';
 import { promisify } from 'util';

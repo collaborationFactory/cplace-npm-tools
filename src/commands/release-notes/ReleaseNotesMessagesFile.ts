@@ -1,10 +1,9 @@
 /**
  * Utility class for parsing and writing a messages file
  */
-import * as Promise from 'bluebird';
 import { IGitLogEntry } from '../../git';
 import { Global } from '../../Global';
-import { fs } from '../../p/fs';
+import { fs, readFileAsync, writeFileAsync, statAsync, readdirAsync } from '../../p/fs';
 import { enforceNewline, makeSingleLine } from '../../util';
 
 type MessageEntryStatus = 'ok' | 'commented' | 'conflict';
@@ -71,10 +70,9 @@ export class ReleaseNotesMessagesFile {
     }
 
     public static getAllMessagesFiles(): Promise<ReleaseNotesMessagesFile[]> {
-        return fs
-            .statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)
+        return statAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES)
             .catch(() => Promise.reject(`directory ${ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES} does not exist`))
-            .then(() => fs.readdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES))
+            .then(() => readdirAsync(ReleaseNotesMessagesFile.DIRECTORY_RELEASE_NOTES))
             .then((files) => {
                 return files
                     .filter((f) => ReleaseNotesMessagesFile.MESSAGES_FILE_NAME_PATTERN.test(f))
@@ -102,8 +100,7 @@ export class ReleaseNotesMessagesFile {
         this.missingEntries = new Map();
         this.numErrors = 0;
 
-        return fs
-            .readFileAsync(this.path, 'utf8')
+        return readFileAsync(this.path, 'utf8')
             .then((content) => {
                 content
                     .split('\n')
@@ -195,8 +192,7 @@ export class ReleaseNotesMessagesFile {
                 return `${hash}:${e.message}`;
             })
             .join('\n') + '\n';
-        return fs
-            .writeFileAsync(this.path, content, 'utf8')
+        return writeFileAsync(this.path, content, 'utf8')
             .then(
                 () => {
                     this.missingEntries.clear();

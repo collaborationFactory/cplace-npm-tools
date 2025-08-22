@@ -1,7 +1,6 @@
 /**
  * Custom Git Driver for merging release note files
  */
-import * as Promise from 'bluebird';
 import {ICommand, ICommandParameters} from '../models';
 import {ReleaseNotesMessagesFile} from './ReleaseNotesMessagesFile';
 

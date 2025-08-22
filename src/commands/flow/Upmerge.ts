@@ -1,12 +1,10 @@
 /**
  * Upmerge command for merging the release branches chain to master
  */
-import * as BPromise from 'bluebird';
 import {Repository} from '../../git';
 import {ICommand, ICommandParameters} from '../models';
 import {ReleaseNumber} from './ReleaseNumber';
 import {IGitBranchDetails} from '../../git/models';
-import * as randomatic from 'randomatic';
 import {IBranchDetails} from './models';
 import {Global} from '../../Global';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
@@ -35,7 +33,7 @@ export class Upmerge implements ICommand {
 
     private remoteReleaseBranchPattern: RegExp;
 
-    private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
+    private prefix: string = 'upmerge-' + this.generateRandomString(6) + '/';
     private static readonly REPO_DIVIDER = '='.repeat(20);
     private static readonly BRANCH_DIVIDER = '-'.repeat(20);
 
@@ -79,29 +77,29 @@ export class Upmerge implements ICommand {
         await this.doMerges(branches);
     }
 
-    private checkRepoClean(): BPromise<void> {
+    private checkRepoClean(): Promise<void> {
         return this.repo
             .status()
             .then((status) => {
                 if (status.behind) {
-                    return BPromise.reject(`current branch is ${status.behind} commits behind ${status.tracking}`);
+                    return Promise.reject(`current branch is ${status.behind} commits behind ${status.tracking}`);
                 }
 
                 if (['not_added', 'conflicted', 'created', 'deleted', 'modified', 'renamed'].find((k) => status[k].length)) {
-                    return BPromise.reject('You have uncommitted changes');
+                    return Promise.reject('Cannot proceed with upmerge: repository has uncommitted changes. Please commit or stash your changes first.');
                 }
 
-                return BPromise.resolve();
+                return Promise.resolve();
             });
     }
 
-    private checkForRelease(): BPromise<ReleaseNumber> {
+    private checkForRelease(): Promise<ReleaseNumber> {
         if (this.release) {
             const rn = ReleaseNumber.parse(this.release);
             if (rn == null) {
-                return BPromise.reject(`Could not parse release number '${this.release}'`);
+                return Promise.reject(`Could not parse release number '${this.release}'`);
             }
-            return BPromise.resolve(rn);
+            return Promise.resolve(rn);
         }
 
         return this.repo
@@ -109,16 +107,16 @@ export class Upmerge implements ICommand {
             .then((status) => {
                 const match = this.remoteReleaseBranchPattern.exec(status.tracking);
                 if (!match || match.length < 2) {
-                    return BPromise.reject(`tracked branch ${status.tracking} does not conform to release branch pattern ${this.remoteReleaseBranchPattern}`);
+                    return Promise.reject(`tracked branch ${status.tracking} does not conform to release branch pattern ${this.remoteReleaseBranchPattern}`);
                 }
 
                 const version = match[1];
                 const releaseNumber = ReleaseNumber.parse(version);
                 if (!releaseNumber) {
-                    return BPromise.reject(`${version} is no valid Release Number`);
+                    return Promise.reject(`Invalid release number format: '${version}'. Expected format: Major(.Minor(.Patch)) (e.g., 25, 25.2 or 25.2.7).`);
                 } else {
                     console.log('is in release:', releaseNumber);
-                    return BPromise.resolve(releaseNumber);
+                    return Promise.resolve(releaseNumber);
                 }
             });
     }
@@ -181,26 +179,43 @@ export class Upmerge implements ICommand {
             });
     }
 
-    private checkMergability(branches: IBranchDetails[]): BPromise<IBranchDetails[]> {
+    private checkMergability(branches: IBranchDetails[]): Promise<IBranchDetails[]> {
         for (const b of branches) {
             if (b.gone) {
-                return BPromise.reject(`branch ${b.name} is gone - cannot upmerge`);
+                return Promise.reject(`branch ${b.name} is gone - cannot upmerge`);
             }
             if (b.ahead || b.behind) {
-                return BPromise.reject(`branch ${b.name} differs from remote - ahead: ${b.ahead}, behind: ${b.behind}`);
+                return Promise.reject(`branch ${b.name} differs from remote - ahead: ${b.ahead}, behind: ${b.behind}`);
             }
         }
-        return BPromise.resolve(branches);
+        return Promise.resolve(branches);
+    }
+
+    private generateRandomString(length: number): string {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
     }
 
     private tempBranchName(remoteBranchName: string): string {
         if (!remoteBranchName.startsWith(this.remote + '/')) {
             throw new Error(`Branch '${remoteBranchName}' does not start with '${this.remote}/'`);
         }
-        return this.prefix + remoteBranchName.substr(this.remote.length + 1);
+        return this.prefix + remoteBranchName.substring(this.remote.length + 1);
     }
 
-    private doMerges(branches: IBranchDetails[]): BPromise<void> {
+    /**
+     * Performs the actual merge operations for release and customer branches.
+     * Processes release branches first in sequence, then customer branches.
+     * Ensures proper cleanup of temporary branches regardless of success/failure.
+     * 
+     * @param branches Array of branch details to process
+     * @returns Promise that resolves when all merges complete
+     */
+    private doMerges(branches: IBranchDetails[]): Promise<void> {
 
         const cleanup: Set<string> = new Set();
         const releaseBranches = branches.filter((branch) => !branch.customer);
@@ -214,10 +229,10 @@ export class Upmerge implements ICommand {
             .then((status) => prevBranch = status.current)
             .then(() => releaseBranches.reduce(
                 (p, branch, i) => p.then(() => this.mergeReleaseBranch(branch, i, releaseBranches, cleanup)),
-                BPromise.resolve()))
+                Promise.resolve()))
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
-                BPromise.resolve()))
+                Promise.resolve()))
             .finally(() => {
                     this.repo
                         .checkoutBranch(prevBranch)
@@ -228,20 +243,22 @@ export class Upmerge implements ICommand {
             );
     }
 
-    private mergeReleaseBranch(branch: IBranchDetails, i: number, branches: IBranchDetails[], cleanup: Set<string>): BPromise {
+    private mergeReleaseBranch(branch: IBranchDetails, i: number, branches: IBranchDetails[], cleanup: Set<string>): Promise<void> {
         if (i === 0) {
             const tempBranchName = this.tempBranchName(branches[0].name);
             return this.repo.checkoutBranch(['-b', tempBranchName, branches[0].name])
-                .then(() => cleanup.add(tempBranchName));
+                .then(() => {
+                    cleanup.add(tempBranchName);
+                });
         }
         const srcBranch = branches[i - 1];
         return this.mergeBranch(branch, srcBranch, false, cleanup);
     }
 
-    private mergeCustomerBranch(branch: IBranchDetails, branches: IBranchDetails[], cleanup: Set<string>): BPromise {
+    private mergeCustomerBranch(branch: IBranchDetails, branches: IBranchDetails[], cleanup: Set<string>): Promise<void> {
         Global.isVerbose() && console.log(`Customer branch ${branch.name} with version ${branch.version}`);
 
-        return BPromise.resolve()
+        return Promise.resolve()
             .then(() => {
                 const previousCustomerBranch = branches
                     .filter((b) => b.customer === branch.customer)
@@ -249,7 +266,7 @@ export class Upmerge implements ICommand {
                     .find((b) => b.version.compareTo(branch.version) < 0);
                 if (!previousCustomerBranch) {
                     Global.isVerbose() && console.log('No previous branch, nothing to merge.');
-                    return BPromise.resolve();
+                    return Promise.resolve();
                 }
                 Global.isVerbose() && console.log(`Previous branch found: ${previousCustomerBranch.name}`);
                 return this.mergeBranch(branch, previousCustomerBranch, false, cleanup);
@@ -260,7 +277,7 @@ export class Upmerge implements ICommand {
                     .sort((b1, b2) => b2.version.compareTo(b1.version))
                     .find((b) => b.version.compareTo(branch.version) <= 0);
                 if (!matchingReleaseBranch) {
-                    return BPromise.reject(`No release branch for version ${branch.version} found.`);
+                    return Promise.reject(`No release branch for version ${branch.version} found.`);
                 }
                 Global.isVerbose() && console.log(`Matching release branch for ${branch.name} is ${matchingReleaseBranch.name}`);
 
@@ -268,7 +285,17 @@ export class Upmerge implements ICommand {
             });
     }
 
-    private mergeBranch(branch: IBranchDetails, srcBranch: IBranchDetails, tolerateExistingBranch: boolean, cleanup: Set<string>): BPromise {
+    /**
+     * Merges source branch into target branch using temporary branch strategy.
+     * Creates temporary branches to avoid conflicts with remote tracking branches.
+     * 
+     * @param branch Target branch to merge into
+     * @param srcBranch Source branch to merge from  
+     * @param tolerateExistingBranch If true, overwrites existing temp branch
+     * @param cleanup Set to track temporary branches for cleanup
+     * @returns Promise that resolves when merge and push complete
+     */
+    private mergeBranch(branch: IBranchDetails, srcBranch: IBranchDetails, tolerateExistingBranch: boolean, cleanup: Set<string>): Promise<void> {
         const tempSrcBranch = this.tempBranchName(srcBranch.name);
         const upmergeChecker = new UpmergeAnalyzer(this.repo);
 
@@ -277,7 +304,7 @@ export class Upmerge implements ICommand {
 
 
         if (!branch.name.startsWith(this.remote + '/')) {
-            return BPromise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
+            return Promise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
         }
         const tempBranchName = this.tempBranchName(branch.name);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
@@ -289,10 +316,10 @@ export class Upmerge implements ICommand {
             })
             .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
             .then(() => {
-                const targetBranchName = branch.name.substr(this.remote.length + 1);
+                const targetBranchName = branch.name.substring(this.remote.length + 1);
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
-                    : BPromise.resolve();
+                    : Promise.resolve();
             });
     }
 

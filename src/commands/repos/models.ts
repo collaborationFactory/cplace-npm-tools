@@ -48,16 +48,6 @@ export interface IModulesXmlModule {
     group?: string;
 }
 
-export interface IIml {
-    component: IImlComponent[];
-}
-
-export interface IImlComponent {
-    /* tslint:disable */
-    orderEntry: Array<IXmlAttributes<ITypeAttribute>>;
-    /* tslint:enable */
-    $: INameAttribute;
-}
 
 export interface INameAttribute {
     name: string;

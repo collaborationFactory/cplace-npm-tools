@@ -77,7 +77,7 @@ export class ValidateBranches extends AbstractReposCommand {
         };
         this.currentPath.push(this.rootRepoName);
         Object.keys(this.parentRepos)
-            .map((repoName: string) => this.createDependencyTree(repoName, rootDependencies), {concurrency: 1});
+            .forEach((repoName: string) => this.createDependencyTree(repoName, rootDependencies));
         const dependenciesMap = this.mapDependencies(rootDependencies);
         const report = this.validateDependencies(dependenciesMap);
         this.printReport(report);
@@ -156,7 +156,7 @@ Please configure all transitive repository dependencies and clone all repos with
                 childDependencies.reposDescriptor = JSON.parse(fs.readFileSync(childConfigPath, 'utf8'));
                 childDependencies.transitiveDependencies = new Map<string, IReposTransitiveDependencies>();
                 Object.keys(childDependencies.reposDescriptor)
-                    .map((nextChildRepoName: string) => this.createDependencyTree(nextChildRepoName, childDependencies), {concurrency: 1});
+                    .forEach((nextChildRepoName: string) => this.createDependencyTree(nextChildRepoName, childDependencies));
             }
         }
         parentDependencies.transitiveDependencies.set(repoName, childDependencies);

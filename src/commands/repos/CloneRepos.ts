@@ -1,7 +1,6 @@
 /**
  * General update-repos command
  */
-import * as Promise from 'bluebird';
 import * as path from 'path';
 import {fs} from '../../p/fs';
 import {AbstractReposCommand} from './AbstractReposCommand';
@@ -29,7 +28,8 @@ export class CloneRepos extends AbstractReposCommand {
                 sequential: this.sequential,
                 concurrency: this.concurrency
             })
-            .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
+            .then(() => {}) // Convert to void
+            .catch((err) => Promise.reject(`[CloneRepos]: Failed to clone repositories. Ensure you have proper access permissions and network connectivity. Error: ${err}`));
     }
 
     private handleRepo(repoName: string, repoProperties: IRepoStatus, toPath: string, depth: number): Promise<void> {
@@ -39,9 +39,11 @@ export class CloneRepos extends AbstractReposCommand {
                     repoProperties.latestTagForRelease = latestTag;
                     return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth);
                 })
+                .then(() => {}) // Convert Repository to void
                 .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
         } else {
-            return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth);
+            return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth)
+                .then(() => {}); // Convert Repository to void
         }
     }
 
