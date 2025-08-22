@@ -46,6 +46,13 @@ export class BranchRepos extends AbstractReposCommand {
         return true;
     }
 
+    /**
+     * Executes the branch creation workflow across multiple repositories.
+     * Processes repos in phases: validation (parallel) -> checkout (sequential) -> adjust (sequential) -> push (sequential).
+     * Sequential processing ensures consistent state and avoids git conflicts.
+     * 
+     * @returns Promise that resolves when all repositories are processed
+     */
     public async execute(): Promise<void> {
         const repos = await this.findRepos();
         

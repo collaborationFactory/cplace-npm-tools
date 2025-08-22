@@ -86,7 +86,7 @@ export class Upmerge implements ICommand {
                 }
 
                 if (['not_added', 'conflicted', 'created', 'deleted', 'modified', 'renamed'].find((k) => status[k].length)) {
-                    return Promise.reject('You have uncommitted changes');
+                    return Promise.reject('Cannot proceed with upmerge: repository has uncommitted changes. Please commit or stash your changes first.');
                 }
 
                 return Promise.resolve();
@@ -113,7 +113,7 @@ export class Upmerge implements ICommand {
                 const version = match[1];
                 const releaseNumber = ReleaseNumber.parse(version);
                 if (!releaseNumber) {
-                    return Promise.reject(`${version} is no valid Release Number`);
+                    return Promise.reject(`Invalid release number format: '${version}'. Expected format: X.Y.Z (e.g., 1.2.3).`);
                 } else {
                     console.log('is in release:', releaseNumber);
                     return Promise.resolve(releaseNumber);
@@ -204,9 +204,17 @@ export class Upmerge implements ICommand {
         if (!remoteBranchName.startsWith(this.remote + '/')) {
             throw new Error(`Branch '${remoteBranchName}' does not start with '${this.remote}/'`);
         }
-        return this.prefix + remoteBranchName.substr(this.remote.length + 1);
+        return this.prefix + remoteBranchName.substring(this.remote.length + 1);
     }
 
+    /**
+     * Performs the actual merge operations for release and customer branches.
+     * Processes release branches first in sequence, then customer branches.
+     * Ensures proper cleanup of temporary branches regardless of success/failure.
+     * 
+     * @param branches Array of branch details to process
+     * @returns Promise that resolves when all merges complete
+     */
     private doMerges(branches: IBranchDetails[]): Promise<void> {
 
         const cleanup: Set<string> = new Set();
@@ -277,6 +285,16 @@ export class Upmerge implements ICommand {
             });
     }
 
+    /**
+     * Merges source branch into target branch using temporary branch strategy.
+     * Creates temporary branches to avoid conflicts with remote tracking branches.
+     * 
+     * @param branch Target branch to merge into
+     * @param srcBranch Source branch to merge from  
+     * @param tolerateExistingBranch If true, overwrites existing temp branch
+     * @param cleanup Set to track temporary branches for cleanup
+     * @returns Promise that resolves when merge and push complete
+     */
     private mergeBranch(branch: IBranchDetails, srcBranch: IBranchDetails, tolerateExistingBranch: boolean, cleanup: Set<string>): Promise<void> {
         const tempSrcBranch = this.tempBranchName(srcBranch.name);
         const upmergeChecker = new UpmergeAnalyzer(this.repo);
@@ -298,7 +316,7 @@ export class Upmerge implements ICommand {
             })
             .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
             .then(() => {
-                const targetBranchName = branch.name.substr(this.remote.length + 1);
+                const targetBranchName = branch.name.substring(this.remote.length + 1);
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
                     : Promise.resolve();

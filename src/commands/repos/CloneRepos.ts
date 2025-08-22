@@ -29,7 +29,7 @@ export class CloneRepos extends AbstractReposCommand {
                 concurrency: this.concurrency
             })
             .then(() => {}) // Convert to void
-            .catch((err) => Promise.reject(`[CloneRepos]: failed to clone repos: ${err}`));
+            .catch((err) => Promise.reject(`[CloneRepos]: Failed to clone repositories. Ensure you have proper access permissions and network connectivity. Error: ${err}`));
     }
 
     private handleRepo(repoName: string, repoProperties: IRepoStatus, toPath: string, depth: number): Promise<void> {
