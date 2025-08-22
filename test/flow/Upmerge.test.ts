@@ -87,7 +87,7 @@ describe('Upmerge', () => {
                 isClean: () => false
             }));
 
-            await expect(upmerge.execute()).rejects.toMatch('You have uncommitted changes');
+            await expect(upmerge.execute()).rejects.toMatch('Cannot proceed with upmerge: repository has uncommitted changes');
         });
 
         it('should fail if current branch is behind remote', async () => {
