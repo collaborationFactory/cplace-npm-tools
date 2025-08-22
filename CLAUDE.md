@@ -2,112 +2,73 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Mission
-
-Migration from bluebird to native promises.
-
-## Claude's Role
-
-- You are a node.js typescript expert following best practices.
-- Write production ready code.
-- Concentrate on the existing core implementation.
-
-## Project Overview
-
-This is `@cplace/cli`, a command-line utility for working with cplace code and repositories. It provides tools for release notes generation, repository management, visualization, refactoring, and end-to-end testing.
-
 ## Development Commands
 
-### Core Development
+Build and prepare the project:
 ```bash
-# Install dependencies
-npm install
-
-# Development build (lint + compile TypeScript)
-npm run dev
-
-# Individual commands
-npm run dev:lint    # ESLint check
-npm run dev:tsc     # TypeScript compilation + set executable permissions
-
-# Clean build artifacts
-npm run clean
-
-# Full prepare (clean + dev)
-npm run prepare
+npm run dev          # Lint and compile TypeScript
+npm run dev:lint     # Run ESLint on all TypeScript files  
+npm run dev:tsc      # Compile TypeScript and make dist/ executable
+npm run prepare      # Clean + dev (full rebuild)
+npm run clean        # Remove dist/ and *.tgz files
 ```
 
-### Testing
+Testing:
 ```bash
-# Run all tests
-npm test           # Uses Jest with ts-jest preset
-
-# Test configuration is in jest.config.js
-# - Test timeout: 1000 seconds (for long-running operations)
-# - Supports TypeScript files via ts-jest
-# - Tests located in src/ and test/ directories
+npm test             # Run Jest unit tests
+npm run test         # Same as above
 ```
 
-### Local Development
+Local development and testing:
 ```bash
-# Link for local testing
-npm run link       # Prepares and links the CLI globally
-
-# After linking, test with:
-cplace-cli --help
-
-# Clean up local link
-npm r -g @cplace/cli
+npm link             # Link local package for testing (runs prepare first)
+npm r -g @cplace/cli # Unlink/remove global package after testing
 ```
 
-## Architecture
+## Architecture Overview
 
-### Command Structure
-The CLI uses a command-based architecture where each major feature is a separate command:
+This is a CLI tool (`@cplace/cli`) that provides utilities for working with cplace codebases. The main entry point is `src/cli.ts` which uses the `meow` library for CLI parsing and `CommandRunner` for command execution.
 
-- **Entry Point**: `src/cli.ts` - Main CLI entry using meow for argument parsing
-- **Command Runner**: `src/commands/CommandRunner.ts` - Dispatches to registered commands
-- **Commands**: Each command is in `src/commands/<command-name>/` directory
-  - `release-notes` - Release notes generation and management
-  - `repos` - Repository operations (update, clone, branch management)
-  - `flow` - Upmerge operations between releases
-  - `visualize` - Branch dependency visualization
-  - `refactor` - Plugin refactoring utilities
-  - `version` - Version management utilities
+### Core Structure
 
-### Key Components
-- **Global Configuration**: `src/Global.ts` - Handles global CLI parameters like `--verbose`
-- **Git Operations**: `src/git/` - Git-related utilities and operations
-- **Promise Utilities**: `src/promiseAllSettled.ts` - Bluebird Promise extensions
-- **Helpers**: `src/helpers/` - Shared utility functions
+- **`src/cli.ts`**: Main CLI entry point with help text and command parsing
+- **`src/commands/CommandRunner.ts`**: Central command registry and execution logic
+- **`src/commands/`**: Individual command implementations organized in subdirectories:
+  - `release-notes/`: Generate and manage release notes from git commits
+  - `repos/`: Multi-repository management (clone, update, branch creation)
+  - `flow/`: Git flow operations (upmerge workflows)
+  - `visualize/`: Repository dependency visualization  
+  - `e2e/`: End-to-end test execution
+  - `refactor/`: Code refactoring utilities
+  - `version/`: Version management
 
-### Dependencies Architecture
-- Uses **Bluebird** for enhanced Promise handling
-- **simple-git** for Git operations
-- **meow** for CLI argument parsing
-- **@inquirer/prompts** for interactive prompts
-- **xml2js** for XML parsing (likely for cplace-specific configs)
+### Key Commands
 
-## Important Files
-- `parent-repos.json` - Repository dependency configuration
-- `release-notes/messages_*.db` - Release notes message databases
-- `version.gradle` - Version configuration files
+- **`release-notes`**: Generates release notes from git commit messages, supports multiple languages and merge conflict resolution
+- **`repos`**: Manages parent repository dependencies defined in `parent-repos.json`, handles cloning, updating, and branching across multiple repositories
+- **`flow --upmerge`**: Automated merging of changes up through release branches
+- **`visualize`**: Creates dependency graphs of repository branches
+- **`e2e`**: Runs end-to-end tests with Selenium WebDriver
 
-## Linting and Type Checking
-- Uses ESLint with TypeScript support (`@typescript-eslint/*`)
-- Configuration in `.eslintrc.json`
-- TypeScript configuration in `tsconfig.json` (ES6 target, CommonJS modules)
+### Command Pattern
 
-## Testing Notes
-- Jest with ts-jest preset for TypeScript support
-- Very long test timeout (1000s) - indicates complex integration tests
-- Tests can be in both `src/` (alongside code) and `test/` directories
+All commands implement the `ICommand` interface with:
+- `prepareAndMayExecute(params)`: Validation and setup
+- `execute()`: Main command logic returning Promise\<void\>
 
-## Development Guidelines
+Commands are registered in `REGISTERED_COMMANDS` object in `CommandRunner.ts`.
 
-### Code Quality Standards
+### Configuration Files
 
-1. **TypeScript Best Practices**: Strict typing, proper error handling
-2. **node.js Compliance**: Follow official node.js specification
-3. **General Coding Conventions**: Adhere to "separation of concerns"
-4. **Testing**: Make sure existing Unit tests for all tools and handlers keep working or are updated properly after code changes
+- **`parent-repos.json`**: Defines repository dependencies and versions (used by `repos` command)
+- **`release-notes/messages_*.db`**: Release note message databases for different languages
+- **`.git/config`**: Can include custom merge drivers for automatic conflict resolution
+
+### Development Notes
+
+- Uses TypeScript with ES6 target
+- Jest for testing with 1000-second timeout for long-running operations
+- ESLint with TypeScript support
+- Bluebird for Promise handling
+- Built binaries go to `dist/` with executable permissions
+- Global installation creates `cplace-cli` binary

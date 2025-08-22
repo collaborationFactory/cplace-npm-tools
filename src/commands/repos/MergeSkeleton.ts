@@ -37,6 +37,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         [{major: 24, minor: 1, patch: 0}, 'version/24.1'],
         [{major: 25, minor: 2, patch: 0}, 'version/25.2'],
         [{major: 25, minor: 3, patch: 0}, 'version/25.3'],
+        [{major: 25, minor: 4, patch: 0}, 'version/25.4'],
     ]);
 
     protected static readonly FILE_MERGE_STATUS_MAP: Map<string, { description: string, defaultAction: string, defaultActionLong: string }> = new Map([
@@ -112,9 +113,12 @@ export class MergeSkeleton extends AbstractReposCommand {
                 await repo.pullOnlyFastForward(this.status.current)
                     .catch((err) => console.log(`Error when pulling target branch ${err}`));
             }
-            await this.mergeSkeletonBranch(repo, `${MergeSkeleton.SKELETON_REMOTE_NAME}/${this.selectedSkeletonBranch}`, true)
+            await this.mergeSkeletonBranch(repo, MergeSkeleton.SKELETON_REMOTE_NAME, this.selectedSkeletonBranch, true)
                 .catch((err) => {
-                    console.log(`Cannot merge skeleton branch: ${err}`);
+                    console.error(`Cannot merge skeleton branch: ${err.message || err}`);
+                    if (Global.isVerbose()) {
+                        console.error('Full error details:', err);
+                    }
                 });
         }
 
@@ -345,9 +349,9 @@ export class MergeSkeleton extends AbstractReposCommand {
         return `${skeletonVerion}`;
     }
 
-    private mergeSkeletonBranch(repo: Repository, skeletonBranch: string, noCommit: boolean): Promise<void> {
+    private mergeSkeletonBranch(repo: Repository, remote: string, skeletonBranch: string, noCommit: boolean): Promise<void> {
         console.log(`Merging skeleton branch ${skeletonBranch}`);
-        return repo.merge(skeletonBranch, {noEdit: true, noCommit: noCommit});
+        return repo.merge(remote, skeletonBranch, {noEdit: true, noCommit: noCommit});
     }
 
     private async acceptDecisionsAndContinueMerge(repo: Repository): Promise<void> {

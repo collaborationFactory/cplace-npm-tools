@@ -1,0 +1,85 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # Only run on specific file changes
+    paths:
+      - "src/**/*.ts"
+      - "tools/**/*.ts"
+      - "test/**/*.ts"
+      - "*.json"
+      - ".github/workflows/*.yml"
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4.1)
+          # model: "claude-opus-4-1-20250805"
+
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request for the cplace CLI tools (@cplace/cli) and provide feedback on:
+            
+            **Code Quality & Architecture:**
+            - TypeScript best practices and type safety
+            - Command pattern implementation and registry system
+            - CLI interface design using meow library
+            - Promise-based async patterns with Bluebird
+            
+            **CLI Command Implementation:**
+            - Command validation in prepareAndMayExecute methods
+            - Error handling and user feedback
+            - Multi-repository operations (repos command)
+            - Git workflow automation (flow, release-notes)
+            - Repository visualization and dependency management
+            
+            **Performance & Security:**
+            - Git operations and repository state management
+            - File system operations for multi-repo workflows
+            - Input validation for CLI parameters
+            - Security of git operations and branch management
+            
+            **Testing & Build:**
+            - Jest test coverage and quality
+            - Build script correctness (npm run dev, prepare)
+            - CLI usability and help text accuracy
+            - Local development workflow (npm link)
+            
+            **Project Standards:**
+            - ESLint configuration compliance
+            - Command interface consistency (ICommand pattern)
+            - Error handling patterns and user experience
+            - Integration with cplace development workflows
+            
+            Be constructive and focus on maintainability, performance, and alignment with the existing CLI architecture patterns.
+
+          # Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
+          use_sticky_comment: true
+          
+          # Add specific tools for running tests or linting
+          allowed_tools: "Bash(npm run test),Bash(npm run prepare),Bash(npm run clean),Bash(npm run dev), Bash(npm run dev:lint),Bash(npm run dev:tsc)"
+          
+          # Optional: Skip review for certain conditions
+          # if: |
+          #   !contains(github.event.pull_request.title, '[skip-review]') &&
+          #   !contains(github.event.pull_request.title, '[WIP]')
+
