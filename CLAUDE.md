@@ -69,6 +69,5 @@ Commands are registered in `REGISTERED_COMMANDS` object in `CommandRunner.ts`.
 - Uses TypeScript with ES6 target
 - Jest for testing with 1000-second timeout for long-running operations
 - ESLint with TypeScript support
-- Bluebird for Promise handling
 - Built binaries go to `dist/` with executable permissions
 - Global installation creates `cplace-cli` binary
