@@ -113,7 +113,7 @@ export class Upmerge implements ICommand {
                 const version = match[1];
                 const releaseNumber = ReleaseNumber.parse(version);
                 if (!releaseNumber) {
-                    return Promise.reject(`Invalid release number format: '${version}'. Expected format: X.Y.Z (e.g., 1.2.3).`);
+                    return Promise.reject(`Invalid release number format: '${version}'. Expected format: Major(.Minor(.Patch)) (e.g., 25, 25.2 or 25.2.7).`);
                 } else {
                     console.log('is in release:', releaseNumber);
                     return Promise.resolve(releaseNumber);
