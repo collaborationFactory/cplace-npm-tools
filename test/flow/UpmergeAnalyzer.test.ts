@@ -11,7 +11,7 @@ describe('UpmergeAnalyzer', () => {
     let mockRepo: jest.Mocked<Repository>;
     let consoleLogSpy: jest.SpyInstance;
 
-    // Sample test data
+    // Sample test data - now using delimiter format instead of JSON
     const sampleBranches: IBranchDetails[] = [
         createBranchDetails('release/23.1', 'commit1', '23.1'),
         createBranchDetails('release/23.2', 'commit2', '23.2'),
@@ -34,6 +34,16 @@ describe('UpmergeAnalyzer', () => {
             message: 'Second commit'
         }
     ];
+
+    /**
+     * Helper function to convert commit objects to delimiter format for testing.
+     * Generates test data that matches the expected git log output format.
+     */
+    function toDelimiterFormat(commits: any[]): string {
+        return commits.map(commit =>
+            `${commit.hash}\0${commit.author_name}\0${commit.author_email}\0${commit.date}\0${commit.message}\0`
+        ).join('\n');
+    }
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -60,10 +70,10 @@ describe('UpmergeAnalyzer', () => {
         });
 
         it('should print out a message if there are pending upmerges', async () => {
-            const commitJson = sampleCommits.map(commit => JSON.stringify(commit)).join('\n');
+            const commitDelimited = toDelimiterFormat(sampleCommits);
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce(commitJson); // log with commits
+                .mockResolvedValueOnce(commitDelimited); // log with commits
 
             await upmergeChecker.analyzeRequiredMerge(sampleBranches[0].name, sampleBranches[1].name)
 
@@ -79,14 +89,42 @@ describe('UpmergeAnalyzer', () => {
                 .toThrow('Git command failed');
         });
 
+        it('should handle commit messages with special characters including quotes', async () => {
+            const commitsWithSpecialChars = [
+                {
+                    hash: 'abc123',
+                    author_name: 'John Doe',
+                    author_email: 'john@example.com',
+                    date: '2024-01-01',
+                    message: 'Fix "broken" functionality with backslashes \\ and newlines'
+                },
+                {
+                    hash: 'def456',
+                    author_name: 'Jane Smith',
+                    author_email: 'jane@example.com',
+                    date: '2024-01-02',
+                    message: 'Add support for JSON: {"key": "value"}'
+                }
+            ];
+            const commitDelimited = toDelimiterFormat(commitsWithSpecialChars);
+
+            mockRepo.rawWrapper.mockResolvedValueOnce(commitDelimited);
+
+            const result = await upmergeChecker.analyzeRequiredMerge(sampleBranches[0].name, sampleBranches[1].name);
+
+            expect(result.commits).toHaveLength(2);
+            expect(result.commits[0].message).toContain('Fix "broken" functionality with backslashes \\ and newlines');
+            expect(result.commits[1].message).toContain('{"key": "value"}');
+        });
+
     });
 
     describe('logging behavior', () => {
         it('should show detailed commit info when commits are under threshold', async () => {
-            const commitJson = sampleCommits.map(commit => JSON.stringify(commit)).join('\n');
+            const commitDelimited = toDelimiterFormat(sampleCommits);
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce(commitJson);
+                .mockResolvedValueOnce(commitDelimited);
 
             await upmergeChecker.analyzeRequiredMerge(sampleBranches[0].name, sampleBranches[1].name);
 
@@ -101,10 +139,10 @@ describe('UpmergeAnalyzer', () => {
                 hash: `hash${i}`,
                 message: `Commit ${i}`
             }));
-            const commitJson = manyCommits.map(commit => JSON.stringify(commit)).join('\n');
+            const commitDelimited = toDelimiterFormat(manyCommits);
 
             mockRepo.rawWrapper
-                .mockResolvedValueOnce(commitJson);
+                .mockResolvedValueOnce(commitDelimited);
 
             await upmergeChecker.analyzeRequiredMerge(sampleBranches[0].name, sampleBranches[1].name)
 

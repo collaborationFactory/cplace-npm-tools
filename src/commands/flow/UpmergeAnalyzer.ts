@@ -57,11 +57,12 @@ export class UpmergeAnalyzer {
      */
     public async analyzeRequiredMerge(sourceBranch: string, targetBranch: string): Promise<UpmergeCheckResult> {
         try {
-            const logCmd = ['log', '--format={"hash": "%H", "author_name": "%aN", "author_email": "%aE", "date": "%ad", "message": "%s"}', '--date=short',
+            // Use null-byte delimiter to avoid JSON parsing issues with quotes in commit messages
+            const logCmd = ['log', '--format=%H%x00%aN%x00%aE%x00%ad%x00%s%x00', '--date=short',
                 `${targetBranch}..${sourceBranch}`];
             const log = await this.repo.rawWrapper(logCmd);
 
-            const commits = this.parseJsonCommits(log);
+            const commits = this.parseDelimiterCommits(log);
             const authors = this.aggregateAuthors(commits);
 
             this.printResult({sourceBranch: sourceBranch, targetBranch: targetBranch, commits, authors});
@@ -78,28 +79,46 @@ export class UpmergeAnalyzer {
     }
 
     /**
-     * Parses a git log output string containing JSON-formatted commit entries into an array
-     * of CommitInfo objects. Handles empty logs and invalid JSON entries gracefully.
+     * Parses a git log output string using null-byte delimiters into an array
+     * of CommitInfo objects. This approach is safer than JSON parsing as it
+     * avoids issues with quotes, backslashes, and other special characters
+     * in commit messages.
      *
-     * @param log - Git log output string containing JSON-formatted commit entries
+     * @param log - Git log output string with null-byte delimited fields
      * @returns Array of parsed CommitInfo objects
      */
-    private parseJsonCommits(log: string): CommitInfo[] {
+    private parseDelimiterCommits(log: string): CommitInfo[] {
         if (!log) return [];
 
         return log.trim()
             .split('\n')
             .filter(line => line.trim())
-            .reduce((acc, line) => {
-                if (!line.trim()) return acc;
-                try {
-                    acc.push(JSON.parse(line));
-                } catch (err) {
-                    console.error('Failed to parse commit:', err.message);
-                    throw err;
-                }
-                return acc;
-            }, [] as CommitInfo[]);
+            .map(line => this.parseGitLogLine(line));
+    }
+
+    /**
+     * Parses a single line of git log output using null-byte delimiters
+     *
+     * @param line - Single line with null-byte delimited fields
+     * @returns Parsed CommitInfo object
+     */
+    private parseGitLogLine(line: string): CommitInfo {
+        const parts = line.split('\0');
+        
+        // Remove trailing empty element (caused by trailing %x00)
+        if (parts.length > 0 && parts[parts.length - 1] === '') {
+            parts.pop();
+        }
+
+        const [hash, author_name, author_email, date, message = ''] = parts;
+
+        return {
+            hash: hash?.trim() || '',
+            author_name: author_name?.trim() || '',
+            author_email: author_email?.trim() || '',
+            date: date?.trim() || '',
+            message: message?.trim() || ''
+        };
     }
 
     /**
