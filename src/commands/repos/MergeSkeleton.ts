@@ -340,13 +340,13 @@ export class MergeSkeleton extends AbstractReposCommand {
             return `${this.skeletonBranch}`;
         }
 
-        let skeletonVerion: string = '';
+        let skeletonVersion: string = '';
         MergeSkeleton.CPLACE_VERSION_TO_SKELETON_VERSION.forEach((value: string, key: {major: number, minor: number, patch: number}) => {
             if (CplaceVersion.compareTo(key) >= 0) {
-                skeletonVerion = value;
+                skeletonVersion = value;
             }
         });
-        return `${skeletonVerion}`;
+        return `${skeletonVersion}`;
     }
 
     private mergeSkeletonBranch(repo: Repository, remote: string, skeletonBranch: string, noCommit: boolean): Promise<void> {

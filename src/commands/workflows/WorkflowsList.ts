@@ -1,18 +1,65 @@
 /**
  * List available workflows from skeleton repository
  */
+import * as path from 'path';
 import {ICommand, ICommandParameters} from '../models';
 import {Global} from '../../Global';
+import {SkeletonManager} from '../../helpers/SkeletonManager';
+import {Repository} from '../../git';
 
 export class WorkflowsList implements ICommand {
     
-    public prepareAndMayExecute(_params: ICommandParameters): boolean {
+    protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
+    protected static readonly PARAMETER_SKELETON_BRANCH_KEBAB: string = 'skeleton-branch';
+
+    protected skeletonBranch?: string;
+
+    public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('Preparing workflows list command');
+
+        // Parse skeleton branch override parameter
+        const skeletonBranch = params[WorkflowsList.PARAMETER_SKELETON_BRANCH] || params[WorkflowsList.PARAMETER_SKELETON_BRANCH_KEBAB];
+        if (typeof skeletonBranch === 'string') {
+            this.skeletonBranch = skeletonBranch;
+            Global.isVerbose() && console.log(`Using skeleton branch override: ${this.skeletonBranch}`);
+        }
+
         return true;
     }
 
     public async execute(): Promise<void> {
-        console.log('Listing available workflows from skeleton repository...');
-        console.log('(This is a stub implementation - workflow discovery will be implemented in Phase 3)');
+        try {
+            const pathToRepo = path.join(process.cwd());
+            const repo = new Repository(pathToRepo);
+
+            await repo.checkIsRepo();
+            console.log(`Listing available workflows in repo ${repo.repoName}`);
+
+            // Validate cplace version compatibility
+            SkeletonManager.validateCplaceVersion();
+
+            // Setup skeleton repository access
+            await SkeletonManager.ensureSkeletonRemote(repo);
+
+            // Get appropriate skeleton branch
+            const selectedSkeletonBranch = SkeletonManager.getSkeletonBranchForVersion(this.skeletonBranch);
+
+            // Validate skeleton branch exists
+            const branchExists = await SkeletonManager.validateSkeletonBranchExists(repo, selectedSkeletonBranch);
+            if (!branchExists) {
+                throw new Error(`Skeleton branch '${selectedSkeletonBranch}' does not exist`);
+            }
+
+            console.log(`Using skeleton branch: ${selectedSkeletonBranch}`);
+            console.log('Skeleton repository access configured successfully.');
+            console.log('(Workflow enumeration will be implemented in Phase 3)');
+
+        } catch (error) {
+            console.error(`Error accessing skeleton repository: ${error instanceof Error ? error.message : error}`);
+            if (Global.isVerbose()) {
+                console.error('Full error details:', error);
+            }
+            throw error;
+        }
     }
 }
