@@ -227,6 +227,25 @@ $  cplace-cli --help
                 Will refactor an old plugin source structure like 'src/classes' or 'src/java' to a proper Maven-like
                 structure with 'src/main/java' and 'src/test/java'
 
+        workflows [--list] [--add-workflows <names>] [--skeleton-branch <name>] [--force] [--dry-run]
+            Manages GitHub Actions workflows from the skeleton repository.
+            
+            --list
+                List available workflows from skeleton repository with their current status
+                
+            --add-workflows <names>
+                Add specified workflows (space-separated list of workflow filenames)
+                Example: --add-workflows "ci.yml deploy.yml test.yml"
+                
+            --skeleton-branch <name>
+                Override automatic branch detection and use specific skeleton branch
+                
+            --force
+                Skip conflict prompts and overwrite existing files
+                
+            --dry-run
+                Show what would be done without making changes
+
         version --rewrite-versions
             Rewrites versions in the version.gradle and parent-repos.json files for custom branches.
             This command helps manage versions for non-release branches by:
