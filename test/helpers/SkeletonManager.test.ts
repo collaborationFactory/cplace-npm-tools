@@ -55,24 +55,22 @@ describe('SkeletonManager.getSkeletonBranchForVersion', () => {
         });
 
         it.each([
-            [24, 1, 0, "version/24.1"],
-            [24, 2, 0, "version/24.1"],
-            [24, 3, 0, "version/24.1"],
-            [24, 4, 0, "version/24.1"],
-            [25, 1, 0, "version/24.1"],
-            [25, 2, 0, "version/25.2"],
-            [25, 3, 0, "version/25.3"],
-            [25, 4, 0, "version/25.4"],
-            [26, 1, 0, "version/25.4"] // fallback case
-        ])('should map cplace version %i.%i.%i to %s', (major, minor, patch, expected) => {
+            [24, 1, "version/24.1"],
+            [24, 2, "version/24.1"],
+            [24, 3, "version/24.1"],
+            [24, 4, "version/24.1"],
+            [25, 1, "version/24.1"],
+            [25, 2, "version/25.2"],
+            [25, 3, "version/25.3"],
+            [25, 4, "version/25.4"],
+            [26, 1, "version/25.4"] // fallback case
+        ])('should map cplace version %i.%i to %s', (major, minor, expected) => {
             const mockVersion = {
                 major: major,
                 minor: minor,
-                patch: patch,
                 snapshot: false
             };
             getSpy.mockReturnValue(mockVersion);
-            toStringSpy.mockReturnValue(`${major}.${minor}.${patch}`);
             // Set the internal _version so real compareTo method works
             (CplaceVersion as any)._version = mockVersion;
 
