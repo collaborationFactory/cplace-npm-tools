@@ -5,10 +5,11 @@ import * as path from 'path';
 import {ICommand, ICommandParameters} from '../../models';
 import {Global} from '../../../Global';
 import {SkeletonManager} from '../../../helpers/SkeletonManager';
+import {WorkflowScanner} from '../../../helpers/WorkflowScanner';
 import {Repository} from '../../../git';
 
 export class WorkflowsList implements ICommand {
-    
+
     protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
     protected static readonly PARAMETER_SKELETON_BRANCH_KEBAB: string = 'skeleton-branch';
 
@@ -33,7 +34,7 @@ export class WorkflowsList implements ICommand {
             const repo = new Repository(pathToRepo);
 
             await repo.checkIsRepo();
-            console.log(`Listing available workflows in repo ${repo.repoName}`);
+            Global.isVerbose() && console.log(`Listing available workflows in repo ${repo.repoName}`);
 
             // Validate cplace version compatibility
             SkeletonManager.validateCplaceVersion();
@@ -45,21 +46,25 @@ export class WorkflowsList implements ICommand {
             const selectedSkeletonBranch = SkeletonManager.getSkeletonBranchForVersion(this.skeletonBranch);
 
             // Validate skeleton branch exists
-            const branchExists = await SkeletonManager.validateSkeletonBranchExists(repo, selectedSkeletonBranch);
+        const branchExists = await SkeletonManager.validateSkeletonBranchExists(repo, selectedSkeletonBranch);
             if (!branchExists) {
                 throw new Error(`Skeleton branch '${selectedSkeletonBranch}' does not exist`);
             }
 
-            console.log(`Using skeleton branch: ${selectedSkeletonBranch}`);
-            console.log('Skeleton repository access configured successfully.');
-            console.log('(Workflow enumeration will be implemented in Phase 3)');
+            Global.isVerbose() && console.log(`Using skeleton branch: ${selectedSkeletonBranch}`);
+
+            // Scan workflows from skeleton and compare with local
+            const workflowStatus = await WorkflowScanner.scanWorkflows(repo, selectedSkeletonBranch);
+
+            // Display formatted results
+            console.log(WorkflowScanner.formatWorkflowStatus(workflowStatus));
 
         } catch (error) {
-            console.error(`Error accessing skeleton repository: ${error instanceof Error ? error.message : error}`);
+            console.error(`Error listing workflows: ${error instanceof Error ? error.message : error}`);
             if (Global.isVerbose()) {
                 console.error('Full error details:', error);
             }
-            throw error;
+            process.exit(1);
         }
     }
 }

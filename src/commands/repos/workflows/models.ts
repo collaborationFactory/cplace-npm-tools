@@ -5,8 +5,6 @@
 export interface IWorkflowInfo {
     name: string;
     fileName: string;
-    description?: string;
-    size?: number;
     exists: boolean;
 }
 

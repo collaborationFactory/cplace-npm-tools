@@ -5,6 +5,7 @@
 import { Repository } from '../git';
 import { Global } from '../Global';
 import { CplaceVersion } from './CplaceVersion';
+import { execSync } from 'child_process';
 
 export class SkeletonManager {
 
@@ -115,6 +116,90 @@ export class SkeletonManager {
 
         if (CplaceVersion.compareTo({major: 5, minor: 4, patch: 0}) < 0) {
             throw new Error('Skeleton operations work only for cplace versions 5.4 or higher');
+        }
+    }
+
+    /**
+     * List files in a specific directory on a remote branch
+     * Uses git ls-tree to enumerate files without checking out the branch
+     */
+    public static async getFilesFromRemoteBranch(repo: Repository, branch: string, directoryPath: string): Promise<string[]> {
+        try {
+            Global.isVerbose() && console.log(`Listing files in ${directoryPath} on remote branch ${branch}`);
+
+            const remoteBranchRef = `${SkeletonManager.SKELETON_REMOTE_NAME}/${branch}`;
+            const command = `git ls-tree --name-only -r "${remoteBranchRef}" "${directoryPath}/"`;
+
+            const result: Buffer = execSync(command, {
+                cwd: repo.workingDir,
+                encoding: 'buffer'
+            });
+
+            if (!result || result.length === 0) {
+                Global.isVerbose() && console.log(`No files found in ${directoryPath} on branch ${branch}`);
+                return [];
+            }
+
+            const files = result.toString('utf8')
+                .split(/\r?\n/)
+                .filter(line => line.trim().length > 0)
+                .map(line => line.trim());
+
+            Global.isVerbose() && console.log(`Found ${files.length} files in ${directoryPath}: ${files.join(', ')}`);
+            return files;
+        } catch (error) {
+            Global.isVerbose() && console.log(`Error listing files in remote branch: ${error}`);
+            throw new Error(`Failed to list files in ${directoryPath} on branch ${branch}: ${error instanceof Error ? error.message : error}`);
+        }
+    }
+
+    /**
+     * Get content of a specific file from a remote branch
+     * Uses git show to read file content without checking out the branch
+     */
+    public static async getFileContentFromRemote(repo: Repository, branch: string, filePath: string): Promise<string> {
+        try {
+            Global.isVerbose() && console.log(`Reading content of ${filePath} from remote branch ${branch}`);
+
+            const remoteBranchRef = `${SkeletonManager.SKELETON_REMOTE_NAME}/${branch}`;
+            const command = `git show "${remoteBranchRef}:${filePath}"`;
+
+            const result: Buffer = execSync(command, {
+                cwd: repo.workingDir,
+                encoding: 'buffer'
+            });
+
+            const content = result.toString('utf8');
+            Global.isVerbose() && console.log(`Successfully read ${content.length} characters from ${filePath}`);
+            return content;
+        } catch (error) {
+            Global.isVerbose() && console.log(`Error reading file from remote branch: ${error}`);
+            throw new Error(`Failed to read ${filePath} from branch ${branch}: ${error instanceof Error ? error.message : error}`);
+        }
+    }
+
+    /**
+     * List all workflow files (.yml and .yaml) in the skeleton repository's .github/workflows directory
+     */
+    public static async listWorkflowsInBranch(repo: Repository, branch: string): Promise<string[]> {
+        try {
+            const workflowsPath = '.github/workflows';
+            const allFiles = await SkeletonManager.getFilesFromRemoteBranch(repo, branch, workflowsPath);
+
+            // Filter for workflow files (.yml and .yaml)
+            const workflowFiles = allFiles.filter(filePath => {
+                const fileName = filePath.split('/').pop() || '';
+                return fileName.endsWith('.yml') || fileName.endsWith('.yaml');
+            });
+
+            Global.isVerbose() && console.log(`Found ${workflowFiles.length} workflow files: ${workflowFiles.join(', ')}`);
+            return workflowFiles;
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('does not exist')) {
+                Global.isVerbose() && console.log('No .github/workflows directory found in skeleton repository');
+                return [];
+            }
+            throw error;
         }
     }
 }
