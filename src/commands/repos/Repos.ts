@@ -11,6 +11,7 @@ import {AddDependency} from './add-dependency/AddDependency';
 import {MergeSkeleton} from './MergeSkeleton';
 import { MigrateArtifactGroup } from './MigrateArtifactGroup';
 import {ValidateBranches} from './ValidateBranches';
+import {Workflows} from './workflows/Workflows';
 
 export class Repos implements ICommand {
     public static readonly PARAMETER_BRANCH: string = 'branch';
@@ -27,6 +28,7 @@ export class Repos implements ICommand {
     public static readonly PARAMETER_MERGE_SKELETON_SHORT: string = 'm';
     public static readonly PARAMETER_MIGRATE_ARTIFACT_GROUP: string = 'migrateArtifactGroups';
     public static readonly PARAMETER_VALIDATE_BRANCHES: string = 'validateBranches';
+    public static readonly PARAMETER_WORKFLOWS: string = 'workflows';
 
     private cmd: ICommand;
 
@@ -47,6 +49,8 @@ export class Repos implements ICommand {
             this.cmd = new MigrateArtifactGroup();
         } else if (params[Repos.PARAMETER_VALIDATE_BRANCHES]) {
             this.cmd = new ValidateBranches();
+        } else if (params[Repos.PARAMETER_WORKFLOWS]) {
+            this.cmd = new Workflows();
         } else {
             console.error('Error: Unknown or missing repos subcommand!');
             return false;

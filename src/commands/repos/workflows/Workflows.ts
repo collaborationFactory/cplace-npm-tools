@@ -2,7 +2,7 @@
  * General workflows command
  */
 import * as Promise from 'bluebird';
-import {ICommand, ICommandParameters} from '../models';
+import {ICommand, ICommandParameters} from '../../models';
 import {WorkflowsList} from './WorkflowsList';
 import {WorkflowsAdd} from './WorkflowsAdd';
 

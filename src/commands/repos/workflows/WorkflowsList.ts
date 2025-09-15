@@ -2,10 +2,10 @@
  * List available workflows from skeleton repository
  */
 import * as path from 'path';
-import {ICommand, ICommandParameters} from '../models';
-import {Global} from '../../Global';
-import {SkeletonManager} from '../../helpers/SkeletonManager';
-import {Repository} from '../../git';
+import {ICommand, ICommandParameters} from '../../models';
+import {Global} from '../../../Global';
+import {SkeletonManager} from '../../../helpers/SkeletonManager';
+import {Repository} from '../../../git';
 
 export class WorkflowsList implements ICommand {
     

@@ -2,12 +2,12 @@
  * Add specific workflows from skeleton repository
  */
 import * as path from 'path';
-import {ICommand, ICommandParameters} from '../models';
-import {Global} from '../../Global';
+import {ICommand, ICommandParameters} from '../../models';
+import {Global} from '../../../Global';
 import {Workflows} from './Workflows';
-import {SkeletonManager} from '../../helpers/SkeletonManager';
-import {Repository} from '../../git';
-import {AbstractReposCommand} from '../repos/AbstractReposCommand';
+import {SkeletonManager} from '../../../helpers/SkeletonManager';
+import {Repository} from '../../../git';
+import {AbstractReposCommand} from '../AbstractReposCommand';
 
 export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
     

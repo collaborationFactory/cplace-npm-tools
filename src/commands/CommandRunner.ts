@@ -10,7 +10,6 @@ import {VisualizeDelegate} from './visualize';
 import {RefactorDelegate} from './refactor';
 import {E2E} from './e2e';
 import {Version} from "./version";
-import {Workflows} from './workflows';
 
 export class UnknownCommandError extends Error {
     constructor(command: string) {
@@ -27,7 +26,6 @@ const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'refactor': new RefactorDelegate(),
     'e2e': new E2E(),
     'version': new Version(),
-    'workflows': new Workflows()
 };
 
 export type Result = 'missing' | 'failed' | 'success';

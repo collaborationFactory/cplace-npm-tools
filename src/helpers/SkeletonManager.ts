@@ -63,21 +63,55 @@ export class SkeletonManager {
             Global.isVerbose() && console.log('CplaceVersion already initialized');
         }
 
-        let skeletonVersion: string = '';
-        SkeletonManager.CPLACE_VERSION_TO_SKELETON_VERSION.forEach((value: string, key: {major: number, minor: number, patch: number}) => {
-            if (CplaceVersion.compareTo(key) >= 0) {
-                skeletonVersion = value;
-            }
+        // DEBUG: Show detected cplace version details
+        console.log(`🐞 DEBUG: Detected cplace version: ${CplaceVersion.toString()}`);
+        const currentVersion = CplaceVersion.get();
+        console.log(`🐞 DEBUG: Version object: major=${currentVersion.major}, minor=${currentVersion.minor}, patch=${currentVersion.patch}, snapshot=${currentVersion.snapshot}`);
+
+        // Convert Map to array and sort in descending order (highest version first)
+        const sortedVersions = Array.from(SkeletonManager.CPLACE_VERSION_TO_SKELETON_VERSION.entries())
+            .sort((a, b) => SkeletonManager.compareVersions(b[0], a[0]));
+
+        console.log(`🐞 DEBUG: Sorted skeleton versions (highest first):`);
+        sortedVersions.forEach(([key, value], index) => {
+            console.log(`🐞 DEBUG:   ${index + 1}. ${key.major}.${key.minor}.${key.patch} → ${value}`);
         });
 
-        if (!skeletonVersion) {
-            // Fallback to latest supported version if no match found
-            skeletonVersion = 'version/25.4';
-            console.warn(`No skeleton version mapping found for current cplace version. Using fallback: ${skeletonVersion}`);
+        // Find first (highest) compatible version
+        console.log(`🐞 DEBUG: Checking version compatibility:`);
+        for (const [key, value] of sortedVersions) {
+            const comparisonResult = CplaceVersion.compareTo(key);
+            const isCompatible = comparisonResult >= 0;
+            console.log(`🐞 DEBUG:   comparing ${CplaceVersion.toString()} >= ${key.major}.${key.minor}.${key.patch}: result=${comparisonResult}, compatible=${isCompatible}`);
+            
+            if (isCompatible) {
+                console.log(`🐞 DEBUG: ✅ MATCH FOUND: ${value} (first compatible version)`);
+                Global.isVerbose() && console.log(`Selected skeleton branch: ${value} for cplace version ${CplaceVersion.toString()}`);
+                return value;
+            }
         }
 
-        Global.isVerbose() && console.log(`Selected skeleton branch: ${skeletonVersion} for cplace version ${CplaceVersion.toString()}`);
-        return skeletonVersion;
+        // Fallback to highest available version if no compatible version found
+        const fallbackVersion = sortedVersions[0][1];
+        console.log(`🐞 DEBUG: ⚠️  No compatible version found, using fallback: ${fallbackVersion}`);
+        console.warn(`No compatible skeleton version found for current cplace version. Using latest available: ${fallbackVersion}`);
+        Global.isVerbose() && console.log(`Selected skeleton branch: ${fallbackVersion} for cplace version ${CplaceVersion.toString()}`);
+        return fallbackVersion;
+    }
+
+    /**
+     * Compare two version objects
+     * Returns: positive if version1 > version2, negative if version1 < version2, 0 if equal
+     */
+    private static compareVersions(version1: {major: number, minor: number, patch: number}, version2: {major: number, minor: number, patch: number}): number {
+        if (version1.major !== version2.major) {
+            return version1.major - version2.major;
+        } else if (version1.minor !== version2.minor) {
+            return version1.minor - version2.minor;
+        } else if (version1.patch !== version2.patch) {
+            return version1.patch - version2.patch;
+        }
+        return 0;
     }
 
     /**
