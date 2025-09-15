@@ -106,8 +106,7 @@ export class WorkflowScanner {
 
                 try {
                     const content = fs.readFileSync(filePath, 'utf8');
-                    const stats = fs.statSync(filePath);
-                    const workflowInfo = WorkflowScanner.parseWorkflowInfo(fileName, content, stats.size);
+                    const workflowInfo = WorkflowScanner.parseWorkflowInfo(fileName, content);
                     workflowInfo.exists = true;
                     workflows.push(workflowInfo);
 
@@ -134,7 +133,7 @@ export class WorkflowScanner {
      * Parse workflow metadata from YAML content using simple regex extraction
      * Avoids dependency on YAML parser for basic metadata extraction
      */
-    private static parseWorkflowInfo(fileName: string, content: string, size?: number): IWorkflowInfo {
+    private static parseWorkflowInfo(fileName: string, content: string): IWorkflowInfo {
         // Extract workflow name from YAML content using regex
         let workflowName: string | undefined;
         const nameMatch = content.match(/^name:\s*["']?([^"'\n]+)["']?/m);

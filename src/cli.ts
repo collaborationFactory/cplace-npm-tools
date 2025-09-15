@@ -238,7 +238,7 @@ const cli = meow(
                 '--exclude all' does no validation but is useful to print the raw dependency structure of the parent repositories.
                 Note that the data is only taken from the locally checked out files.
 
-            --workflows [--list] [--add-workflows <names>] [--skeleton-branch <name>] [--force] [--dry-run]
+            --workflows [--list] [--add-workflows <names>] [--add-interactive] [--skeleton-branch <name>] [--force] [--dry-run]
                 Manages GitHub Actions workflows from the skeleton repository.
 
                 --list
@@ -247,6 +247,10 @@ const cli = meow(
                 --add-workflows <names>
                     Add specified workflows (space-separated list of workflow filenames)
                     Example: --add-workflows "ci.yml deploy.yml test.yml"
+
+                --add-interactive
+                    Interactive mode to select and add workflows using arrow keys and checkboxes
+                    Supports --skeleton-branch to specify a different skeleton branch
 
                 --skeleton-branch <name>
                     Override automatic branch detection and use specific skeleton branch
