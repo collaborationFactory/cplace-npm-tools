@@ -135,11 +135,12 @@ export class WriteRepos extends AbstractReposCommand {
             .getCurrentCommitHash()
             .then((commit) => {
                 const current = this.parentRepos[repo.repoName];
-                try {
-                    repo.checkBranchExistsOnRemote('origin', status.current.trim());
-                } catch (e) {
+
+                const branchExistsOnRemote: boolean = repo.checkBranchExistsOnRemote('origin', status.current.trim());
+                if (!branchExistsOnRemote) {
                     console.warn(`[${repo.repoName}]: branch ${status.current} does not exist remotely. Consider to use the '--latest-tag' option in this case. See 'cplace-cli --help' for the 'repos --write' subcommand for details.`);
                 }
+
                 const result: IRepoStatus = {
                     url: current.url,
                     branch: status.current,
