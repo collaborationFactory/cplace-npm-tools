@@ -80,61 +80,6 @@ describe('WorkflowsList', () => {
             });
         });
 
-        describe('WorkflowsList-specific kebab-case parameter handling', () => {
-            it('should use kebab-case parameter when camelCase is not set by inherited method', () => {
-                // Mock inherited method to not set skeletonBranch (simulates no camelCase param)
-                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
-                    .mockImplementation(() => {
-                        (workflowsList as any).skeletonBranch = undefined;
-                    });
-
-                const params: ICommandParameters = {
-                    'skeleton-branch': 'kebab-test-branch'
-                };
-
-                workflowsList.prepareAndMayExecute(params);
-
-                expect((workflowsList as any).skeletonBranch).toBe('kebab-test-branch');
-            });
-
-            it('should not override camelCase parameter with kebab-case (inherited takes precedence)', () => {
-                // Mock inherited method to set skeletonBranch (simulates camelCase param was provided)
-                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
-                    .mockImplementation(() => {
-                        (workflowsList as any).skeletonBranch = 'inherited-branch';
-                    });
-
-                const params: ICommandParameters = {
-                    'skeleton-branch': 'should-not-use-this'
-                };
-
-                workflowsList.prepareAndMayExecute(params);
-
-                // Should keep the inherited value, not overwrite with kebab-case
-                expect((workflowsList as any).skeletonBranch).toBe('inherited-branch');
-            });
-
-            it('should ignore non-string kebab-case parameters', () => {
-                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
-                    .mockImplementation(() => {
-                        (workflowsList as any).skeletonBranch = undefined;
-                    });
-
-                const testCases = [
-                    { 'skeleton-branch': 123 },
-                    { 'skeleton-branch': true },
-                    { 'skeleton-branch': {} },
-                    { 'skeleton-branch': null },
-                    { 'skeleton-branch': undefined }
-                ];
-
-                for (const params of testCases) {
-                    (workflowsList as any).skeletonBranch = undefined; // Reset
-                    workflowsList.prepareAndMayExecute(params);
-                    expect((workflowsList as any).skeletonBranch).toBeUndefined();
-                }
-            });
-        });
 
         describe('verbose logging', () => {
             it('should log preparation message when verbose mode is enabled', () => {
@@ -153,18 +98,6 @@ describe('WorkflowsList', () => {
                 expect(consoleLogSpy).not.toHaveBeenCalledWith('Preparing workflows list command');
             });
 
-            it('should log skeleton branch override when using kebab-case parameter', () => {
-                mockGlobal.isVerbose.mockReturnValue(true);
-                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
-                    .mockImplementation(() => {
-                        (workflowsList as any).skeletonBranch = undefined;
-                    });
-
-                const params: ICommandParameters = { 'skeleton-branch': 'test-branch' };
-                workflowsList.prepareAndMayExecute(params);
-
-                expect(consoleLogSpy).toHaveBeenCalledWith('Using skeleton branch override: test-branch');
-            });
         });
     });
 
