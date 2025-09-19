@@ -9,11 +9,9 @@ import {AbstractWorkflowCommand} from './AbstractWorkflowCommand';
 export class WorkflowsAdd extends AbstractWorkflowCommand implements ICommand {
 
     protected static readonly PARAMETER_FORCE: string = 'force';
-    protected static readonly PARAMETER_DRY_RUN: string = 'dryRun';
 
     protected workflowNames: string[] = [];
     protected force: boolean = false;
-    protected dryRun: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('Preparing workflows add command');
@@ -25,14 +23,10 @@ export class WorkflowsAdd extends AbstractWorkflowCommand implements ICommand {
 
         // Parse other parameters
         this.force = !!params[WorkflowsAdd.PARAMETER_FORCE];
-        this.dryRun = !!params[WorkflowsAdd.PARAMETER_DRY_RUN];
         this.parseSkeletonBranchParameter(params);
 
         if (this.force) {
             Global.isVerbose() && console.log('Force mode enabled - will overwrite existing files');
-        }
-        if (this.dryRun) {
-            Global.isVerbose() && console.log('Dry run mode enabled - no changes will be made');
         }
 
         Global.isVerbose() && console.log(`Workflows to add: ${this.workflowNames.join(', ')}`);

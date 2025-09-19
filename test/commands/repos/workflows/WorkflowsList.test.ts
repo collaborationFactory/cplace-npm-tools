@@ -1,32 +1,25 @@
-import { WorkflowsList } from '../../../../src/commands/repos/workflows/WorkflowsList';
+import { WorkflowsList } from '../../../../src/commands/repos/workflows';
 import { Repository } from '../../../../src/git';
-import { SkeletonManager } from '../../../../src/helpers/SkeletonManager';
 import { WorkflowScanner } from '../../../../src/helpers/WorkflowScanner';
 import { Global } from '../../../../src/Global';
 import { ICommandParameters } from '../../../../src/commands/models';
-import { IWorkflowStatus, IWorkflowInfo } from '../../../../src/commands/repos/workflows/models';
+import { IWorkflowStatus, IWorkflowInfo } from '../../../../src/commands/repos/workflows';
 
 jest.mock('../../../../src/git');
-jest.mock('../../../../src/helpers/SkeletonManager');
 jest.mock('../../../../src/helpers/WorkflowScanner');
 jest.mock('../../../../src/Global');
 
 describe('WorkflowsList', () => {
-    const mockRepository = Repository as jest.MockedClass<typeof Repository>;
-    const mockSkeletonManager = SkeletonManager as jest.Mocked<typeof SkeletonManager>;
     const mockWorkflowScanner = WorkflowScanner as jest.Mocked<typeof WorkflowScanner>;
     const mockGlobal = Global as jest.Mocked<typeof Global>;
 
     let workflowsList: WorkflowsList;
     let mockRepo: jest.Mocked<Repository>;
     let consoleLogSpy: jest.SpyInstance;
-    let consoleErrorSpy: jest.SpyInstance;
-    let processExitSpy: jest.SpyInstance;
 
-    // Test data objects
+    // Test data
     const TEST_REPO_NAME = 'test-repo';
     const TEST_SKELETON_BRANCH = 'version/25.4';
-    const CUSTOM_SKELETON_BRANCH = 'custom/branch';
 
     const createMockWorkflow = (overrides: Partial<IWorkflowInfo> = {}): IWorkflowInfo => ({
         name: 'CI Pipeline',
@@ -41,255 +34,267 @@ describe('WorkflowsList', () => {
         ...overrides
     });
 
-    // Helper functions for mock setup
-    const setupBasicMocks = () => {
-        mockGlobal.isVerbose.mockReturnValue(false);
-        mockRepo.checkIsRepo.mockResolvedValue();
-        Object.defineProperty(mockRepo, 'repoName', {
-            value: TEST_REPO_NAME,
-            writable: false
-        });
-    };
-
-    const setupSkeletonMocks = (branch: string = TEST_SKELETON_BRANCH) => {
-        mockSkeletonManager.validateCplaceVersion.mockImplementation(() => {});
-        mockSkeletonManager.ensureSkeletonRemote.mockResolvedValue();
-        mockSkeletonManager.getSkeletonBranchForVersion.mockReturnValue(branch);
-        mockSkeletonManager.validateSkeletonBranchExists.mockResolvedValue(true);
-    };
-
-    const setupWorkflowScannerMocks = (workflowStatus: IWorkflowStatus = createMockWorkflowStatus()) => {
-        mockWorkflowScanner.scanWorkflows.mockResolvedValue(workflowStatus);
-        mockWorkflowScanner.formatWorkflowStatus.mockReturnValue('Formatted workflow status');
-    };
-
-    const setupAllMocks = (workflowStatus?: IWorkflowStatus, skeletonBranch?: string) => {
-        setupBasicMocks();
-        setupSkeletonMocks(skeletonBranch);
-        setupWorkflowScannerMocks(workflowStatus);
-    };
-
     beforeEach(() => {
         jest.clearAllMocks();
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        processExitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
         workflowsList = new WorkflowsList();
-        mockRepo = new mockRepository('/test/repo') as jest.Mocked<Repository>;
-        mockRepository.mockImplementation(() => mockRepo);
 
-        setupBasicMocks();
+        // Create mock repo with basic properties
+        mockRepo = {
+            repoName: TEST_REPO_NAME
+        } as jest.Mocked<Repository>;
+
+        // Mock inherited methods directly
+        jest.spyOn(workflowsList as any, 'initializeRepository')
+            .mockResolvedValue(mockRepo);
+        jest.spyOn(workflowsList as any, 'setupSkeletonRepository')
+            .mockResolvedValue(TEST_SKELETON_BRANCH);
+        jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
+            .mockImplementation(() => {});
+
+        // Set up repo and selectedSkeletonBranch properties
+        (workflowsList as any).repo = mockRepo;
+        (workflowsList as any).selectedSkeletonBranch = TEST_SKELETON_BRANCH;
+
+        mockGlobal.isVerbose.mockReturnValue(false);
+        mockWorkflowScanner.scanWorkflows.mockResolvedValue(createMockWorkflowStatus());
+        mockWorkflowScanner.formatWorkflowStatus.mockReturnValue('Formatted workflow status');
     });
 
     afterEach(() => {
         consoleLogSpy.mockRestore();
-        consoleErrorSpy.mockRestore();
-        processExitSpy.mockRestore();
         jest.restoreAllMocks();
     });
 
     describe('prepareAndMayExecute', () => {
-        describe('parameter parsing', () => {
-            it.each([
-                [
-                    'camelCase skeleton branch parameter',
-                    { skeletonBranch: CUSTOM_SKELETON_BRANCH },
-                    CUSTOM_SKELETON_BRANCH
-                ],
-                [
-                    'kebab-case skeleton branch parameter',
-                    { 'skeleton-branch': 'another/branch' },
-                    'another/branch'
-                ],
-                [
-                    'missing skeleton branch parameter',
-                    {},
-                    undefined
-                ]
-            ])('should handle %s', (scenario, params, expectedBranch) => {
+        describe('inherited method integration', () => {
+            it('should call parseSkeletonBranchParameter with provided params', () => {
+                const parseSkeletonSpy = jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter');
+                const params: ICommandParameters = { someParam: 'value' };
+
                 const result = workflowsList.prepareAndMayExecute(params);
 
                 expect(result).toBe(true);
-                expect((workflowsList as any).skeletonBranch).toBe(expectedBranch);
+                expect(parseSkeletonSpy).toHaveBeenCalledWith(params);
+            });
+        });
+
+        describe('WorkflowsList-specific kebab-case parameter handling', () => {
+            it('should use kebab-case parameter when camelCase is not set by inherited method', () => {
+                // Mock inherited method to not set skeletonBranch (simulates no camelCase param)
+                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
+                    .mockImplementation(() => {
+                        (workflowsList as any).skeletonBranch = undefined;
+                    });
+
+                const params: ICommandParameters = {
+                    'skeleton-branch': 'kebab-test-branch'
+                };
+
+                workflowsList.prepareAndMayExecute(params);
+
+                expect((workflowsList as any).skeletonBranch).toBe('kebab-test-branch');
+            });
+
+            it('should not override camelCase parameter with kebab-case (inherited takes precedence)', () => {
+                // Mock inherited method to set skeletonBranch (simulates camelCase param was provided)
+                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
+                    .mockImplementation(() => {
+                        (workflowsList as any).skeletonBranch = 'inherited-branch';
+                    });
+
+                const params: ICommandParameters = {
+                    'skeleton-branch': 'should-not-use-this'
+                };
+
+                workflowsList.prepareAndMayExecute(params);
+
+                // Should keep the inherited value, not overwrite with kebab-case
+                expect((workflowsList as any).skeletonBranch).toBe('inherited-branch');
+            });
+
+            it('should ignore non-string kebab-case parameters', () => {
+                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
+                    .mockImplementation(() => {
+                        (workflowsList as any).skeletonBranch = undefined;
+                    });
+
+                const testCases = [
+                    { 'skeleton-branch': 123 },
+                    { 'skeleton-branch': true },
+                    { 'skeleton-branch': {} },
+                    { 'skeleton-branch': null },
+                    { 'skeleton-branch': undefined }
+                ];
+
+                for (const params of testCases) {
+                    (workflowsList as any).skeletonBranch = undefined; // Reset
+                    workflowsList.prepareAndMayExecute(params);
+                    expect((workflowsList as any).skeletonBranch).toBeUndefined();
+                }
             });
         });
 
         describe('verbose logging', () => {
-            it('should log verbose message when verbose mode is enabled', () => {
+            it('should log preparation message when verbose mode is enabled', () => {
                 mockGlobal.isVerbose.mockReturnValue(true);
 
-                const params: ICommandParameters = {};
-                workflowsList.prepareAndMayExecute(params);
+                workflowsList.prepareAndMayExecute({});
 
                 expect(consoleLogSpy).toHaveBeenCalledWith('Preparing workflows list command');
             });
 
-            it('should not log when verbose mode is disabled', () => {
+            it('should not log preparation message when verbose mode is disabled', () => {
                 mockGlobal.isVerbose.mockReturnValue(false);
 
-                const params: ICommandParameters = {};
-                workflowsList.prepareAndMayExecute(params);
+                workflowsList.prepareAndMayExecute({});
 
                 expect(consoleLogSpy).not.toHaveBeenCalledWith('Preparing workflows list command');
+            });
+
+            it('should log skeleton branch override when using kebab-case parameter', () => {
+                mockGlobal.isVerbose.mockReturnValue(true);
+                jest.spyOn(workflowsList as any, 'parseSkeletonBranchParameter')
+                    .mockImplementation(() => {
+                        (workflowsList as any).skeletonBranch = undefined;
+                    });
+
+                const params: ICommandParameters = { 'skeleton-branch': 'test-branch' };
+                workflowsList.prepareAndMayExecute(params);
+
+                expect(consoleLogSpy).toHaveBeenCalledWith('Using skeleton branch override: test-branch');
             });
         });
     });
 
     describe('execute', () => {
-        describe('successful execution', () => {
-            beforeEach(() => {
-                setupAllMocks();
-            });
-
-            it('should execute successfully and display workflows', async () => {
-                await workflowsList.execute();
-
-                expect(mockRepo.checkIsRepo).toHaveBeenCalled();
-                expect(mockSkeletonManager.validateCplaceVersion).toHaveBeenCalled();
-                expect(mockSkeletonManager.ensureSkeletonRemote).toHaveBeenCalledWith(mockRepo);
-                expect(mockSkeletonManager.getSkeletonBranchForVersion).toHaveBeenCalledWith(undefined);
-                expect(mockSkeletonManager.validateSkeletonBranchExists).toHaveBeenCalledWith(mockRepo, TEST_SKELETON_BRANCH);
-                expect(mockWorkflowScanner.scanWorkflows).toHaveBeenCalledWith(mockRepo, TEST_SKELETON_BRANCH);
-                expect(mockWorkflowScanner.formatWorkflowStatus).toHaveBeenCalledWith(createMockWorkflowStatus());
-                expect(consoleLogSpy).toHaveBeenCalledWith('Formatted workflow status');
-            });
-
-            it('should use custom skeleton branch when provided', async () => {
-                (workflowsList as any).skeletonBranch = CUSTOM_SKELETON_BRANCH;
-                setupAllMocks(createMockWorkflowStatus({ available: [], existing: [] }));
+        describe('method orchestration', () => {
+            it('should call inherited methods in correct sequence', async () => {
+                const initSpy = jest.spyOn(workflowsList as any, 'initializeRepository');
+                const setupSpy = jest.spyOn(workflowsList as any, 'setupSkeletonRepository');
 
                 await workflowsList.execute();
 
-                expect(mockSkeletonManager.getSkeletonBranchForVersion).toHaveBeenCalledWith(CUSTOM_SKELETON_BRANCH);
-                expect(mockSkeletonManager.validateSkeletonBranchExists).toHaveBeenCalledWith(mockRepo, TEST_SKELETON_BRANCH);
+                // Verify methods were called - sequence verification through individual calls
+                expect(initSpy).toHaveBeenCalledTimes(1);
+                expect(setupSpy).toHaveBeenCalledTimes(1);
+                expect(mockWorkflowScanner.scanWorkflows).toHaveBeenCalledTimes(1);
+            });
+
+            it('should initialize repository first', async () => {
+                const initSpy = jest.spyOn(workflowsList as any, 'initializeRepository');
+
+                await workflowsList.execute();
+
+                expect(initSpy).toHaveBeenCalledWith();
+            });
+
+            it('should setup skeleton repository after initialization', async () => {
+                const setupSpy = jest.spyOn(workflowsList as any, 'setupSkeletonRepository');
+
+                await workflowsList.execute();
+
+                expect(setupSpy).toHaveBeenCalledWith();
             });
         });
 
-        describe('workflow status variations', () => {
-            beforeEach(() => {
-                setupBasicMocks();
-                setupSkeletonMocks();
-            });
-
-            it.each([
-                [
-                    'empty workflow status',
-                    createMockWorkflowStatus({ available: [], existing: [] }),
-                    'should handle empty workflow lists'
-                ],
-                [
-                    'multiple available workflows',
-                    createMockWorkflowStatus({
-                        available: [
-                            createMockWorkflow({ name: 'Build', fileName: 'build.yml' }),
-                            createMockWorkflow({ name: 'Test', fileName: 'test.yml' })
-                        ],
-                        existing: []
-                    }),
-                    'should handle multiple available workflows'
-                ],
-                [
-                    'workflows with existing files',
-                    createMockWorkflowStatus({
-                        available: [createMockWorkflow({ exists: true })],
-                        existing: [createMockWorkflow({ name: 'Existing', fileName: 'existing.yml', exists: true })]
-                    }),
-                    'should handle workflows with existing files'
-                ]
-            ])('should handle %s', async (scenario, workflowStatus) => {
-                setupWorkflowScannerMocks(workflowStatus);
-
+        describe('WorkflowScanner integration', () => {
+            it('should scan workflows with correct parameters', async () => {
                 await workflowsList.execute();
 
                 expect(mockWorkflowScanner.scanWorkflows).toHaveBeenCalledWith(mockRepo, TEST_SKELETON_BRANCH);
+            });
+
+            it('should format and display workflow status', async () => {
+                const workflowStatus = createMockWorkflowStatus({
+                    available: [
+                        createMockWorkflow({ name: 'Build', fileName: 'build.yml' }),
+                        createMockWorkflow({ name: 'Test', fileName: 'test.yml' })
+                    ]
+                });
+                mockWorkflowScanner.scanWorkflows.mockResolvedValue(workflowStatus);
+                mockWorkflowScanner.formatWorkflowStatus.mockReturnValue('Custom formatted output');
+
+                await workflowsList.execute();
+
                 expect(mockWorkflowScanner.formatWorkflowStatus).toHaveBeenCalledWith(workflowStatus);
-                expect(consoleLogSpy).toHaveBeenCalledWith('Formatted workflow status');
+                expect(consoleLogSpy).toHaveBeenCalledWith('Custom formatted output');
+            });
+
+            it('should handle empty workflow status', async () => {
+                const emptyStatus = createMockWorkflowStatus({ available: [], existing: [] });
+                mockWorkflowScanner.scanWorkflows.mockResolvedValue(emptyStatus);
+
+                await workflowsList.execute();
+
+                expect(mockWorkflowScanner.formatWorkflowStatus).toHaveBeenCalledWith(emptyStatus);
+            });
+
+            it('should handle mixed workflow status', async () => {
+                const mixedStatus = createMockWorkflowStatus({
+                    available: [createMockWorkflow()],
+                    existing: [createMockWorkflow({ exists: true })]
+                });
+                mockWorkflowScanner.scanWorkflows.mockResolvedValue(mixedStatus);
+
+                await workflowsList.execute();
+
+                expect(mockWorkflowScanner.formatWorkflowStatus).toHaveBeenCalledWith(mixedStatus);
             });
         });
 
         describe('verbose logging', () => {
-            beforeEach(() => {
-                setupAllMocks();
-            });
-
-            it('should log verbose messages when verbose mode is enabled', async () => {
+            it('should log verbose message about listing workflows when enabled', async () => {
                 mockGlobal.isVerbose.mockReturnValue(true);
 
                 await workflowsList.execute();
 
                 expect(consoleLogSpy).toHaveBeenCalledWith(`Listing available workflows in repo ${TEST_REPO_NAME}`);
-                expect(consoleLogSpy).toHaveBeenCalledWith(`Using skeleton branch: ${TEST_SKELETON_BRANCH}`);
             });
 
-            it('should not log verbose messages when verbose mode is disabled', async () => {
+            it('should not log verbose messages when disabled', async () => {
                 mockGlobal.isVerbose.mockReturnValue(false);
 
                 await workflowsList.execute();
 
                 expect(consoleLogSpy).not.toHaveBeenCalledWith(`Listing available workflows in repo ${TEST_REPO_NAME}`);
-                expect(consoleLogSpy).not.toHaveBeenCalledWith(`Using skeleton branch: ${TEST_SKELETON_BRANCH}`);
             });
         });
 
-        describe('error handling', () => {
-            beforeEach(() => {
-                setupBasicMocks();
+        describe('output display', () => {
+            it('should always display formatted workflow status', async () => {
+                mockWorkflowScanner.formatWorkflowStatus.mockReturnValue('Test output');
+
+                await workflowsList.execute();
+
+                expect(consoleLogSpy).toHaveBeenCalledWith('Test output');
             });
 
-            it.each([
-                [
-                    'repository check failure',
-                    () => mockRepo.checkIsRepo.mockRejectedValue(new Error('Not a git repository')),
-                    'Not a git repository'
-                ],
-                [
-                    'cplace version validation failure',
-                    () => {
-                        setupSkeletonMocks();
-                        mockSkeletonManager.validateCplaceVersion.mockImplementation(() => {
-                            throw new Error('Unsupported cplace version');
-                        });
-                    },
-                    'Unsupported cplace version'
-                ],
-                [
-                    'skeleton remote setup failure',
-                    () => {
-                        setupSkeletonMocks();
-                        mockSkeletonManager.ensureSkeletonRemote.mockRejectedValue(new Error('Network error'));
-                    },
-                    'Network error'
-                ],
-                [
-                    'non-existent skeleton branch',
-                    () => {
-                        setupSkeletonMocks();
-                        mockSkeletonManager.validateSkeletonBranchExists.mockResolvedValue(false);
-                    },
-                    `Skeleton branch '${TEST_SKELETON_BRANCH}' does not exist`
-                ],
-                [
-                    'workflow scanning failure',
-                    () => {
-                        setupSkeletonMocks();
-                        mockWorkflowScanner.scanWorkflows.mockRejectedValue(new Error('Failed to scan workflows'));
-                    },
-                    'Failed to scan workflows'
-                ]
-            ])('should propagate %s', async (scenario, setupError, expectedErrorMessage) => {
-                setupError();
+            it('should display output even when no workflows are found', async () => {
+                const emptyStatus = createMockWorkflowStatus({ available: [], existing: [] });
+                mockWorkflowScanner.scanWorkflows.mockResolvedValue(emptyStatus);
+                mockWorkflowScanner.formatWorkflowStatus.mockReturnValue('No workflows found');
 
-                await expect(workflowsList.execute()).rejects.toThrow(expectedErrorMessage);
+                await workflowsList.execute();
+
+                expect(consoleLogSpy).toHaveBeenCalledWith('No workflows found');
+            });
+        });
+
+        describe('error propagation', () => {
+            it('should propagate errors from inherited methods', async () => {
+                const error = new Error('Initialization failed');
+                jest.spyOn(workflowsList as any, 'initializeRepository').mockRejectedValue(error);
+
+                await expect(workflowsList.execute()).rejects.toThrow('Initialization failed');
             });
 
-            it('should propagate detailed error objects for proper CLI handling', async () => {
-                const error = new Error('Detailed error message');
-                error.stack = 'Mock stack trace';
-                setupSkeletonMocks();
+            it('should propagate errors from WorkflowScanner', async () => {
+                const error = new Error('Scan failed');
                 mockWorkflowScanner.scanWorkflows.mockRejectedValue(error);
 
-                await expect(workflowsList.execute()).rejects.toThrow(error);
+                await expect(workflowsList.execute()).rejects.toThrow('Scan failed');
             });
         });
     });
