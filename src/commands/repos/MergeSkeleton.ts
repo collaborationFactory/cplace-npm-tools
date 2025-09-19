@@ -6,11 +6,11 @@ import { AbstractReposCommand } from './AbstractReposCommand';
 import { Repository } from '../../git';
 import { Global } from '../../Global';
 import { ICommandParameters } from '../models';
-import { CplaceVersion } from '../../helpers/CplaceVersion';
 import { execSync } from 'child_process';
 import { StatusResult } from 'simple-git';
 import { fs } from '../../p/fs';
 import { expand } from '@inquirer/prompts';
+import { SkeletonManager } from '../../helpers/SkeletonManager';
 
 export class MergeSkeleton extends AbstractReposCommand {
 
@@ -22,23 +22,6 @@ export class MergeSkeleton extends AbstractReposCommand {
     protected static readonly PARAMETER_OURS: string = 'ours';
     protected static readonly PARAMETER_INTERACTIVE: string = 'interactive';
 
-    protected static readonly SKELETON_REMOTE_NAME: string = 'skeleton';
-    protected static readonly SKELETON_REMOTE: string = 'https://github.com/collaborationFactory/cplace-customer-repo-skeleton.git';
-    protected static readonly CPLACE_VERSION_TO_SKELETON_VERSION: Map<{major: number, minor: number, patch: number}, string> = new Map([
-        [{major: 5, minor: 4, patch: 0}, 'version/2.0'],
-        [{major: 5, minor: 9, patch: 0}, 'version/3.0'],
-        [{major: 5, minor: 11, patch: 0}, 'version/4.0'],
-        [{major: 5, minor: 13, patch: 0}, 'version/5.0'],
-        [{major: 5, minor: 19, patch: 0}, 'version/6.0'],
-        [{major: 22, minor: 3, patch: 0}, 'version/7.0'],
-        [{major: 23, minor: 1, patch: 0}, 'version/8.0'],
-        [{major: 23, minor: 2, patch: 0}, 'version/23.2'],
-        [{major: 23, minor: 3, patch: 0}, 'version/23.3'],
-        [{major: 24, minor: 1, patch: 0}, 'version/24.1'],
-        [{major: 25, minor: 2, patch: 0}, 'version/25.2'],
-        [{major: 25, minor: 3, patch: 0}, 'version/25.3'],
-        [{major: 25, minor: 4, patch: 0}, 'version/25.4'],
-    ]);
 
     protected static readonly FILE_MERGE_STATUS_MAP: Map<string, { description: string, defaultAction: string, defaultActionLong: string }> = new Map([
         [' M', { description: 'work tree changed since index', defaultAction: 't', defaultActionLong: 'theirs' }],
@@ -94,7 +77,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         await repo.checkIsRepo();
 
         console.log(`Merging skeleton in repo ${repo.repoName}`);
-        await this.addSkeletonAsRemote(repo);
+        await SkeletonManager.ensureSkeletonRemote(repo);
 
         // checkout branch if repo is not in merging state
         this.status = await repo.status();
@@ -104,7 +87,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         this.targetBranchIsTracked = this.status.tracking != null;
 
         // validate cplace version after checking out the target branch
-        this.validateCplaceVersion();
+        SkeletonManager.validateCplaceVersion();
         this.selectedSkeletonBranch = this.getSkeletonBranchToMerge();
 
         // if not in merging state, merge skeleton
@@ -113,7 +96,7 @@ export class MergeSkeleton extends AbstractReposCommand {
                 await repo.pullOnlyFastForward(this.status.current)
                     .catch((err) => console.log(`Error when pulling target branch ${err}`));
             }
-            await this.mergeSkeletonBranch(repo, MergeSkeleton.SKELETON_REMOTE_NAME, this.selectedSkeletonBranch, true)
+            await this.mergeSkeletonBranch(repo, SkeletonManager.SKELETON_REMOTE_NAME, this.selectedSkeletonBranch, true)
                 .catch((err) => {
                     console.error(`Cannot merge skeleton branch: ${err.message || err}`);
                     if (Global.isVerbose()) {
@@ -223,7 +206,7 @@ export class MergeSkeleton extends AbstractReposCommand {
 
         // get the corresponding merge status from the map
         const mergeStatus = MergeSkeleton.FILE_MERGE_STATUS_MAP.get(`${localStatus}${remoteStatus}`);
-        
+
         let userResponse: string;
         if (interactive) {
             // ask user if he wants to keep the file
@@ -231,7 +214,7 @@ export class MergeSkeleton extends AbstractReposCommand {
         } else {
             userResponse = mergeStatus.defaultActionLong;
         }
-         
+
         if (userResponse === 'ours') {
             // accept our version
             this.ours.add(fileName);
@@ -239,7 +222,7 @@ export class MergeSkeleton extends AbstractReposCommand {
             // accept their version
             this.theirs.add(fileName);
         } else if (userResponse === 'resolve') {
-            // do nothing, resolve conflicts manually   
+            // do nothing, resolve conflicts manually
         }
     }
 
@@ -282,30 +265,10 @@ export class MergeSkeleton extends AbstractReposCommand {
         Promise.resolve();
     }
 
-    private async addSkeletonAsRemote(repo: Repository): Promise<void> {
-        console.log('Add skeleton repo as remote');
-        await repo.addRemote(MergeSkeleton.SKELETON_REMOTE_NAME, MergeSkeleton.SKELETON_REMOTE)
-            .catch((err) => {
-                console.log(`Skeleton remote already exists.\n`);
-                Global.isVerbose() && console.log(`Error: ${err}`);
-            });
-        await repo.fetch({});
-    }
-
     private validateRepoClean(repo: Repository): Promise<Repository> {
         return repo.status()
             .then((status) => this.checkRepoClean(repo, status))
             .then(() => repo);
-    }
-
-    private validateCplaceVersion(): void {
-        console.log('Initialize cplace version');
-        CplaceVersion.initialize();
-        console.log(`cplace version detected: ${CplaceVersion.toString()}`);
-
-        if (CplaceVersion.compareTo({major: 5, minor: 4, patch: 0}) < 0) {
-            throw new Error('Merge skeleton works only for cplace versions 5.4 or higher');
-        }
     }
 
     private async checkoutBaseBranch(repo: Repository): Promise<void> {
@@ -340,13 +303,7 @@ export class MergeSkeleton extends AbstractReposCommand {
             return `${this.skeletonBranch}`;
         }
 
-        let skeletonVersion: string = '';
-        MergeSkeleton.CPLACE_VERSION_TO_SKELETON_VERSION.forEach((value: string, key: {major: number, minor: number, patch: number}) => {
-            if (CplaceVersion.compareTo(key) >= 0) {
-                skeletonVersion = value;
-            }
-        });
-        return `${skeletonVersion}`;
+        return SkeletonManager.getSkeletonBranchForVersion();
     }
 
     private mergeSkeletonBranch(repo: Repository, remote: string, skeletonBranch: string, noCommit: boolean): Promise<void> {
