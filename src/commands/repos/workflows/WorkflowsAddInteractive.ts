@@ -30,26 +30,19 @@ export class WorkflowsAddInteractive extends AbstractWorkflowCommand implements 
     }
 
     public async execute(): Promise<void> {
-        try {
-            // Initialize repository with force flag consideration
-            await this.initializeRepository(this.force);
-            console.log(`Interactive workflow selection for repo ${this.repo.repoName}`);
+        // Initialize repository with force flag consideration
+        await this.initializeRepository();
+        console.log(`Interactive workflow selection for repo ${this.repo.repoName}`);
 
-            // Setup skeleton repository
-            await this.setupSkeletonRepository();
+        // Setup skeleton repository
+        await this.setupSkeletonRepository();
 
-            // Perform interactive workflow selection
-            const selectedWorkflows = await this.performInteractiveWorkflowSelection();
+        // Perform interactive workflow selection
+        const selectedWorkflows = await this.performInteractiveWorkflowSelection();
 
-            await this.copyWorkflowsWithEnvironment(selectedWorkflows, this.force);
+        await this.copyWorkflowsWithEnvironment(selectedWorkflows, this.force);
 
-        } catch (error) {
-            console.error(`Error in interactive workflow selection: ${error instanceof Error ? error.message : error}`);
-            if (Global.isVerbose()) {
-                console.error('Full error details:', error);
-            }
-            process.exit(1);
-        }
+        return Promise.resolve();
     }
 
     private async performInteractiveWorkflowSelection(): Promise<string[]> {

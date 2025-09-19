@@ -29,26 +29,19 @@ export class WorkflowsList extends AbstractWorkflowCommand implements ICommand {
     }
 
     public async execute(): Promise<void> {
-        try {
-            // Initialize repository (skip repo clean check for list command)
-            await this.initializeRepository(true);
-            Global.isVerbose() && console.log(`Listing available workflows in repo ${this.repo.repoName}`);
+        // Initialize repository (skip repo clean check for list command)
+        await this.initializeRepository();
+        Global.isVerbose() && console.log(`Listing available workflows in repo ${this.repo.repoName}`);
 
-            // Setup skeleton repository
-            await this.setupSkeletonRepository();
+        // Setup skeleton repository
+        await this.setupSkeletonRepository();
 
-            // Scan workflows from skeleton and compare with local
-            const workflowStatus = await WorkflowScanner.scanWorkflows(this.repo, this.selectedSkeletonBranch);
+        // Scan workflows from skeleton and compare with local
+        const workflowStatus = await WorkflowScanner.scanWorkflows(this.repo, this.selectedSkeletonBranch);
 
-            // Display formatted results
-            console.log(WorkflowScanner.formatWorkflowStatus(workflowStatus));
+        // Display formatted results
+        console.log(WorkflowScanner.formatWorkflowStatus(workflowStatus));
 
-        } catch (error) {
-            console.error(`Error listing workflows: ${error instanceof Error ? error.message : error}`);
-            if (Global.isVerbose()) {
-                console.error('Full error details:', error);
-            }
-            process.exit(1);
-        }
+        return Promise.resolve();
     }
 }

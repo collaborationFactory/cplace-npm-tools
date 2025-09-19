@@ -9,7 +9,7 @@ import {WorkflowsAddInteractive} from './WorkflowsAddInteractive';
 
 export class Workflows implements ICommand {
     public static readonly PARAMETER_LIST: string = 'list';
-    public static readonly PARAMETER_ADD_WORKFLOWS: string = 'addWorkflows';
+    public static readonly PARAMETER_ADD_WORKFLOWS: string = 'add';
     public static readonly PARAMETER_ADD_INTERACTIVE: string = 'addInteractive';
 
     private cmd: ICommand;

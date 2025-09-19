@@ -22,18 +22,12 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
     /**
      * Initialize repository and validate its state
      */
-    protected async initializeRepository(allowDirty: boolean = false): Promise<Repository> {
+    protected async initializeRepository(): Promise<Repository> {
         const pathToRepo = path.join(process.cwd());
         this.repo = new Repository(pathToRepo);
 
         await this.repo.checkIsRepo();
         Global.isVerbose() && console.log(`Working with repo ${this.repo.repoName}`);
-
-        if (!allowDirty) {
-            const status = await this.repo.status();
-            await this.checkRepoClean(this.repo, status);
-        }
-
         return this.repo;
     }
 
@@ -69,6 +63,11 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
     ): Promise<boolean> {
         const localWorkflowsPath = path.join(this.repo.workingDir, '.github', 'workflows');
 
+        // Validate the workflows directory path
+        if (!this.validatePath(localWorkflowsPath)) {
+            throw new Error(`Invalid workflows directory path: ${localWorkflowsPath}`);
+        }
+
         // Ensure .github/workflows directory exists
         await fs.promises.mkdir(localWorkflowsPath, {recursive: true});
 
@@ -94,6 +93,43 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
     }
 
     /**
+     * Copy a file from skeleton repository with standard confirmation handling
+     */
+    private async copyFileFromSkeleton(
+        skeletonPath: string,
+        localPath: string,
+        fileName: string,
+        overwriteExisting: boolean
+    ): Promise<boolean> {
+        // Validate the local path for security
+        if (!this.validatePath(localPath)) {
+            throw new Error(`Invalid path: ${localPath}`);
+        }
+
+        if (fs.existsSync(localPath)) {
+            if (!overwriteExisting) {
+                const overwrite = await confirm({
+                    message: `File ${fileName} already exists. Overwrite?`,
+                    default: false
+                });
+                if (!overwrite) {
+                    console.log(`Skipped: ${fileName}`);
+                    return false;
+                }
+            }
+        }
+
+        await SkeletonManager.copyFileFromRemote(
+            this.repo,
+            this.selectedSkeletonBranch,
+            skeletonPath,
+            localPath
+        );
+        console.log(`✓ Copied: ${fileName}`);
+        return true;
+    }
+
+    /**
      * Copy the workflow file from skeleton repository
      */
     private async copyWorkflowFile(
@@ -104,29 +140,29 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         const skeletonWorkflowPath = `.github/workflows/${workflowFileName}`;
         const localWorkflowPath = path.join(localWorkflowsPath, workflowFileName);
 
-        // Handle existing file
-        if (fs.existsSync(localWorkflowPath)) {
-            if (!overwriteExisting) {
-                const overwrite = await confirm({
-                    message: `Workflow ${workflowFileName} already exists. Overwrite?`,
-                    default: false
-                });
-                if (!overwrite) {
-                    console.log(`  Skipped: ${workflowFileName}`);
-                    return false;
-                }
-            }
+        // Validate the local workflow path
+        if (!this.validatePath(localWorkflowPath)) {
+            throw new Error(`Invalid workflow path: ${localWorkflowPath}`);
         }
 
-        await SkeletonManager.copyFileFromRemote(
+        // Check if workflow file exists in skeleton repository
+        const fileExists = await SkeletonManager.fileExistsInRemote(
             this.repo,
             this.selectedSkeletonBranch,
-            skeletonWorkflowPath,
-            localWorkflowPath
+            skeletonWorkflowPath
         );
-        console.log(`✓ Copied workflow: ${workflowFileName}`);
 
-        return true;
+        if (!fileExists) {
+            console.log(`✗ Workflow not found: ${workflowFileName}`);
+            return false;
+        }
+
+        return await this.copyFileFromSkeleton(
+            skeletonWorkflowPath,
+            localWorkflowPath,
+            workflowFileName,
+            overwriteExisting
+        );
     }
 
     /**
@@ -142,6 +178,11 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         const skeletonEnvPath = `.github/${envFileName}`;
         const localEnvPath = path.join(localGithubPath, envFileName);
 
+        // Validate the local environment file path
+        if (!this.validatePath(localEnvPath)) {
+            throw new Error(`Invalid environment file path: ${localEnvPath}`);
+        }
+
         // Check if environment file exists in skeleton
         const envFileExists = await SkeletonManager.fileExistsInRemote(
             this.repo,
@@ -154,31 +195,26 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
             return;
         }
 
-        // Handle existing environment file
-        if (fs.existsSync(localEnvPath)) {
-            if (!overwriteExisting) {
-                const overwrite = await confirm({
-                    message: `Environment file ${envFileName} already exists. Overwrite?`,
-                    default: false
-                });
-                if (!overwrite) {
-                    console.log(`  Skipped: ${envFileName}`);
-                    return;
-                }
-            }
-        }
-
         try {
-            await SkeletonManager.copyFileFromRemote(
-                this.repo,
-                this.selectedSkeletonBranch,
+            await this.copyFileFromSkeleton(
                 skeletonEnvPath,
-                localEnvPath
+                localEnvPath,
+                envFileName,
+                overwriteExisting
             );
-            console.log(`  ✓ Copied environment file: ${envFileName}`);
         } catch (envError) {
             console.error(`  ✗ Failed to copy environment file ${envFileName}: ${envError instanceof Error ? envError.message : envError}`);
         }
+    }
+
+    /**
+     * Validate a file path for security
+     * @param filePath Path to validate
+     * @returns true if the path is valid, false otherwise
+     */
+    private validatePath(filePath: string): boolean {
+        const normalized = path.normalize(filePath);
+        return !normalized.includes('..') && path.isAbsolute(normalized);
     }
 
     /**

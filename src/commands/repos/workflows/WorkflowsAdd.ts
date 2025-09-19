@@ -57,14 +57,14 @@ export class WorkflowsAdd extends AbstractWorkflowCommand implements ICommand {
     public async execute(): Promise<void> {
         try {
             // Initialize repository with force flag consideration
-            await this.initializeRepository(this.force);
+            await this.initializeRepository();
             console.log(`Adding workflows to repo ${this.repo.repoName}`);
 
             // Setup skeleton repository
             await this.setupSkeletonRepository();
 
             // Copy specified workflows
-            await this.copySpecifiedWorkflows();
+            await this.copySpecifiedWorkflows(this.workflowNames, this.force);
 
         } catch (error) {
             console.error(`Error adding workflows: ${error instanceof Error ? error.message : error}`);
@@ -75,21 +75,19 @@ export class WorkflowsAdd extends AbstractWorkflowCommand implements ICommand {
         }
     }
 
-    private performDryRun(): void {
-        console.log(`Would add workflows: ${this.workflowNames.join(', ')}`);
-        console.log('Skeleton repository access configured successfully.');
-    }
 
-    private async copySpecifiedWorkflows(): Promise<void> {
-        console.log(`Adding workflows: ${this.workflowNames.join(', ')}`);
+    private async copySpecifiedWorkflows(workflowNames: string[], force: boolean): Promise<void> {
+        console.log(`Adding workflows: ${workflowNames.join(', ')}`);
 
-        for (const workflowName of this.workflowNames) {
+        for (const workflowName of workflowNames) {
             // Add .yml extension if not present
             const workflowFileName = workflowName.endsWith('.yml') || workflowName.endsWith('.yaml')
                 ? workflowName
                 : `${workflowName}.yml`;
 
-            await this.copyWorkflowWithEnvironment(workflowFileName, this.force);
+             await this.copyWorkflowWithEnvironment(workflowFileName, force);
+
         }
+
     }
 }
