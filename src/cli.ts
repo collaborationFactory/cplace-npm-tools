@@ -258,9 +258,6 @@ const cli = meow(
                 --force
                     Skip conflict prompts and overwrite existing files
 
-                --dry-run
-                    Show what would be done without making changes
-
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
             The output is a .dot file.

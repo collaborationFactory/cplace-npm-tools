@@ -1,29 +1,45 @@
 /**
  * Add specific workflows from skeleton repository
  */
-import * as path from 'path';
 import {ICommand, ICommandParameters} from '../../models';
 import {Global} from '../../../Global';
 import {Workflows} from './Workflows';
-import {SkeletonManager} from '../../../helpers/SkeletonManager';
-import {Repository} from '../../../git';
-import {AbstractReposCommand} from '../AbstractReposCommand';
+import {AbstractWorkflowCommand} from './AbstractWorkflowCommand';
 
-export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
+export class WorkflowsAdd extends AbstractWorkflowCommand implements ICommand {
 
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_DRY_RUN: string = 'dryRun';
-    protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
 
     protected workflowNames: string[] = [];
     protected force: boolean = false;
     protected dryRun: boolean = false;
-    protected skeletonBranch: string;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('Preparing workflows add command');
 
-        // Get workflow names from parameters
+        // Parse workflow names
+        if (!this.parseWorkflowNames(params)) {
+            return false;
+        }
+
+        // Parse other parameters
+        this.force = !!params[WorkflowsAdd.PARAMETER_FORCE];
+        this.dryRun = !!params[WorkflowsAdd.PARAMETER_DRY_RUN];
+        this.parseSkeletonBranchParameter(params);
+
+        if (this.force) {
+            Global.isVerbose() && console.log('Force mode enabled - will overwrite existing files');
+        }
+        if (this.dryRun) {
+            Global.isVerbose() && console.log('Dry run mode enabled - no changes will be made');
+        }
+
+        Global.isVerbose() && console.log(`Workflows to add: ${this.workflowNames.join(', ')}`);
+        return true;
+    }
+
+    private parseWorkflowNames(params: ICommandParameters): boolean {
         const addWorkflows = params[Workflows.PARAMETER_ADD_WORKFLOWS];
         if (typeof addWorkflows === 'string') {
             this.workflowNames = addWorkflows.split(' ').filter(name => name.trim().length > 0);
@@ -35,68 +51,20 @@ export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
             console.error('Error: No workflow names specified for --add-workflows');
             return false;
         }
-
-        // Parse other parameters
-        this.force = !!params[WorkflowsAdd.PARAMETER_FORCE];
-        this.dryRun = !!params[WorkflowsAdd.PARAMETER_DRY_RUN];
-
-        const skeletonBranch = params[WorkflowsAdd.PARAMETER_SKELETON_BRANCH];
-        if (typeof skeletonBranch === 'string') {
-            this.skeletonBranch = skeletonBranch;
-            Global.isVerbose() && console.log(`Using skeleton branch: ${this.skeletonBranch}`);
-        }
-
-        if (this.force) {
-            Global.isVerbose() && console.log('Force mode enabled - will overwrite existing files');
-        }
-
-        if (this.dryRun) {
-            Global.isVerbose() && console.log('Dry run mode enabled - no changes will be made');
-        }
-
-        Global.isVerbose() && console.log(`Workflows to add: ${this.workflowNames.join(', ')}`);
-
         return true;
     }
 
     public async execute(): Promise<void> {
         try {
-            const pathToRepo = path.join(process.cwd());
-            const repo = new Repository(pathToRepo);
+            // Initialize repository with force flag consideration
+            await this.initializeRepository(this.force);
+            console.log(`Adding workflows to repo ${this.repo.repoName}`);
 
-            await repo.checkIsRepo();
-            console.log(`Adding workflows to repo ${repo.repoName}`);
+            // Setup skeleton repository
+            await this.setupSkeletonRepository();
 
-            // Validate repository state unless force mode is enabled
-            if (!this.force) {
-                const status = await repo.status();
-                this.checkRepoClean(repo, status);
-            }
-
-            // Validate cplace version compatibility
-            SkeletonManager.validateCplaceVersion();
-
-            // Setup skeleton repository access
-            await SkeletonManager.ensureSkeletonRemote(repo);
-
-            // Get appropriate skeleton branch
-            const selectedSkeletonBranch = SkeletonManager.getSkeletonBranchForVersion(this.skeletonBranch);
-
-            // Validate skeleton branch exists
-            const branchExists = await SkeletonManager.validateSkeletonBranchExists(repo, selectedSkeletonBranch);
-            if (!branchExists) {
-                throw new Error(`Skeleton branch '${selectedSkeletonBranch}' does not exist`);
-            }
-
-            console.log(`Using skeleton branch: ${selectedSkeletonBranch}`);
-
-            if (this.dryRun) {
-                console.log('DRY RUN - No actual changes will be made');
-            }
-
-            console.log(`Workflows to add: ${this.workflowNames.join(', ')}`);
-            console.log('Skeleton repository access configured successfully.');
-            console.log('(Workflow validation and copying will be implemented in Phase 4)');
+            // Copy specified workflows
+            await this.copySpecifiedWorkflows();
 
         } catch (error) {
             console.error(`Error adding workflows: ${error instanceof Error ? error.message : error}`);
@@ -104,6 +72,24 @@ export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
                 console.error('Full error details:', error);
             }
             throw error;
+        }
+    }
+
+    private performDryRun(): void {
+        console.log(`Would add workflows: ${this.workflowNames.join(', ')}`);
+        console.log('Skeleton repository access configured successfully.');
+    }
+
+    private async copySpecifiedWorkflows(): Promise<void> {
+        console.log(`Adding workflows: ${this.workflowNames.join(', ')}`);
+
+        for (const workflowName of this.workflowNames) {
+            // Add .yml extension if not present
+            const workflowFileName = workflowName.endsWith('.yml') || workflowName.endsWith('.yaml')
+                ? workflowName
+                : `${workflowName}.yml`;
+
+            await this.copyWorkflowWithEnvironment(workflowFileName, this.force);
         }
     }
 }
