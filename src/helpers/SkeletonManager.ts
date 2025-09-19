@@ -6,6 +6,8 @@ import { Repository } from '../git';
 import { Global } from '../Global';
 import { CplaceVersion } from './CplaceVersion';
 import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class SkeletonManager {
 
@@ -200,6 +202,54 @@ export class SkeletonManager {
                 return [];
             }
             throw error;
+        }
+    }
+
+    /**
+     * Check if a file exists in the skeleton repository on a specific branch
+     */
+    public static async fileExistsInRemote(repo: Repository, branch: string, filePath: string): Promise<boolean> {
+        try {
+            Global.isVerbose() && console.log(`Checking if ${filePath} exists on remote branch ${branch}`);
+
+            const remoteBranchRef = `${SkeletonManager.SKELETON_REMOTE_NAME}/${branch}`;
+            const command = `git cat-file -e "${remoteBranchRef}:${filePath}"`;
+
+            execSync(command, {
+                cwd: repo.workingDir,
+                stdio: 'ignore' // Suppress output since we only care about exit code
+            });
+
+            Global.isVerbose() && console.log(`File ${filePath} exists on remote branch ${branch}`);
+            return true;
+        } catch (error) {
+            // git cat-file -e exits with code 1 if file doesn't exist
+            Global.isVerbose() && console.log(`File ${filePath} does not exist on remote branch ${branch}`);
+            return false;
+        }
+    }
+
+    /**
+     * Copy a file from the skeleton repository to the local filesystem
+     */
+    public static async copyFileFromRemote(repo: Repository, branch: string, remotePath: string, localPath: string): Promise<void> {
+        try {
+            Global.isVerbose() && console.log(`Copying ${remotePath} from skeleton to ${localPath}`);
+
+            // Get file content from skeleton repository
+            const content = await SkeletonManager.getFileContentFromRemote(repo, branch, remotePath);
+
+            // Ensure the local directory exists
+            const localDir = path.dirname(localPath);
+            await fs.promises.mkdir(localDir, { recursive: true });
+
+            // Write the file to local filesystem
+            await fs.promises.writeFile(localPath, content, 'utf8');
+
+            Global.isVerbose() && console.log(`Successfully copied ${remotePath} to ${localPath}`);
+        } catch (error) {
+            Global.isVerbose() && console.log(`Error copying file from remote: ${error}`);
+            throw new Error(`Failed to copy ${remotePath} to ${localPath}: ${error instanceof Error ? error.message : error}`);
         }
     }
 }

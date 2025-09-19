@@ -10,12 +10,10 @@ import {Repository} from '../../../git';
 import {AbstractReposCommand} from '../AbstractReposCommand';
 
 export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
-    
+
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_DRY_RUN: string = 'dryRun';
-    protected static readonly PARAMETER_DRY_RUN_KEBAB: string = 'dry-run';
     protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
-    protected static readonly PARAMETER_SKELETON_BRANCH_KEBAB: string = 'skeleton-branch';
 
     protected workflowNames: string[] = [];
     protected force: boolean = false;
@@ -26,7 +24,7 @@ export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
         Global.isVerbose() && console.log('Preparing workflows add command');
 
         // Get workflow names from parameters
-        const addWorkflows = params[Workflows.PARAMETER_ADD_WORKFLOWS] || params[Workflows.PARAMETER_ADD_WORKFLOWS_KEBAB];
+        const addWorkflows = params[Workflows.PARAMETER_ADD_WORKFLOWS];
         if (typeof addWorkflows === 'string') {
             this.workflowNames = addWorkflows.split(' ').filter(name => name.trim().length > 0);
         } else if (Array.isArray(addWorkflows)) {
@@ -40,9 +38,9 @@ export class WorkflowsAdd extends AbstractReposCommand implements ICommand {
 
         // Parse other parameters
         this.force = !!params[WorkflowsAdd.PARAMETER_FORCE];
-        this.dryRun = !!params[WorkflowsAdd.PARAMETER_DRY_RUN] || !!params[WorkflowsAdd.PARAMETER_DRY_RUN_KEBAB];
+        this.dryRun = !!params[WorkflowsAdd.PARAMETER_DRY_RUN];
 
-        const skeletonBranch = params[WorkflowsAdd.PARAMETER_SKELETON_BRANCH] || params[WorkflowsAdd.PARAMETER_SKELETON_BRANCH_KEBAB];
+        const skeletonBranch = params[WorkflowsAdd.PARAMETER_SKELETON_BRANCH];
         if (typeof skeletonBranch === 'string') {
             this.skeletonBranch = skeletonBranch;
             Global.isVerbose() && console.log(`Using skeleton branch: ${this.skeletonBranch}`);

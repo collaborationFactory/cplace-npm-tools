@@ -2,7 +2,8 @@
  * Interactive workflow selection and addition from skeleton repository
  */
 import * as path from 'path';
-import { checkbox } from '@inquirer/prompts';
+import * as fs from 'fs';
+import { checkbox, confirm } from '@inquirer/prompts';
 import { ICommand, ICommandParameters } from '../../models';
 import { Global } from '../../../Global';
 import { SkeletonManager } from '../../../helpers/SkeletonManager';
@@ -13,26 +14,17 @@ import { AbstractReposCommand } from '../AbstractReposCommand';
 export class WorkflowsAddInteractive extends AbstractReposCommand implements ICommand {
 
     protected static readonly PARAMETER_SKELETON_BRANCH: string = 'skeletonBranch';
-    protected static readonly PARAMETER_SKELETON_BRANCH_KEBAB: string = 'skeleton-branch';
-    protected static readonly PARAMETER_FORCE: string = 'force';
 
     protected skeletonBranch?: string;
-    protected force: boolean = false;
 
     public prepareAndMayExecute(params: ICommandParameters): boolean {
         Global.isVerbose() && console.log('Preparing interactive workflows add command');
 
         // Parse skeleton branch override parameter
-        const skeletonBranch = params[WorkflowsAddInteractive.PARAMETER_SKELETON_BRANCH] || params[WorkflowsAddInteractive.PARAMETER_SKELETON_BRANCH_KEBAB];
+        const skeletonBranch = params[WorkflowsAddInteractive.PARAMETER_SKELETON_BRANCH];
         if (typeof skeletonBranch === 'string') {
             this.skeletonBranch = skeletonBranch;
             Global.isVerbose() && console.log(`Using skeleton branch override: ${this.skeletonBranch}`);
-        }
-
-        // Parse force parameter
-        this.force = !!params[WorkflowsAddInteractive.PARAMETER_FORCE];
-        if (this.force) {
-            Global.isVerbose() && console.log('Force mode enabled - will overwrite existing files');
         }
 
         return true;
@@ -45,12 +37,6 @@ export class WorkflowsAddInteractive extends AbstractReposCommand implements ICo
 
             await repo.checkIsRepo();
             Global.isVerbose() && console.log(`Interactive workflow selection for repo ${repo.repoName}`);
-
-            // Validate repository state unless force mode is enabled
-            if (!this.force) {
-                const status = await repo.status();
-                this.checkRepoClean(repo, status);
-            }
 
             // Validate cplace version compatibility
             SkeletonManager.validateCplaceVersion();
@@ -104,16 +90,73 @@ export class WorkflowsAddInteractive extends AbstractReposCommand implements ICo
             console.log(`Selected ${selectedWorkflows.length} workflow(s): ${selectedWorkflows.join(', ')}`);
             console.log('Copying selected workflows...');
 
-            // TODO: Implement actual workflow copying logic
-            // For now, show what would be copied
-            for (const workflowFileName of selectedWorkflows) {
-                console.log(`✓ Would copy workflow: ${workflowFileName}`);
-                // TODO: Copy workflow file from skeleton
-                // TODO: Copy associated environment files
-            }
+            const localWorkflowsPath = path.join(repo.workingDir, '.github', 'workflows');
+            const localGithubPath = path.join(repo.workingDir, '.github');
 
-            console.log(`Successfully processed ${selectedWorkflows.length} workflow(s).`);
-            console.log('(Note: Actual file copying will be implemented in the next phase)');
+            // Ensure .github/workflows directory exists
+            await fs.promises.mkdir(localWorkflowsPath, { recursive: true });
+
+            for (const workflowFileName of selectedWorkflows) {
+                try {
+                    // Copy workflow file from skeleton
+                    const skeletonWorkflowPath = `.github/workflows/${workflowFileName}`;
+                    const localWorkflowPath = path.join(localWorkflowsPath, workflowFileName);
+
+                    // Check if workflow file already exists locally
+                    if (fs.existsSync(localWorkflowPath)) {
+                        const overwrite = await confirm({
+                            message: `Workflow ${workflowFileName} already exists. Overwrite?`,
+                            default: false
+                        });
+
+                        if (!overwrite) {
+                            console.log(`  Skipped: ${workflowFileName}`);
+                            continue;
+                        }
+                    }
+
+                    await SkeletonManager.copyFileFromRemote(repo, selectedSkeletonBranch, skeletonWorkflowPath, localWorkflowPath);
+                    console.log(`✓ Copied workflow: ${workflowFileName}`);
+
+                    // Check for associated environment file
+                    const workflowBaseName = workflowFileName.replace(/\.(ya?ml)$/, '');
+                    const envFileName = `.${workflowBaseName}-env`;
+                    const skeletonEnvPath = `.github/${envFileName}`;
+                    const localEnvPath = path.join(localGithubPath, envFileName);
+
+                    // Check if environment file exists in skeleton before trying to copy
+                    const envFileExists = await SkeletonManager.fileExistsInRemote(repo, selectedSkeletonBranch, skeletonEnvPath);
+                    if (envFileExists) {
+                        // Check if environment file already exists locally
+                        if (fs.existsSync(localEnvPath)) {
+                            const overwrite = await confirm({
+                                message: `Environment file ${envFileName} already exists. Overwrite?`,
+                                default: false
+                            });
+
+                            if (!overwrite) {
+                                console.log(`  Skipped: ${envFileName}`);
+                                continue;
+                            }
+                        }
+
+                        try {
+                            await SkeletonManager.copyFileFromRemote(repo, selectedSkeletonBranch, skeletonEnvPath, localEnvPath);
+                            console.log(`  ✓ Copied environment file: ${envFileName}`);
+                        } catch (envError) {
+                            console.error(`  ✗ Failed to copy environment file ${envFileName}: ${envError instanceof Error ? envError.message : envError}`);
+                        }
+                    } else {
+                        Global.isVerbose() && console.log(`  No environment file found for ${workflowFileName} (${envFileName})`);
+                    }
+
+                } catch (error) {
+                    console.error(`✗ Failed to copy workflow ${workflowFileName}: ${error instanceof Error ? error.message : error}`);
+                    if (Global.isVerbose()) {
+                        console.error('Full error details:', error);
+                    }
+                }
+            }
 
         } catch (error) {
             console.error(`Error in interactive workflow selection: ${error instanceof Error ? error.message : error}`);
