@@ -225,11 +225,23 @@ $  cplace-cli --help
                     Interactive mode to select and add workflows using arrow keys and checkboxes
                     Supports --skeleton-branch to specify a different skeleton branch
 
-                --skeleton-branch <name>
-                    Override automatic branch detection and use specific skeleton branch
+                    --skeleton-branch <name>
+                        Override automatic branch detection and use specific skeleton branch
 
-                --force
-                    Skip conflict prompts and overwrite existing files
+                    --force
+                        Overwrite existing workflow files without confirmation
+
+                ex: cplace-cli repos --workflows --list
+                    (list all available workflows from skeleton repository with current status)
+
+                    cplace-cli repos --workflows --add "ci.yml deploy.yml"
+                    (add specific workflows ci.yml and deploy.yml from skeleton repository)
+
+                    cplace-cli repos --workflows --add-interactive
+                    (interactive selection of workflows to add with checkboxes)
+
+                    cplace-cli repos --workflows --add-interactive --skeleton-branch version/25.4
+                    (interactive selection using specific skeleton branch instead of auto-detection)
 
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
