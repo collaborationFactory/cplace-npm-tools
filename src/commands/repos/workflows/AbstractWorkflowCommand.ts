@@ -207,13 +207,14 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
     }
 
     /**
-     * Validate a file path for security
+     * Validate a file path for security to prevent path traversal attacks
      * @param filePath Path to validate
      * @returns true if the path is valid, false otherwise
      */
     private validatePath(filePath: string): boolean {
-        const normalized = path.normalize(filePath);
-        return !normalized.includes('..') && path.isAbsolute(normalized);
+        const resolvedPath = path.resolve(filePath);
+        const repoPath = path.resolve(this.repo.workingDir);
+        return resolvedPath.startsWith(repoPath) && !filePath.includes('..');
     }
 
     /**
