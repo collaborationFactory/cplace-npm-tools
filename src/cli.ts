@@ -238,7 +238,7 @@ const cli = meow(
                 '--exclude all' does no validation but is useful to print the raw dependency structure of the parent repositories.
                 Note that the data is only taken from the locally checked out files.
 
-            --workflows [--list] [--add <names>] [--add-interactive] [--skeleton-branch <name>] [--force] [--dry-run]
+            --workflows --list | --add <names> | --add-interactive [--skeleton-branch <name>] [--force]
                 Manages GitHub Actions workflows from the skeleton repository.
 
                 --list
@@ -254,9 +254,6 @@ const cli = meow(
 
                 --skeleton-branch <name>
                     Override automatic branch detection and use specific skeleton branch
-
-                --force
-                    Skip conflict prompts and overwrite existing files
 
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.

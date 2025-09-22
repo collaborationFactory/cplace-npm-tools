@@ -43,7 +43,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
 
         // Get appropriate skeleton branch
         this.selectedSkeletonBranch = SkeletonManager.getSkeletonBranchForVersion(this.skeletonBranch);
-
         // Validate skeleton branch exists
         const branchExists = await SkeletonManager.validateSkeletonBranchExists(this.repo, this.selectedSkeletonBranch);
         if (!branchExists) {

@@ -82,7 +82,7 @@ export class SkeletonManager {
             console.warn(`No skeleton version mapping found for current cplace version. Using fallback: ${skeletonVersion}`);
         }
 
-        Global.isVerbose() && console.log(`Selected skeleton branch: ${skeletonVersion} for cplace version ${CplaceVersion.toString()}`);
+        console.log(`Selected skeleton branch: ${skeletonVersion} for cplace version ${CplaceVersion.toString()}`);
         return skeletonVersion;
     }
 
