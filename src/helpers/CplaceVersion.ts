@@ -148,8 +148,8 @@ export class CplaceVersion {
             return this._version.major - otherVersion.major;
         } else if (this._version.minor !== otherVersion.minor) {
             return this._version.minor - otherVersion.minor;
-        } else if (patch !== otherVersion.patch) {
-            return patch - otherVersion.patch;
+        } else if (this._version.patch !== patch) {
+            return this._version.patch - patch;
         }
         return 0;
     }
