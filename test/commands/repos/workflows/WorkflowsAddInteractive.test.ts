@@ -264,7 +264,7 @@ describe('WorkflowsAddInteractive', () => {
             expect(result).toEqual(['build.yml', 'test.yml']);
         });
 
-        it('should filter out existing workflows', async () => {
+        it('should show all workflows with status indicators', async () => {
             const workflowStatusWithExisting: IWorkflowStatus = {
                 available: [
                     { name: 'Build Workflow', fileName: 'build.yml', exists: false },
@@ -278,18 +278,19 @@ describe('WorkflowsAddInteractive', () => {
 
             await (command as any).performInteractiveWorkflowSelection();
 
-            // Only missing workflows (exists: false) should be offered for selection
+            // All workflows should be shown with status indicators
             expect(mockCheckbox).toHaveBeenCalledWith({
                 message: 'Select workflows to add:',
                 choices: [
-                    { name: 'Build Workflow (build.yml)', value: 'build.yml', checked: false },
-                    { name: 'Deploy Workflow (deploy.yml)', value: 'deploy.yml', checked: false }
+                    { name: 'Build Workflow (build.yml) [+ Missing]', value: 'build.yml', checked: false },
+                    { name: 'Test Workflow (test.yml) [✓ Present]', value: 'test.yml', checked: false },
+                    { name: 'Deploy Workflow (deploy.yml) [+ Missing]', value: 'deploy.yml', checked: false }
                 ],
                 required: false
             });
         });
 
-        it('should handle no missing workflows', async () => {
+        it('should handle scenario where all workflows exist', async () => {
             const workflowStatusAllExist: IWorkflowStatus = {
                 available: [
                     { name: 'Build Workflow', fileName: 'build.yml', exists: true },
@@ -302,7 +303,15 @@ describe('WorkflowsAddInteractive', () => {
 
             const result = await (command as any).performInteractiveWorkflowSelection();
 
-            expect(consoleLogSpy).toHaveBeenCalledWith('No missing workflows found. All available workflows are already present in this repository.');
+            // All workflows should still be shown with status indicators
+            expect(mockCheckbox).toHaveBeenCalledWith({
+                message: 'Select workflows to add:',
+                choices: [
+                    { name: 'Build Workflow (build.yml) [✓ Present]', value: 'build.yml', checked: false },
+                    { name: 'Test Workflow (test.yml) [✓ Present]', value: 'test.yml', checked: false }
+                ],
+                required: false
+            });
             expect(result).toEqual([]);
         });
 
@@ -311,7 +320,7 @@ describe('WorkflowsAddInteractive', () => {
 
             await (command as any).performInteractiveWorkflowSelection();
 
-            expect(consoleLogSpy).toHaveBeenCalledWith('Scanning available workflows...');
+            expect(consoleLogSpy).toHaveBeenCalledWith('Scanning workflows...');
         });
     });
 
