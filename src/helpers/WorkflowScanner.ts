@@ -7,7 +7,7 @@ import * as path from 'path';
 import { Global } from '../Global';
 import { SkeletonManager } from './SkeletonManager';
 import { Repository } from '../git';
-import { IWorkflowInfo, IWorkflowStatus } from '../commands/repos/workflows/models';
+import { IWorkflowInfo, IWorkflowStatus } from '../commands/repos/workflows';
 
 export class WorkflowScanner {
 
@@ -208,3 +208,4 @@ export class WorkflowScanner {
         return lines.join('\n');
     }
 }
+

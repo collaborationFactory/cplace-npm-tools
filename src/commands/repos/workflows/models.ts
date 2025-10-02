@@ -29,19 +29,3 @@ export interface IWorkflowStatus {
     /** Workflows that already exist in the current repository */
     existing: IWorkflowInfo[];
 }
-
-/**
- * Represents environment files associated with workflows.
- * Environment files follow the naming convention '.{workflowName}-env' and contain workflow-specific variables.
- * Used for tracking and copying environment configurations alongside workflow files.
- */
-export interface IEnvironmentFile {
-    /** The base name of the associated workflow (without .yml/.yaml extension) */
-    workflowName: string;
-    /** The environment file name (e.g., '.build-env', '.test-env') */
-    fileName: string;
-    /** The full file system path to the environment file */
-    path: string;
-    /** Whether this environment file exists in the current repository */
-    exists: boolean;
-}

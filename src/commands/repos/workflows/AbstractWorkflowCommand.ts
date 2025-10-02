@@ -62,11 +62,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
     ): Promise<boolean> {
         const localWorkflowsPath = path.join(this.repo.workingDir, '.github', 'workflows');
 
-        // Validate the workflows directory path
-        if (!this.validatePath(localWorkflowsPath)) {
-            throw new Error(`Invalid workflows directory path: ${localWorkflowsPath}`);
-        }
-
         // Ensure .github/workflows directory exists
         await fs.promises.mkdir(localWorkflowsPath, {recursive: true});
 
@@ -100,11 +95,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         fileName: string,
         overwriteExisting: boolean
     ): Promise<boolean> {
-        // Validate the local path for security
-        if (!this.validatePath(localPath)) {
-            throw new Error(`Invalid path: ${localPath}`);
-        }
-
         if (fs.existsSync(localPath)) {
             if (!overwriteExisting) {
                 const overwrite = await confirm({
@@ -139,11 +129,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         const skeletonWorkflowPath = `.github/workflows/${workflowFileName}`;
         const localWorkflowPath = path.join(localWorkflowsPath, workflowFileName);
 
-        // Validate the local workflow path
-        if (!this.validatePath(localWorkflowPath)) {
-            throw new Error(`Invalid workflow path: ${localWorkflowPath}`);
-        }
-
         // Check if workflow file exists in skeleton repository
         const fileExists = await SkeletonManager.fileExistsInRemote(
             this.repo,
@@ -177,11 +162,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         const skeletonEnvPath = `.github/${envFileName}`;
         const localEnvPath = path.join(localGithubPath, envFileName);
 
-        // Validate the local environment file path
-        if (!this.validatePath(localEnvPath)) {
-            throw new Error(`Invalid environment file path: ${localEnvPath}`);
-        }
-
         // Check if environment file exists in skeleton
         const envFileExists = await SkeletonManager.fileExistsInRemote(
             this.repo,
@@ -204,17 +184,6 @@ export abstract class AbstractWorkflowCommand extends AbstractReposCommand {
         } catch (envError) {
             console.error(`  ✗ Failed to copy environment file ${envFileName}: ${envError instanceof Error ? envError.message : envError}`);
         }
-    }
-
-    /**
-     * Validate a file path for security to prevent path traversal attacks
-     * @param filePath Path to validate
-     * @returns true if the path is valid, false otherwise
-     */
-    private validatePath(filePath: string): boolean {
-        const resolvedPath = path.resolve(filePath);
-        const repoPath = path.resolve(this.repo.workingDir);
-        return resolvedPath.startsWith(repoPath) && !filePath.includes('..');
     }
 
     /**
