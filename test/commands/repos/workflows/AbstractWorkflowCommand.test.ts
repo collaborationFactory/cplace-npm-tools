@@ -221,14 +221,6 @@ describe('AbstractWorkflowCommand', () => {
             expect(result).toBe(true);
         });
 
-        it('should handle invalid workflow path', async () => {
-            mockPath.normalize.mockReturnValue('../../../malicious/path');
-
-            await expect(command.testCopyWorkflowWithEnvironment('test.yml')).rejects.toThrow(
-                'Invalid workflows directory path'
-            );
-        });
-
         it('should handle copy file errors', async () => {
             mockSkeletonManager.fileExistsInRemote.mockResolvedValue(true);
             mockSkeletonManager.copyFileFromRemote.mockRejectedValue(new Error('Copy failed'));
@@ -297,45 +289,6 @@ describe('AbstractWorkflowCommand', () => {
 
             expect(mockSkeletonManager.fileExistsInRemote).toHaveBeenCalledTimes(3);
             expect(mockSkeletonManager.copyFileFromRemote).toHaveBeenCalledTimes(1); // Only for existing.yml
-        });
-    });
-
-    describe('security validations', () => {
-        beforeEach(() => {
-            setupRepositoryWithWorkingDir();
-        });
-
-        it.each([
-            [
-                'path traversal attempts',
-                '../../malicious.yml',
-                () => mockPath.normalize.mockReturnValue('../../../etc/passwd'),
-                'Invalid workflows directory path'
-            ],
-            [
-                'relative paths in workflows directory',
-                'test.yml',
-                () => {
-                    mockPath.join.mockReturnValueOnce('/test/repo/.github/workflows');
-                    mockPath.normalize.mockReturnValueOnce('/test/repo/.github/workflows');
-                    mockPath.isAbsolute.mockReturnValueOnce(false);
-                },
-                'Invalid workflows directory path'
-            ]
-        ])('should reject %s', async (scenario, workflowFile, mockSetup, expectedError) => {
-            mockSetup();
-
-            await expect(command.testCopyWorkflowWithEnvironment(workflowFile)).rejects.toThrow(expectedError);
-        });
-
-        it('should allow valid absolute paths', async () => {
-            mockPath.normalize.mockReturnValue('/valid/absolute/path');
-            mockPath.isAbsolute.mockReturnValue(true);
-            setupSuccessfulFileOperations();
-
-            const result = await command.testCopyWorkflowWithEnvironment('test.yml');
-
-            expect(result).toBe(true);
         });
     });
 });

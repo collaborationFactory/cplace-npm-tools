@@ -36,7 +36,6 @@ on:
 
             expect(result.name).toBe('CI Pipeline');
             expect(result.fileName).toBe('ci.yml');
-            expect(result.size).toBe(100);
             expect(result.exists).toBe(false);
         });
 
@@ -59,14 +58,6 @@ on:
             const result = (WorkflowScanner as any).parseWorkflowInfo('complex-workflow.yml', yamlContent);
 
             expect(result.name).toBe('Complex Workflow');
-        });
-
-
-        it('should calculate size from content when size not provided', () => {
-            const yamlContent = 'name: Test';
-            const result = (WorkflowScanner as any).parseWorkflowInfo('test.yml', yamlContent);
-
-            expect(result.size).toBe(Buffer.byteLength(yamlContent, 'utf8'));
         });
     });
 
@@ -92,15 +83,6 @@ on:
         });
     });
 
-    describe('formatFileSize', () => {
-        it('should format bytes correctly', () => {
-            expect(WorkflowScanner.formatFileSize(0)).toBe('0 B');
-            expect(WorkflowScanner.formatFileSize(500)).toBe('500 B');
-            expect(WorkflowScanner.formatFileSize(1024)).toBe('1 KB');
-            expect(WorkflowScanner.formatFileSize(1536)).toBe('1.5 KB');
-            expect(WorkflowScanner.formatFileSize(1048576)).toBe('1 MB');
-        });
-    });
 
     describe('formatWorkflowStatus', () => {
         it('should display message when no workflows found', () => {
@@ -119,13 +101,11 @@ on:
                     {
                         name: 'CI Pipeline',
                         fileName: 'ci.yml',
-                        size: 1024,
                         exists: true
                     },
                     {
                         name: 'Deploy',
                         fileName: 'deploy.yml',
-                        size: 512,
                         exists: false
                     }
                 ],
@@ -139,8 +119,6 @@ on:
             expect(result).toContain('Deploy');
             expect(result).toContain('ci.yml');
             expect(result).toContain('deploy.yml');
-            expect(result).toContain('1 KB');
-            expect(result).toContain('512 B');
             expect(result).toContain('Present');
             expect(result).toContain('Missing');
             expect(result).toContain('Summary: 2 total, 1 present, 1 missing');

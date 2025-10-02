@@ -142,14 +142,15 @@ export class CplaceVersion {
     }
 
     public static compareTo(otherVersion: { major: number, minor: number, patch: number }): number {
-        const patch = (Number.isFinite(otherVersion.patch) ? otherVersion.patch : 0);
+        // the patch version may not always be set
+        const cplacePatch = (Number.isFinite(this._version.patch) ? this._version.patch: 0 );
 
         if (this._version.major !== otherVersion.major) {
             return this._version.major - otherVersion.major;
         } else if (this._version.minor !== otherVersion.minor) {
             return this._version.minor - otherVersion.minor;
-        } else if (this._version.patch !== patch) {
-            return this._version.patch - patch;
+        } else if (cplacePatch !== otherVersion.patch) {
+            return cplacePatch - otherVersion.patch;
         }
         return 0;
     }
