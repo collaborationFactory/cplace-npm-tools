@@ -25,7 +25,7 @@ const REGISTERED_COMMANDS: { [cmd: string]: ICommand } = {
     'visualize': new VisualizeDelegate(),
     'refactor': new RefactorDelegate(),
     'e2e': new E2E(),
-    'version': new Version()
+    'version': new Version(),
 };
 
 export type Result = 'missing' | 'failed' | 'success';

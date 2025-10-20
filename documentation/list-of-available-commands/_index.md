@@ -50,7 +50,7 @@ $  cplace-cli --help
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
 
-            --update|-u [--nofetch] [--reset-to-remote] [--sequential]: Updates all parent repos.
+            --update|-u [--nofetch] [--reset-to-remote] [--sequential] [--concurrency]: Updates all parent repos.
                 Tags instead of branches are supported in parent-repos.json by cplace-cli > 0.17.0 e.g.:
                 "main": {
                   "url": "git@github.com:collaborationFactory/cplace.git",
@@ -68,6 +68,10 @@ $  cplace-cli --help
                     branch will be checked out.
                 If --sequential is set, then the repositories will be updated one after another,
                     which takes longer but makes the verbose log easier to read.
+                If --concurrency is set to a positive integer (> 0) only that batch of parallel executed 'processes' are run at the same time.
+                    This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
+                    Ignored if If '--sequential' is set.
+                    Default is 15.
                 Update behavior:
                 1. If a tag is configured for the parent repository it is updated to that tag,
                 2. Else if a commit hash is configured, the repository is updated to that commit.
@@ -100,11 +104,17 @@ $  cplace-cli --help
                 If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
                     the commit hash will be added if the repository is checked out.
 
-            --clone|-c [--depth <depth>] :
+            --clone|-c [--depth <depth>] [--sequential] [--concurrency]:
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
                 The --force setting has no effect for this command.
+                If --sequential is set, then the repositories will be cloned one after another,
+                    which takes longer but makes the verbose log easier to read.
+                If --concurrency is set to a positive integer (> 0) only that batch of parallel executed 'processes' are run at the same time.
+                    This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
+                    Ignored if If '--sequential' is set.
+                    Default is 15.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked
@@ -134,26 +144,40 @@ $  cplace-cli --help
                 corresponding IDEA module among all currently known referenced repositories.
                 If --all is set, then all dependencies of the plugin will also be added as dependencies.
 
-            --merge-skeleton|-m [--target-branch=<target-branch-name>] [--skeleton-branch=<skeleton-branch-name]
-                                [--ours=<file-name>] [--pull-request] [--push]:
-                Merges a branch from the skeleton repo to the current branch or to the specified target branch.
-                If no options are specified, the current branch is used as a target branch. A skeleteon branch 
-                will be selected automatically based on the cplace version. If the merge is successful, 
-                the changes will be committed, but not pushed.
-                
-                --target-branch - if specified, this branch will be checked out and the skeleton will be merged 
-                                  in it. The skeleton branch will be selected based on the cplace version from
-                                  this branch.
+            --merge-skeleton|-m [--base-branch=<base-branch>] [--target-branch=<target-branch>]
+                                [--skeleton-branch=<skeleton-branch-name] [--ours=<file-name>]
+                                [--pull-request] [--push] [--interactive]:
+                Merges a branch from the skeleton repo to the specified base branch, or to a specified target branch
+                that will be branched from the base branch. A skeleton branch will be selected automatically based on
+                the cplace version.
+                If the merge is successful, the changes will be committed, but not pushed.
+                If the merge was unsuccessful, fix the merge conflicts, add the changes with 'git add .' (without
+                commiting them) and run the same command again. The command will try to continue the merge.
+
+                --base-branch - specifies to which base branch of the repo to merge the skeleton (ex: release/23.1).
+                --target-branch - if specified, this branch will be checked out from the base branch, and the skeleton
+                                  will be merged in it instead of the base branch.
+                                  The skeleton branch will be selected based on the cplace version from this branch.
                 --skeleton-branch - if specified (ex. '--skeleton-branch=version/7.0'), this skeleton branch will
-                                    be merged to the selected target branch, bypassing the automatic selection and 
+                                    be merged to the selected base/target branch, bypassing the automatic selection and
                                     ignoring the compatibility with the current cplace version.
                 --ours - specify a file to be automatically accepted as ours in case of a merge conflict.
-                         For multiple files, use the parameter once per file 
+                         For multiple files, use the parameter once per file
                          ex: '--ours=README.md --ours=version.gradle'.
-                --pull-request - creates a pull request if the merge was successful. This is only possible if the 
-                                 target branch (currently checked out or specified with --target-branch) is not 
+                --pull-request - creates a pull request if the merge was successful. This is only possible if a
+                                 target branch is specified with --target-branch and if that branch is not
                                  already tracked.
                 --push - if specified, the changes will be pushed to the target branch if the merge was successful
+                --interactive - if specified, the command will ask for a decision for each newly added or conflicting file.
+                                The choices provided are accept our (local) version, accept their (remote) version,
+                                or leave the conflict to be resolved manually.
+
+                ex: cplace-cli repos --merge-skeleton --base-branch=release/23.1 --push
+                    (merge auto detected skeleton version to release/23.1 and push to remote)
+
+                    cplace-cli repos --merge-skeleton --base-branch=release/23.1 --target-branch=merge-skeleton --pull-request
+                    (will checkout 'release/23.1', then checkout 'merge-skeleton' branch, merge auto detected skeleton version
+                    and create a pull request if it was succesfull and 'merge-skeleton' is not a tracked branch)
 
             --migrate-artifact-groups
                 The command makes several changes to the 'build.gradle' file and 'parent-repos.json', needed for
@@ -186,6 +210,38 @@ $  cplace-cli --help
                 '--include all' validates and prints all fields.
                 '--exclude all' does no validation but is useful to print the raw dependency structure of the parent repositories.
                 Note that the data is only taken from the locally checked out files.
+
+            --workflows --list | --add <names> | --add-interactive [--skeleton-branch <name>] [--force]
+                Manages GitHub Actions workflows from the skeleton repository.
+
+                --list
+                    List available workflows from skeleton repository with their current status
+
+                --add <names>
+                    Add specified workflows (space-separated list of workflow filenames)
+                    Example: --add "ci.yml deploy.yml test.yml"
+
+                --add-interactive
+                    Interactive mode to select and add workflows using arrow keys and checkboxes
+                    Supports --skeleton-branch to specify a different skeleton branch
+
+                    --skeleton-branch <name>
+                        Override automatic branch detection and use specific skeleton branch
+
+                    --force
+                        Overwrite existing workflow files without confirmation
+
+                ex: cplace-cli repos --workflows --list
+                    (list all available workflows from skeleton repository with current status)
+
+                    cplace-cli repos --workflows --add "ci.yml deploy.yml"
+                    (add specific workflows ci.yml and deploy.yml from skeleton repository)
+
+                    cplace-cli repos --workflows --add-interactive
+                    (interactive selection of workflows to add with checkboxes)
+
+                    cplace-cli repos --workflows --add-interactive --skeleton-branch version/25.4
+                    (interactive selection using specific skeleton branch instead of auto-detection)
 
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.

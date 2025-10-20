@@ -238,6 +238,38 @@ const cli = meow(
                 '--exclude all' does no validation but is useful to print the raw dependency structure of the parent repositories.
                 Note that the data is only taken from the locally checked out files.
 
+            --workflows --list | --add <names> | --add-interactive [--skeleton-branch <name>] [--force]
+                Manages GitHub Actions workflows from the skeleton repository.
+
+                --list
+                    List available workflows from skeleton repository with their current status
+
+                --add <names>
+                    Add specified workflows (space-separated list of workflow filenames)
+                    Example: --add "ci.yml deploy.yml test.yml"
+
+                --add-interactive
+                    Interactive mode to select and add workflows using arrow keys and checkboxes
+                    Supports --skeleton-branch to specify a different skeleton branch
+    
+                    --skeleton-branch <name>
+                        Override automatic branch detection and use specific skeleton branch
+                    
+                    --force
+                        Overwrite existing workflow files without confirmation
+
+                ex: cplace-cli repos --workflows --list
+                    (list all available workflows from skeleton repository with current status)
+
+                    cplace-cli repos --workflows --add "ci.yml deploy.yml"
+                    (add specific workflows ci.yml and deploy.yml from skeleton repository)
+
+                    cplace-cli repos --workflows --add-interactive
+                    (interactive selection of workflows to add with checkboxes)
+
+                    cplace-cli repos --workflows --add-interactive --skeleton-branch version/25.4
+                    (interactive selection using specific skeleton branch instead of auto-detection)
+
         visualize [--regex-for-exclusion <regexForExclusion>] [--regex-for-inclusion <regexForInclusion>] [--pdf]
             Creates a visualization of the remote branches and their dependencies of the repository.
             The output is a .dot file.
@@ -307,6 +339,7 @@ const cli = meow(
             --chromeDriverVersion will adjust the version of the Chrome driver
               (default: latest version)
               
+
         version --rewrite-versions
             Rewrites versions in the version.gradle and parent-repos.json files for custom branches.
             This command helps manage versions for non-release branches by:
