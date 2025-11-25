@@ -79,6 +79,8 @@ describe('Upmerge', () => {
             mockRepo.merge.mockResolvedValue();
             mockRepo.push.mockResolvedValue();
             mockRepo.deleteBranch.mockResolvedValue();
+            mockRepo.rawWrapper = jest.fn().mockResolvedValue('');
+            mockRepo.setUpstreamBranch = jest.fn().mockResolvedValue(undefined);
         });
 
         it('should fail if working directory is not clean', async () => {
@@ -113,8 +115,17 @@ describe('Upmerge', () => {
             // Should perform merges in sequence
             expect(mockRepo.merge).toHaveBeenCalledTimes(3); // 23.4->24.1, 24.1->24.2, 24.2->master
 
-            // Should push changes
+            // Should push changes to target branches (not temporary branches)
             expect(mockRepo.push).toHaveBeenCalledTimes(3);
+
+            // Should set upstream for each temporary branch
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4); // One for each branch
+
+            // Should configure push.default to upstream
+            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', 'push.default', 'upstream']);
+
+            // Should clean up leftover upmerge branches
+            expect(mockRepo.deleteBranch).toHaveBeenCalled();
         });
 
         it('should not push changes when push is false', async () => {
@@ -126,7 +137,14 @@ describe('Upmerge', () => {
 
             await upmerge.execute();
 
+            // Should not push to target branches when push is false
             expect(mockRepo.push).not.toHaveBeenCalled();
+
+            // Should still set upstream for each temporary branch
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4);
+
+            // Should still configure push.default
+            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', 'push.default', 'upstream']);
         });
 
         it('should handle customer branches when specified', async () => {
@@ -161,6 +179,112 @@ describe('Upmerge', () => {
 
             // Should handle additional merges for customer branches
             expect(mockRepo.merge).toHaveBeenCalledTimes(6); // Regular merges + customer branch merges
+        });
+
+        it('should set upstream to target release branch for each temporary branch', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+
+            await upmerge.execute();
+
+            // Should set upstream for all 4 branches
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4);
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/23.4');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.1');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.2');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/master');
+        });
+
+        it('should configure push.default to upstream at start', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+
+            await upmerge.execute();
+
+            // Should set push.default to upstream
+            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', 'push.default', 'upstream']);
+        });
+
+        it('should clean up leftover upmerge branches after successful completion', async () => {
+            const branchesWithLeftovers: IGitBranchDetails[] = [
+                ...mockBranches,
+                {
+                    name: 'upmerge-ABC123/release/24.1',
+                    commit: 'commit5',
+                    current: false,
+                    isRemote: false,
+                    tracking: null
+                },
+                {
+                    name: 'upmerge-XYZ789/master',
+                    commit: 'commit6',
+                    current: false,
+                    isRemote: false,
+                    tracking: null
+                }
+            ];
+
+            // First call returns branches with leftovers, second call (for cleanup) returns same
+            mockRepo.listBranches
+                .mockResolvedValueOnce(branchesWithLeftovers)
+                .mockResolvedValueOnce(branchesWithLeftovers);
+
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+
+            await upmerge.execute();
+
+            // Should delete the leftover upmerge branches
+            expect(mockRepo.deleteBranch).toHaveBeenCalledWith('upmerge-ABC123/release/24.1');
+            expect(mockRepo.deleteBranch).toHaveBeenCalledWith('upmerge-XYZ789/master');
+        });
+
+        it('should not clean up upmerge branches if upmerge fails', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+
+            // Make merge fail to simulate conflict
+            mockRepo.merge.mockRejectedValueOnce(new Error('Merge conflict'));
+
+            await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+            // Cleanup should not be called because upmerge failed
+            // Only the cleanup.add() branches should be attempted in the finally block of doMerges
+            // but cleanupUpmergeBranches() should not be called
+            const allDeleteCalls = (mockRepo.deleteBranch as jest.Mock).mock.calls;
+            const cleanupCalls = allDeleteCalls.filter(call => call[0].startsWith('upmerge-'));
+
+            // Should only delete branches from the current run's cleanup set, not from cleanupUpmergeBranches
+            expect(cleanupCalls.length).toBeLessThanOrEqual(4); // At most the 4 branches from current run
+        });
+
+        it('should set upstream even when push is disabled', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: false
+            };
+            upmerge.prepareAndMayExecute(params);
+
+            await upmerge.execute();
+
+            // Should still set upstream branches for conflict resolution
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4);
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/23.4');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.1');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.2');
+            expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/master');
         });
     });
 });

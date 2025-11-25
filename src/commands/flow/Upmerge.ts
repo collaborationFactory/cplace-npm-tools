@@ -70,6 +70,11 @@ export class Upmerge implements ICommand {
     public async execute(): Promise<void> {
         await this.repo.fetch({});
         await this.checkRepoClean();
+
+        // Set push.default to upstream to allow pushing to differently named upstream branches
+        // This allows developers to simply run 'git push' after resolving merge conflicts
+        await this.repo.rawWrapper(['config', 'push.default', 'upstream']);
+
         const release = await this.checkForRelease();
 
         const gitBranchDetails = await this.repo.listBranches();
@@ -77,6 +82,23 @@ export class Upmerge implements ICommand {
         await this.checkMergability(branches);
 
         await this.doMerges(branches);
+
+        // Clean up any leftover upmerge branches after successful completion
+        await this.cleanupUpmergeBranches();
+    }
+
+    private async cleanupUpmergeBranches(): Promise<void> {
+        const upmergePattern = /^upmerge-[A-Za-z0-9]+\/.+$/;
+        const allBranches = await this.repo.listBranches();
+        const localUpmergeBranches = allBranches
+            .filter(b => !b.isRemote && upmergePattern.test(b.name));
+
+        if (localUpmergeBranches.length > 0) {
+            Global.isVerbose() && console.log(`Cleaning up ${localUpmergeBranches.length} leftover upmerge branches`);
+            await promiseAllSettledParallel(
+                localUpmergeBranches.map(b => this.repo.deleteBranch(b.name))
+            );
+        }
     }
 
     private checkRepoClean(): BPromise<void> {
@@ -231,8 +253,10 @@ export class Upmerge implements ICommand {
     private mergeReleaseBranch(branch: IBranchDetails, i: number, branches: IBranchDetails[], cleanup: Set<string>): BPromise {
         if (i === 0) {
             const tempBranchName = this.tempBranchName(branches[0].name);
+            const targetBranchName = branches[0].name.substr(this.remote.length + 1);
             return this.repo.checkoutBranch(['-b', tempBranchName, branches[0].name])
-                .then(() => cleanup.add(tempBranchName));
+                .then(() => cleanup.add(tempBranchName))
+                .then(() => this.repo.setUpstreamBranch(`${this.remote}/${targetBranchName}`));
         }
         const srcBranch = branches[i - 1];
         return this.mergeBranch(branch, srcBranch, false, cleanup);
@@ -280,8 +304,10 @@ export class Upmerge implements ICommand {
             return BPromise.reject(`Branch '${branch.name}' does not start with '${this.remote}/'`);
         }
         const tempBranchName = this.tempBranchName(branch.name);
+        const targetBranchName = branch.name.substr(this.remote.length + 1);
         return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
             .then(() => cleanup.add(tempBranchName))
+            .then(() => this.repo.setUpstreamBranch(`${this.remote}/${targetBranchName}`))
             .then(() => {
                 if (this.showDetails) {
                     return upmergeChecker.analyzeRequiredMerge(tempSrcBranch, branch.name)
@@ -289,7 +315,6 @@ export class Upmerge implements ICommand {
             })
             .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
             .then(() => {
-                const targetBranchName = branch.name.substr(this.remote.length + 1);
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
                     : BPromise.resolve();
