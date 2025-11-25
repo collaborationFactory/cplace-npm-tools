@@ -88,16 +88,20 @@ export class Upmerge implements ICommand {
     }
 
     private async cleanupUpmergeBranches(): Promise<void> {
-        const upmergePattern = /^upmerge-[A-Za-z0-9]+\/.+$/;
-        const allBranches = await this.repo.listBranches();
-        const localUpmergeBranches = allBranches
-            .filter(b => !b.isRemote && upmergePattern.test(b.name));
+        try {
+            const upmergePattern = /^upmerge-[A-Za-z0-9]+\/.+$/;
+            const allBranches = await this.repo.listBranches();
+            const localUpmergeBranches = allBranches
+                .filter(b => !b.isRemote && upmergePattern.test(b.name));
 
-        if (localUpmergeBranches.length > 0) {
-            Global.isVerbose() && console.log(`Cleaning up ${localUpmergeBranches.length} leftover upmerge branches`);
-            await promiseAllSettledParallel(
-                localUpmergeBranches.map(b => this.repo.deleteBranch(b.name))
-            );
+            if (localUpmergeBranches.length > 0) {
+                Global.isVerbose() && console.log(`Cleaning up ${localUpmergeBranches.length} leftover upmerge branches`);
+                await promiseAllSettledParallel(
+                    localUpmergeBranches.map(b => this.repo.deleteBranch(b.name))
+                );
+            }
+        } catch (error) {
+            console.warn(`Warning: Could not clean up leftover upmerge branches: ${error.message || error}`);
         }
     }
 
