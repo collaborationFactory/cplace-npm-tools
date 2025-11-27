@@ -73,7 +73,7 @@ export class Upmerge implements ICommand {
 
         // Set push.default to upstream to allow pushing to differently named upstream branches
         // This allows developers to simply run 'git push' after resolving merge conflicts
-        await this.repo.rawWrapper(['config', 'push.default', 'upstream']);
+        await this.repo.rawWrapper(['config', '--local', 'push.default', 'upstream']);
 
         const release = await this.checkForRelease();
 
@@ -244,14 +244,18 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 BPromise.resolve()))
+            .then(() => 
+                this.repo.checkoutBranch(releaseBranches.pop()!.name.replace(this.remote + '/', ''))
+            )
+            .catch((err) =>
+                this.repo.checkoutBranch(prevBranch)
+            )
             .finally(() => {
-                    this.repo
-                        .checkoutBranch(prevBranch)
-                        .then(() => promiseAllSettledParallel(
-                            [...cleanup].map((b) => this.repo.deleteBranch(b))
-                        ))
-                }
-            );
+                console.log("Cleaning up temporary branches");
+                return promiseAllSettledParallel(
+                    [...cleanup].map((b) => this.repo.deleteBranch(b))
+                )
+            });
     }
 
     private mergeReleaseBranch(branch: IBranchDetails, i: number, branches: IBranchDetails[], cleanup: Set<string>): BPromise {
