@@ -244,17 +244,16 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 BPromise.resolve()))
-            .then(() =>
-                this.repo.checkoutBranch(releaseBranches.pop()!.name.replace(this.remote + '/', ''))
-            )
-            .catch((err) =>
-                this.repo.checkoutBranch(prevBranch)
-                    .then(() => Promise.reject(err))
-            )
-            .finally(() => {
-                return promiseAllSettledParallel(
-                    [...cleanup].map((b) => this.repo.deleteBranch(b))
-                )
+            .then(() => {
+                // On success: checkout the last upmerged branch and delete temporary branches
+                if (releaseBranches.length > 0) {
+                    const lastReleaseBranch = releaseBranches[releaseBranches.length - 1];
+                    return this.repo
+                        .checkoutBranch(lastReleaseBranch.name.replace(this.remote + '/', ''))
+                        .then(() => promiseAllSettledParallel(
+                            [...cleanup].map((b) => this.repo.deleteBranch(b))
+                        ));
+                }
             });
     }
 
