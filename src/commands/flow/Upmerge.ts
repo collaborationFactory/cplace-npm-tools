@@ -231,13 +231,11 @@ export class Upmerge implements ICommand {
         const cleanup: Set<string> = new Set();
         const releaseBranches = branches.filter((branch) => !branch.customer);
         const customerBranches = branches.filter((branch) => branch.customer);
-        let prevBranch: string | string[];
         console.log(Upmerge.REPO_DIVIDER);
         console.log(`Repository: ${this.repo.repoName}`);
         console.log(Upmerge.REPO_DIVIDER);
         return this.repo
             .status()
-            .then((status) => prevBranch = status.current)
             .then(() => releaseBranches.reduce(
                 (p, branch, i) => p.then(() => this.mergeReleaseBranch(branch, i, releaseBranches, cleanup)),
                 BPromise.resolve()))
