@@ -664,6 +664,20 @@ export class Repository {
         });
     }
 
+    public setUpstreamBranch(upstreamBranch: string): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            Global.isVerbose() && console.log(`[${this.repoName}]: setting upstream branch to ${upstreamBranch}`);
+            this.git.raw(['branch', '--set-upstream-to', upstreamBranch], (err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    Global.isVerbose() && console.log(`[${this.repoName}]: upstream branch set to ${upstreamBranch}`);
+                    resolve();
+                }
+            });
+        });
+    }
+
     public checkoutCommit(commit: string): Promise<void> {
         if (commit) {
             return new Promise<void>((resolve, reject) => {
