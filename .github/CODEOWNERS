@@ -1,0 +1,16 @@
+## Draft CODEOWNERS File
+```
+# CODEOWNERS file for cplace build docs repository
+# This file defines code ownership for automatic review requests
+
+# Default owner for everything in the repo:
+# * @HaaseMartin @falkt
+
+# If you want to specify ownership for specific areas:
+# Documentation files
+# *.md @TimHorm
+
+# Configuration files
+# .github/ @TimHorm
+
+/documentation @falkt @HaaseMartin
