@@ -69,7 +69,7 @@ export abstract class AbstractReposCommand implements ICommand {
         if (typeof gitRetryCount === 'number' && !isNaN(gitRetryCount) && gitRetryCount >= 1) {
             this.gitRetryCount = gitRetryCount;
         } else {
-            this.gitRetryCount = 3;
+            this.gitRetryCount = 1;
         }
         Global.isVerbose() && console.log('running with git retry count = ' + this.gitRetryCount);
 

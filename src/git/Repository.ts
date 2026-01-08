@@ -51,7 +51,7 @@ export class Repository {
      * @param rootDir - Root directory for resolving remote URL protocol
      * @param toPath - Destination path for the cloned repository
      * @param depth - Clone depth (0 for full clone)
-     * @param gitRetryCount - Number of retry attempts for transient errors (default: 3)
+     * @param gitRetryCount - Number of retry attempts for HTTP 404 errors (default: 1, no retries)
      * @returns Promise resolving to the cloned Repository instance
      */
     public static async clone(
@@ -60,7 +60,7 @@ export class Repository {
         rootDir: string,
         toPath: string,
         depth: number,
-        gitRetryCount: number = 3
+        gitRetryCount: number = 1
     ): Promise<Repository> {
         const { ref, isTag } = this.determineRefToCheckout(repoName, repoProperties, depth);
         const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
@@ -72,42 +72,21 @@ export class Repository {
     }
 
     /**
-     * Checks if the given error is a transient error that should be retried.
-     * Transient errors include network issues, temporary server errors, and Git RPC failures.
+     * Determines if the given error is retryable.
+     * Retryable errors include network timeouts, connection failures, HTTP 404s, and Git RPC issues.
      */
-    private static isTransientCloneError(error: any): boolean {
+    private static isRetryableGitError(error: any): boolean {
         if (!error) {
             return false;
         }
-
         const errorMsg = error.message || error.toString();
 
         // HTTP 404 errors (often temporary on remote git servers / load balancers)
-        if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {
+        if (errorMsg.includes('404') ||  errorMsg.toLowerCase().includes('not found')) {
             return true;
         }
 
-        // Network timeout errors
-        if (errorMsg.includes('ETIMEDOUT') || errorMsg.includes('timed out')) {
-            return true;
-        }
-
-        // Connection errors
-        if (errorMsg.includes('ECONNREFUSED') ||
-            errorMsg.includes('ENOTFOUND') ||
-            errorMsg.includes('ECONNRESET') ||
-            errorMsg.includes('connection refused')) {
-            return true;
-        }
-
-        // Git-specific temporary errors
-        return errorMsg.includes('Could not resolve host') ||
-            errorMsg.includes('Failed to connect') ||
-            errorMsg.includes('RPC failed') ||
-            errorMsg.includes('The remote end hung up') ||
-            errorMsg.includes('early EOF') ||
-            errorMsg.includes('index-pack failed');
-
+        return false;
     }
 
     /**
@@ -198,13 +177,13 @@ export class Repository {
                     });
                 });
 
-                if (attempt > 1) {
+                if (attempt > 0) {
                     console.log(`[${repoName}]:`, `Clone succeeded on attempt ${attempt}`);
                 }
                 return; // Success - exit the retry loop
 
             } catch (err) {
-                const isTransient = this.isTransientCloneError(err);
+                const isTransient = this.isRetryableGitError(err);
                 const hasRetriesLeft = attempt < maxRetries;
 
                 if (isTransient && hasRetriesLeft) {
@@ -593,9 +572,9 @@ export class Repository {
      * The fetch will be done with a depth of 1.
      * @param branch the branch to fetch from the remote
      */
-    public prefetchBranchForShallowClone(branch: string): Promise<void> {
+    public async prefetchBranchForShallowClone(branch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.git.revparse(['--is-shallow-repository'], (err, data) => {
+            this.git.revparse(['--is-shallow-repository'], async (err, data) => {
                 if (err) {
                     reject(err);
                 } else if (data?.trim() === 'true') {
@@ -606,9 +585,13 @@ export class Repository {
                     The named branches will be interpreted as if specified with the -t option on the git remote add command line.
                     With --add, instead of replacing the list of currently tracked branches, adds to that list.
                      */
-                    this.git.remote(['set-branches', '--add', 'origin', branch]);
-                    this.git.fetch(['--depth', '1']);
-                    resolve();
+                    try {
+                        await this.git.remote(['set-branches', '--add', 'origin', branch]);
+                        await this.git.fetch(['--depth', '1']);
+                        resolve();
+                    } catch (fetchErr) {
+                        reject(fetchErr);
+                    }
                 } else {
                     resolve();
                 }
