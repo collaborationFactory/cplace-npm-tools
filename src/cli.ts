@@ -131,7 +131,7 @@ const cli = meow(
                 If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
                     the commit hash will be added if the repository is checked out.
 
-            --clone|-c [--depth <depth>] [--sequential] [--concurrency]:
+            --clone|-c [--depth <depth>] [--sequential] [--concurrency] [--git-retry-count <count>]:
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
@@ -142,6 +142,9 @@ const cli = meow(
                     This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
                     Ignored if If '--sequential' is set.
                     Default is 15.
+                If --git-retry-count is set, specifies the number of retry attempts for transient network errors
+                    (HTTP 404, timeouts, connection issues). Uses exponential backoff (2s, 4s, 8s, ...).
+                    Default: 3. Set to 1 to disable retries.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked
@@ -351,11 +354,6 @@ const cli = meow(
     Global options:
         --verbose
             Print verbose information to console
-
-        --git-retry-count <count>
-            Number of retry attempts for git clone operations on transient network errors
-            (HTTP 404, timeouts, connection issues). Uses exponential backoff (2s, 4s, 8s, ...).
-            Default: 3. Set to 1 to disable retries.
 `,
     /* tslint:enable:no-trailing-whitespace */
     {

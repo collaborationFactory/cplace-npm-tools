@@ -43,100 +43,32 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(repoName: string, repoProperties: IRepoStatus, rootDir: string, toPath: string, depth: number): Promise<Repository> {
-        return new Promise<Repository>((resolve, reject) => {
-            const options = [];
+    /**
+     * Clones a repository with the specified configuration.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param repoProperties - Configuration including branch, tag, commit, url etc.
+     * @param rootDir - Root directory for resolving remote URL protocol
+     * @param toPath - Destination path for the cloned repository
+     * @param depth - Clone depth (0 for full clone)
+     * @param gitRetryCount - Number of retry attempts for transient errors (default: 3)
+     * @returns Promise resolving to the cloned Repository instance
+     */
+    public static async clone(
+        repoName: string,
+        repoProperties: IRepoStatus,
+        rootDir: string,
+        toPath: string,
+        depth: number,
+        gitRetryCount: number = 3
+    ): Promise<Repository> {
+        const { ref, isTag } = this.determineRefToCheckout(repoName, repoProperties, depth);
+        const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
+        const remoteUrl = await this.getRemoteOriginUrl(repoName, repoProperties.url, rootDir);
 
-            let refToCheckout: string;
-            let refIsTag = false;
+        await this.cloneWithRetry(repoName, remoteUrl, toPath, options, gitRetryCount);
 
-            if (repoProperties.useSnapshot) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because useSnapshot is true.`);
-            } else if (repoProperties.commit) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.`);
-            } else if (repoProperties.tag) {
-                refToCheckout = repoProperties.tag;
-                refIsTag = true;
-                console.log(`[${repoName}]: will clone the tag ${refToCheckout} with depth ${depth} as configured.`);
-            } else if (repoProperties.latestTagForRelease) {
-                refToCheckout = repoProperties.latestTagForRelease;
-                this.validateTagMarker(repoProperties, repoName);
-
-                refIsTag = true;
-                console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout}, depth ${depth}.`);
-            } else if (repoProperties.branch) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because no latestTagForRelease was found and only a branch is configured.`);
-            } else {
-                console.log(`[${repoName}]: will clone the latest HEAD of the default branch with depth ${depth} because not even a branch is configured.`);
-            }
-
-            if (refToCheckout) {
-                options.push('--branch', refToCheckout);
-            }
-            if (depth > 0 && !repoProperties.commit) {
-                options.push('--depth', depth.toString(10));
-            }
-
-            Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
-                const maxRetries = Global.getGitRetryCount();
-                let attemptNumber = 0;
-
-                const attemptClone = () => {
-                    attemptNumber++;
-                    const isRetry = attemptNumber > 1;
-
-                    if (isRetry) {
-                        console.log(`[${repoName}]:`, `Clone attempt ${attemptNumber}/${maxRetries}...`);
-                    }
-
-                    simpleGit.simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
-                        if (err) {
-                            // Check if error is transient and we have retries left
-                            if (Repository.isTransientCloneError(err) && attemptNumber < maxRetries) {
-                                const delayMs = Math.pow(2, attemptNumber) * 1000; // 2s, 4s, 8s, etc.
-                                console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attemptNumber}/${maxRetries}): ${err.message || err}`);
-                                console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
-
-                                Repository.delay(delayMs).then(() => attemptClone());
-                            } else {
-                                // No more retries or permanent error
-                                if (attemptNumber >= maxRetries && Repository.isTransientCloneError(err)) {
-                                    console.error(`[${repoName}]:`, `Clone failed after ${maxRetries} attempts`);
-                                }
-                                reject(err);
-                            }
-                        } else {
-                            // Success
-                            if (isRetry) {
-                                console.log(`[${repoName}]:`, `Clone succeeded on attempt ${attemptNumber}`);
-                            }
-
-                            const newRepo = new Repository(toPath);
-                            if (refIsTag) {
-                                newRepo.createBranchForTag(repoName, refToCheckout)
-                                    .then(() => {
-                                        resolve(newRepo);
-                                    });
-                            } else if (repoProperties.commit) {
-                                console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
-                                newRepo.checkoutCommit(repoProperties.commit)
-                                    .then(() => {
-                                        resolve(newRepo);
-                                    });
-                            } else {
-                                resolve(newRepo);
-                            }
-                        }
-                    });
-                };
-
-                // Start first attempt
-                attemptClone();
-            });
-        });
+        return this.setupClonedRepo(repoName, toPath, repoProperties, ref, isTag);
     }
 
     /**
@@ -169,16 +101,13 @@ export class Repository {
         }
 
         // Git-specific temporary errors
-        if (errorMsg.includes('Could not resolve host') ||
+        return errorMsg.includes('Could not resolve host') ||
             errorMsg.includes('Failed to connect') ||
             errorMsg.includes('RPC failed') ||
             errorMsg.includes('The remote end hung up') ||
             errorMsg.includes('early EOF') ||
-            errorMsg.includes('index-pack failed')) {
-            return true;
-        }
+            errorMsg.includes('index-pack failed');
 
-        return false;
     }
 
     /**
@@ -186,6 +115,133 @@ export class Repository {
      */
     private static delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Determines which ref (branch or tag) to checkout based on repo properties.
+     * Returns the ref name and whether it's a tag.
+     */
+    private static determineRefToCheckout(
+        repoName: string,
+        repoProperties: IRepoStatus,
+        depth: number
+    ): { ref: string | undefined; isTag: boolean } {
+        let ref: string | undefined;
+        let isTag = false;
+
+        if (repoProperties.useSnapshot) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref}, depth ${depth}, because useSnapshot is true.`);
+        } else if (repoProperties.commit) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref} because a commit is specified.`);
+        } else if (repoProperties.tag) {
+            ref = repoProperties.tag;
+            isTag = true;
+            console.log(`[${repoName}]: will clone the tag ${ref} with depth ${depth} as configured.`);
+        } else if (repoProperties.latestTagForRelease) {
+            ref = repoProperties.latestTagForRelease;
+            this.validateTagMarker(repoProperties, repoName);
+            isTag = true;
+            console.log(`[${repoName}]: will clone the latestTagForRelease ${ref}, depth ${depth}.`);
+        } else if (repoProperties.branch) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref}, depth ${depth}, because no latestTagForRelease was found and only a branch is configured.`);
+        } else {
+            console.log(`[${repoName}]: will clone the latest HEAD of the default branch with depth ${depth} because not even a branch is configured.`);
+        }
+
+        return { ref, isTag };
+    }
+
+    /**
+     * Builds the clone options array based on ref and depth settings.
+     */
+    private static buildCloneOptions(
+        ref: string | undefined,
+        depth: number,
+        hasCommit: boolean
+    ): string[] {
+        const options: string[] = [];
+
+        if (ref) {
+            options.push('--branch', ref);
+        }
+        if (depth > 0 && !hasCommit) {
+            options.push('--depth', depth.toString(10));
+        }
+
+        return options;
+    }
+
+    /**
+     * Executes git clone with retry logic for transient errors.
+     * Uses exponential backoff between retry attempts.
+     */
+    private static async cloneWithRetry(
+        repoName: string,
+        remoteUrl: string,
+        toPath: string,
+        options: string[],
+        maxRetries: number
+    ): Promise<void> {
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+
+                if (attempt > 1) {
+                    console.log(`[${repoName}]:`, `Clone succeeded on attempt ${attempt}`);
+                }
+                return; // Success - exit the retry loop
+
+            } catch (err) {
+                const isTransient = this.isTransientCloneError(err);
+                const hasRetriesLeft = attempt < maxRetries;
+
+                if (isTransient && hasRetriesLeft) {
+                    const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, etc.
+                    console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attempt}/${maxRetries}): ${err.message || err}`);
+                    console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
+                    await this.delay(delayMs);
+                } else {
+                    if (attempt >= maxRetries && isTransient) {
+                        console.error(`[${repoName}]:`, `Clone failed after ${maxRetries} attempts`);
+                    }
+                    throw err;
+                }
+            }
+        }
+    }
+
+    /**
+     * Sets up the cloned repository by creating branches for tags or checking out specific commits.
+     */
+    private static async setupClonedRepo(
+        repoName: string,
+        toPath: string,
+        repoProperties: IRepoStatus,
+        ref: string | undefined,
+        isTag: boolean
+    ): Promise<Repository> {
+        const newRepo = new Repository(toPath);
+
+        if (isTag && ref) {
+            await newRepo.createBranchForTag(repoName, ref);
+        } else if (repoProperties.commit) {
+            console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+            await newRepo.checkoutCommit(repoProperties.commit);
+        }
+
+        return newRepo;
     }
 
     public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
@@ -635,11 +691,11 @@ export class Repository {
     public async merge(remote: string | null, otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
         opts = opts || {};
         Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
-        
+
         // Check if the branch exists locally or on the remote
         const existsLocally = await this.checkBranchExistsLocally(otherBranch);
         const existsOnRemote = this.checkBranchExistsOnRemote(remote, otherBranch);
-        
+
         if (!existsLocally && !existsOnRemote) {
             const errorMessage = `Branch '${otherBranch}' does not exist locally or on the remote`;
             console.error(`[${this.repoName}]: ${errorMessage}`);
@@ -652,7 +708,7 @@ export class Repository {
         opts.noEdit && options.push('--no-edit');
         opts.noCommit && options.push('--no-commit');
         options.push('--allow-unrelated-histories');
-        
+
         let mergeData;
         try {
             mergeData = await new Promise<any>((resolve, reject) => {

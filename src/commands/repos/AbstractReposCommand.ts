@@ -14,6 +14,7 @@ import {StatusResult} from 'simple-git';
 export abstract class AbstractReposCommand implements ICommand {
     public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
     public static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
+    public static readonly PARAMETER_GIT_RETRY_COUNT: string = 'gitRetryCount';
 
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
@@ -25,6 +26,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected sequential: boolean;
     protected concurrency: number;
     protected depth: number;
+    protected gitRetryCount: number;
     protected parentReposConfigPath: string;
     protected rootDir: string;
 
@@ -62,6 +64,14 @@ export abstract class AbstractReposCommand implements ICommand {
         if (this.concurrency > 0) {
             Global.isVerbose() && console.log('running with concurrency for parallel execution = ' + this.concurrency);
         }
+
+        const gitRetryCount = params[AbstractReposCommand.PARAMETER_GIT_RETRY_COUNT];
+        if (typeof gitRetryCount === 'number' && !isNaN(gitRetryCount) && gitRetryCount >= 1) {
+            this.gitRetryCount = gitRetryCount;
+        } else {
+            this.gitRetryCount = 3;
+        }
+        Global.isVerbose() && console.log('running with git retry count = ' + this.gitRetryCount);
 
         this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         if (!fs.existsSync(this.parentReposConfigPath)) {

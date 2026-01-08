@@ -37,11 +37,11 @@ export class CloneRepos extends AbstractReposCommand {
             return Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, this.rootDir)
                 .then((latestTag) => {
                     repoProperties.latestTagForRelease = latestTag;
-                    return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth);
+                    return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth, this.gitRetryCount);
                 })
                 .catch((err) => Promise.reject(`[${repoName}]: failed to handle repo due to\n${err}`));
         } else {
-            return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth);
+            return Repository.clone(repoName, repoProperties, this.rootDir, toPath, depth, this.gitRetryCount);
         }
     }
 
