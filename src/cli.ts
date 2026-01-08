@@ -351,12 +351,20 @@ const cli = meow(
     Global options:
         --verbose
             Print verbose information to console
+
+        --git-retry-count <count>
+            Number of retry attempts for git clone operations on transient network errors
+            (HTTP 404, timeouts, connection issues). Uses exponential backoff (2s, 4s, 8s, ...).
+            Default: 3. Set to 1 to disable retries.
 `,
     /* tslint:enable:no-trailing-whitespace */
     {
         flags: {
             release: {
                 type: 'string'
+            },
+            gitRetryCount: {
+                type: 'number'
             }
         }
     }

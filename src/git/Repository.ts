@@ -81,29 +81,111 @@ export class Repository {
             }
 
             Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
-                simpleGit.simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        const newRepo = new Repository(toPath);
-                        if (refIsTag) {
-                            newRepo.createBranchForTag(repoName, refToCheckout)
-                                .then(() => {
-                                    resolve(newRepo);
-                                });
-                        } else if (repoProperties.commit) {
-                            console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
-                            newRepo.checkoutCommit(repoProperties.commit)
-                                .then(() => {
-                                    resolve(newRepo);
-                                });
-                        } else {
-                            resolve(newRepo);
-                        }
+                const maxRetries = Global.getGitRetryCount();
+                let attemptNumber = 0;
+
+                const attemptClone = () => {
+                    attemptNumber++;
+                    const isRetry = attemptNumber > 1;
+
+                    if (isRetry) {
+                        console.log(`[${repoName}]:`, `Clone attempt ${attemptNumber}/${maxRetries}...`);
                     }
-                });
+
+                    simpleGit.simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
+                        if (err) {
+                            // Check if error is transient and we have retries left
+                            if (Repository.isTransientCloneError(err) && attemptNumber < maxRetries) {
+                                const delayMs = Math.pow(2, attemptNumber) * 1000; // 2s, 4s, 8s, etc.
+                                console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attemptNumber}/${maxRetries}): ${err.message || err}`);
+                                console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
+
+                                Repository.delay(delayMs).then(() => attemptClone());
+                            } else {
+                                // No more retries or permanent error
+                                if (attemptNumber >= maxRetries && Repository.isTransientCloneError(err)) {
+                                    console.error(`[${repoName}]:`, `Clone failed after ${maxRetries} attempts`);
+                                }
+                                reject(err);
+                            }
+                        } else {
+                            // Success
+                            if (isRetry) {
+                                console.log(`[${repoName}]:`, `Clone succeeded on attempt ${attemptNumber}`);
+                            }
+
+                            const newRepo = new Repository(toPath);
+                            if (refIsTag) {
+                                newRepo.createBranchForTag(repoName, refToCheckout)
+                                    .then(() => {
+                                        resolve(newRepo);
+                                    });
+                            } else if (repoProperties.commit) {
+                                console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+                                newRepo.checkoutCommit(repoProperties.commit)
+                                    .then(() => {
+                                        resolve(newRepo);
+                                    });
+                            } else {
+                                resolve(newRepo);
+                            }
+                        }
+                    });
+                };
+
+                // Start first attempt
+                attemptClone();
             });
         });
+    }
+
+    /**
+     * Checks if the given error is a transient error that should be retried.
+     * Transient errors include network issues, temporary server errors, and Git RPC failures.
+     */
+    private static isTransientCloneError(error: any): boolean {
+        if (!error) {
+            return false;
+        }
+
+        const errorMsg = error.message || error.toString();
+
+        // HTTP 404 errors (often temporary on remote git servers / load balancers)
+        if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {
+            return true;
+        }
+
+        // Network timeout errors
+        if (errorMsg.includes('ETIMEDOUT') || errorMsg.includes('timed out')) {
+            return true;
+        }
+
+        // Connection errors
+        if (errorMsg.includes('ECONNREFUSED') ||
+            errorMsg.includes('ENOTFOUND') ||
+            errorMsg.includes('ECONNRESET') ||
+            errorMsg.includes('connection refused')) {
+            return true;
+        }
+
+        // Git-specific temporary errors
+        if (errorMsg.includes('Could not resolve host') ||
+            errorMsg.includes('Failed to connect') ||
+            errorMsg.includes('RPC failed') ||
+            errorMsg.includes('The remote end hung up') ||
+            errorMsg.includes('early EOF') ||
+            errorMsg.includes('index-pack failed')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Delay helper for exponential backoff
+     */
+    private static delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
