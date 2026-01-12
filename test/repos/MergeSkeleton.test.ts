@@ -21,7 +21,7 @@ describe('MergeSkeleton', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params, mainPath);
+                    cmd.prepareAndMayExecute(params);
                     await cmd.execute();
 
                     return mainPath;
@@ -60,7 +60,7 @@ describe('MergeSkeleton', () => {
                         ours: true
                     };
                     const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params, mainPath);
+                    cmd.prepareAndMayExecute(params);
                     await cmd.execute();
 
                     return mainPath;
@@ -82,7 +82,7 @@ describe('MergeSkeleton', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params, mainPath);
+                    cmd.prepareAndMayExecute(params);
 
                     // Should handle gracefully when no skeleton branch exists
                     try {

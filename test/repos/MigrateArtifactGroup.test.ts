@@ -24,7 +24,7 @@ describe('MigrateArtifactGroup', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params, rootDir);
+                    cmd.prepareAndMayExecute(params);
                     await cmd.execute();
 
                     return rootDir;
@@ -33,7 +33,7 @@ describe('MigrateArtifactGroup', () => {
                     // Assert: parent-repos.json updated with artifactGroup
                     const parentRepos = catParentReposJson(rootDir);
                     expect(parentRepos.main.artifactGroup).toBe('com.example.main');
-                    expect(parentRepos.main.useSnapshots).toBe(true);
+                    expect(parentRepos.main.useSnapshot).toBe(true);
                 }
             );
     });
@@ -54,7 +54,7 @@ describe('MigrateArtifactGroup', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params, rootDir);
+                    cmd.prepareAndMayExecute(params);
                     await cmd.execute();
 
                     return rootDir;
@@ -82,7 +82,7 @@ describe('MigrateArtifactGroup', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params, rootDir);
+                    cmd.prepareAndMayExecute(params);
 
                     // Should handle gracefully
                     try {
