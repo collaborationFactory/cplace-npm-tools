@@ -24,7 +24,7 @@ describe('MergeSkeleton', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return mainPath;
@@ -66,7 +66,7 @@ describe('MergeSkeleton', () => {
                         ours: true
                     };
                     const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return mainPath;

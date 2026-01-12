@@ -15,7 +15,7 @@ describe('BranchRepos', () => {
                     };
 
                     const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return rootDir;
@@ -45,7 +45,7 @@ describe('BranchRepos', () => {
                     };
 
                     const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return rootDir;
@@ -71,7 +71,7 @@ describe('BranchRepos', () => {
                     };
 
                     const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return rootDir;
@@ -98,7 +98,7 @@ describe('BranchRepos', () => {
         const params: ICommandParameters = {};
 
         const cmd = new BranchRepos();
-        const shouldExecute = cmd.prepareAndMayExecute(params);
+        const shouldExecute = cmd.prepareAndMayExecute(params, '/tmp');
 
         expect(shouldExecute).toBe(false);
     });

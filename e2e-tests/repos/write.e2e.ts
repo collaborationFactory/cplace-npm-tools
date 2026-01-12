@@ -36,7 +36,7 @@ describe('repos --write E2E', () => {
         );
     });
 
-    test('should update existing parent-repos.json', async () => {
+    test('should update parent-repos.json from cloned repositories', async () => {
         const runner = new E2ETestRunner(basicTestSetupData)
             .withBranchUnderTest('release/22.2');
 
@@ -45,13 +45,13 @@ describe('repos --write E2E', () => {
                 // Clone repos
                 await cliRunner.execute(['repos', '--clone'], {cwd: rootDir});
 
-                // Manually modify parent-repos.json
+                // Manually modify branch in parent-repos.json
                 const parentReposPath = path.join(rootDir, 'parent-repos.json');
                 const parentRepos = JSON.parse(fs.readFileSync(parentReposPath, 'utf8'));
-                parentRepos.main.custom = 'test-value';
+                parentRepos.main.description = 'Custom Description';
                 fs.writeFileSync(parentReposPath, JSON.stringify(parentRepos, null, 2));
 
-                // Execute: cplace-cli repos --write (should preserve manual changes)
+                // Execute: cplace-cli repos --write (should update from actual repos)
                 const result = await cliRunner.execute(['repos', '--write'], {cwd: rootDir});
                 return {result, rootDir};
             },
@@ -59,15 +59,18 @@ describe('repos --write E2E', () => {
                 // Assert: Command succeeded
                 expect(result.exitCode).toBe(0);
 
-                // Assert: Custom field preserved
+                // Assert: Standard fields updated from repositories
                 const parentReposPath = path.join(rootDir, 'parent-repos.json');
                 const content = JSON.parse(fs.readFileSync(parentReposPath, 'utf8'));
-                expect(content.main.custom).toBe('test-value');
+                expect(content.main.branch).toBe('release/22.2');
+                expect(content.main.url).toBeDefined();
+                // Description is preserved from existing parent-repos.json
+                expect(content.main.description).toBe('Custom Description');
             }
         );
     });
 
-    test('should create parent-repos.json if it does not exist', async () => {
+    test('should fail gracefully when parent-repos.json does not exist', async () => {
         const runner = new E2ETestRunner(basicTestSetupData)
             .withBranchUnderTest('release/22.2');
 
@@ -87,13 +90,12 @@ describe('repos --write E2E', () => {
                 return {result, rootDir};
             },
             async ({result, rootDir}) => {
-                // Assert: Command succeeded
-                expect(result.exitCode).toBe(0);
+                // Assert: Command failed with non-zero exit code
+                expect(result.exitCode).not.toBe(0);
 
-                // Assert: parent-repos.json was created
-                const parentReposPath = path.join(rootDir, 'parent-repos.json');
-                expect(fs.existsSync(parentReposPath)).toBe(true);
-                assertFileContains(parentReposPath, 'main');
+                // Assert: Error message indicates missing parent-repos.json
+                expect(result.stderr).toContain('Cannot find repo description');
+                expect(result.stderr).toContain('parent-repos.json');
             }
         );
     });

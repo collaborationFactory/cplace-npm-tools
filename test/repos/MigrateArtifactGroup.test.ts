@@ -24,7 +24,7 @@ describe('MigrateArtifactGroup', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return rootDir;
@@ -54,7 +54,7 @@ describe('MigrateArtifactGroup', () => {
 
                     const params: ICommandParameters = {};
                     const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params);
+                    cmd.prepareAndMayExecute(params, rootDir);
                     await cmd.execute();
 
                     return rootDir;
