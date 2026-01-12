@@ -4,14 +4,18 @@
   "description": "cplace cli tools",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "engines": {
+    "node": "~18.11.0",
+    "bun": "~1.2.20"
+  },
   "scripts": {
     "test": "jest",
     "dev:tsc": "tsc && chmod -R +x ./dist",
     "dev:lint": "eslint \"**/*.ts\"",
-    "dev": "npm run dev:lint && npm run dev:tsc",
+    "dev": "bun dev:lint && bun dev:tsc",
     "clean": "rm -rf dist/ *.tgz",
-    "prepare": "npm run clean && npm run dev",
-    "link": "npm run prepare && npm link"
+    "prepare": "bun clean && bun dev",
+    "link": "bun prepare && bun link"
   },
   "bin": {
     "cplace-cli": "dist/cli.js"
