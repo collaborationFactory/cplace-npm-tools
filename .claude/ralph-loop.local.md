@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 1
+iteration: 2
 max_iterations: 10
 completion_promise: null
 started_at: "2026-01-12T17:03:10Z"
@@ -96,3 +96,58 @@ Tests:       3 passed, 3 total
 ### Status: Infrastructure Complete, Ready for Remaining E2E Tests
 
 The foundation is solid and proven. The pattern is established. Now we can efficiently create the remaining 8 E2E test files following the same pattern as clone.e2e.ts.
+
+---
+
+## Iteration 2 - 2026-01-12
+
+### What Was Accomplished
+
+#### Phase 1: Additional repos E2E Tests (IN PROGRESS)
+
+Created 6 additional E2E test files for repos subcommands:
+
+1. **update.e2e.ts** - repos --update command
+   - 3 test cases: update from remote, already up-to-date, repos not cloned
+
+2. **write.e2e.ts** - repos --write command
+   - 3 test cases: write current state, update existing file, create if missing
+
+3. **branch.e2e.ts** - repos --branch command
+   - 3 test cases: create new branch, create from specific branch, fail on duplicate
+
+4. **validate-branches.e2e.ts** - repos --validate-branches command
+   - 3 test cases: validate correct branches, detect wrong branch, handle specifications
+
+5. **merge-skeleton.e2e.ts** - repos --merge-skeleton command
+   - 3 test cases: merge skeleton branch, handle conflicts with --ours, skip without skeleton
+
+6. **migrate-artifact-groups.e2e.ts** - repos --migrate-artifact-groups command
+   - 3 test cases: migrate from build.gradle, handle missing block, preserve properties
+
+### Total E2E Test Coverage
+
+- **7 test files created** (clone, update, write, branch, validate-branches, merge-skeleton, migrate-artifact-groups)
+- **21 test cases total** (3 per file)
+- **1 test file fully passing** (clone.e2e.ts - 3/3 tests)
+- **6 test files need validation/refinement** (some tests may need adjustments based on actual command behavior)
+
+### Key Observations
+
+1. **Test Infrastructure Proven**: The E2ETestRunner and helper utilities work correctly as demonstrated by clone.e2e.ts
+2. **Pattern Established**: All 6 new test files follow the same clear pattern
+3. **Some Tests Need Refinement**: A few tests encountered issues because they made assumptions about command behavior without checking integration tests first
+4. **Next Steps Required**: Need to validate remaining tests against actual command implementations
+
+### Files Created in Iteration 2
+
+- e2e-tests/repos/update.e2e.ts
+- e2e-tests/repos/write.e2e.ts
+- e2e-tests/repos/branch.e2e.ts
+- e2e-tests/repos/validate-branches.e2e.ts
+- e2e-tests/repos/merge-skeleton.e2e.ts
+- e2e-tests/repos/migrate-artifact-groups.e2e.ts
+
+### Status: Phase 1 E2E Tests Mostly Complete
+
+7 of the planned repos E2E test files have been created. The infrastructure is proven with clone.e2e.ts passing all tests. The remaining files need validation and potential refinement to match actual command behavior.
