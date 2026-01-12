@@ -11,6 +11,9 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
+                    // Create build.gradle with version info for CplaceVersion check
+                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
+
                     // Create skeleton branch in remote
                     const mainPath = path.join(rootDir, '..', 'main');
                     child_process.execSync('git checkout -b skeleton/5.20', {cwd: mainPath});
@@ -42,6 +45,9 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
+                    // Create build.gradle with version info for CplaceVersion check
+                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
+
                     // Create conflicting changes
                     const mainPath = path.join(rootDir, '..', 'main');
 
@@ -78,6 +84,9 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
+                    // Create build.gradle with version info for CplaceVersion check
+                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
+
                     const mainPath = path.join(rootDir, '..', 'main');
 
                     const params: ICommandParameters = {};
