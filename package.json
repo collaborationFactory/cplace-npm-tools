@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns=e2e-tests",
+    "test:e2e": "npm run prepare && jest --testMatch='**/e2e-tests/**/*.e2e.ts'",
+    "test:all": "npm test && npm run test:e2e",
     "dev:tsc": "tsc && chmod -R +x ./dist",
     "dev:lint": "eslint \"**/*.ts\"",
     "dev": "npm run dev:lint && npm run dev:tsc",
@@ -36,6 +38,7 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-n": "^15.6.0",
     "eslint-plugin-promise": "^6.1.1",
+    "execa": "^5.1.1",
     "jest": "^29.7.0",
     "merge2": "^1.0.2",
     "ts-jest": "^29.1.5",
