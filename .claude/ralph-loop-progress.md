@@ -244,7 +244,8 @@ Plus create E2E tests for all three commands.
 - [x] Fix parameter validation bug in MergeReleaseNotes
 
 ### Commits
-- Hash: [to be added]
+- Hash: `3e3206a`
+- Message: "Add comprehensive test coverage for release-notes commands (Phase 3)"
 
 ---
 
