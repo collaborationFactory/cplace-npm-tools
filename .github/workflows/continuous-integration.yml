@@ -2,8 +2,8 @@ name: Continuous Integration
 on: [pull_request, workflow_dispatch]
 
 jobs:
-  build:
-    name: Run unit tests with Jest
+  integration-tests:
+    name: Run integration tests with Jest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,5 +15,36 @@ jobs:
         run: git config --global user.email "cplace-npm-tools@cplace.io" && git config --global user.name "cplace-npm-tools GitHub Action"
       - name: Install modules
         run: npm install
-      - name: Run Jest
-        run: npm run test --verbose
+      - name: Run integration tests
+        run: npm test --verbose
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        continue-on-error: true
+
+  e2e-tests:
+    name: Run E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18.11.0"
+          cache: 'npm'
+      - name: Setup GIT for testing
+        run: git config --global user.email "cplace-npm-tools@cplace.io" && git config --global user.name "cplace-npm-tools GitHub Action"
+      - name: Install modules
+        run: npm install
+      - name: Build project
+        run: npm run prepare
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: e2e-test-results
+          path: |
+            e2e-tests/**/*.log
+            e2e-tests/**/*.xml

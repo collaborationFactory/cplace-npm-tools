@@ -9,14 +9,16 @@
     "experimentalDecorators": true,
     "outDir": "dist",
     "noImplicitAny": false,
-    "rootDirs": ["src", "test"],
+    "rootDirs": ["src", "test", "e2e-tests"],
     "lib": ["ES6"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "e2e-tests/**/*.ts"
   ],
   "exclude": [
-    "src/**/*.test.ts",
-    "test/**/*"
+    "node_modules",
+    "dist"
   ]
 }
