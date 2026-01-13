@@ -1,6 +1,7 @@
 import {ICommandParameters} from '../../src/commands/models';
 import {BranchRepos} from '../../src/commands/repos/BranchRepos';
 import {basicTestSetupData, testWith, catParentReposJson} from '../helpers/remoteRepositories';
+import {withLockedCwd} from '../helpers/processLock';
 import * as path from 'path';
 import * as child_process from 'child_process';
 
@@ -14,15 +15,11 @@ describe('BranchRepos', () => {
                         branch: 'feature/new-feature'
                     };
 
-                    const previousCwd = process.cwd();
-                    try {
-                        process.chdir(rootDir);
+                    await withLockedCwd(rootDir, async () => {
                         const cmd = new BranchRepos();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return rootDir;
                 },
@@ -50,15 +47,11 @@ describe('BranchRepos', () => {
                         branch: 'feature/new-feature'
                     };
 
-                    const previousCwd = process.cwd();
-                    try {
-                        process.chdir(rootDir);
+                    await withLockedCwd(rootDir, async () => {
                         const cmd = new BranchRepos();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return rootDir;
                 },
@@ -82,15 +75,11 @@ describe('BranchRepos', () => {
                         from: 'master'
                     };
 
-                    const previousCwd = process.cwd();
-                    try {
-                        process.chdir(rootDir);
+                    await withLockedCwd(rootDir, async () => {
                         const cmd = new BranchRepos();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return rootDir;
                 },
@@ -112,17 +101,13 @@ describe('BranchRepos', () => {
             );
     });
 
-    test('should not execute without branch parameter', () => {
+    test('should not execute without branch parameter', async () => {
         const params: ICommandParameters = {};
 
-        const previousCwd = process.cwd();
-        try {
-            process.chdir('/tmp');
+        await withLockedCwd('/tmp', async () => {
             const cmd = new BranchRepos();
             const shouldExecute = cmd.prepareAndMayExecute(params);
             expect(shouldExecute).toBe(false);
-        } finally {
-            process.chdir(previousCwd);
-        }
+        });
     });
 });

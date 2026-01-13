@@ -1,6 +1,7 @@
 import {ICommandParameters} from '../../src/commands/models';
 import {MergeSkeleton} from '../../src/commands/repos/MergeSkeleton';
 import {multiBranchTestSetupData, testWith} from '../helpers/remoteRepositories';
+import {withLockedCwd} from '../helpers/processLock';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
@@ -25,16 +26,13 @@ describe('MergeSkeleton', () => {
                     child_process.execSync('git checkout release/5.20', {cwd: mainPath});
 
                     const params: ICommandParameters = {};
-                    const previousCwd = process.cwd();
-                    try {
-                        // MergeSkeleton operates on the current repo, so run from main
-                        process.chdir(mainPath);
+
+                    // MergeSkeleton operates on the current repo, so run from main
+                    await withLockedCwd(mainPath, async () => {
                         const cmd = new MergeSkeleton();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return mainPath;
                 },
@@ -76,16 +74,13 @@ describe('MergeSkeleton', () => {
                     const params: ICommandParameters = {
                         ours: true
                     };
-                    const previousCwd = process.cwd();
-                    try {
-                        // MergeSkeleton operates on the current repo, so run from main
-                        process.chdir(mainPath);
+
+                    // MergeSkeleton operates on the current repo, so run from main
+                    await withLockedCwd(mainPath, async () => {
                         const cmd = new MergeSkeleton();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return mainPath;
                 },
@@ -109,10 +104,9 @@ describe('MergeSkeleton', () => {
                     child_process.execSync('git add build.gradle && git commit -m "Add build.gradle"', {cwd: mainPath});
 
                     const params: ICommandParameters = {};
-                    const previousCwd = process.cwd();
-                    try {
-                        // MergeSkeleton operates on the current repo, so run from main
-                        process.chdir(mainPath);
+
+                    // MergeSkeleton operates on the current repo, so run from main
+                    await withLockedCwd(mainPath, async () => {
                         const cmd = new MergeSkeleton();
                         cmd.prepareAndMayExecute(params);
 
@@ -123,9 +117,7 @@ describe('MergeSkeleton', () => {
                             // Expected to fail or skip when no skeleton branch
                             expect(e).toBeDefined();
                         }
-                    } finally {
-                        process.chdir(previousCwd);
-                    }
+                    });
 
                     return mainPath;
                 },
