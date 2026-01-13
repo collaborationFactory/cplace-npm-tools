@@ -11,11 +11,13 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
-                    // Create build.gradle with version info for CplaceVersion check
-                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
+                    const mainPath = path.join(rootDir, '..', 'main');
+
+                    // Create build.gradle with version info for CplaceVersion check in main repo
+                    fs.writeFileSync(path.join(mainPath, 'build.gradle'), 'version = "5.20.0"');
+                    child_process.execSync('git add build.gradle && git commit -m "Add build.gradle"', {cwd: mainPath});
 
                     // Create skeleton branch in remote
-                    const mainPath = path.join(rootDir, '..', 'main');
                     child_process.execSync('git checkout -b skeleton/5.20', {cwd: mainPath});
                     fs.writeFileSync(path.join(mainPath, 'skeleton.txt'), 'skeleton content');
                     child_process.execSync('git add . && git commit -m "skeleton"', {cwd: mainPath});
@@ -25,7 +27,8 @@ describe('MergeSkeleton', () => {
                     const params: ICommandParameters = {};
                     const previousCwd = process.cwd();
                     try {
-                        process.chdir(rootDir);
+                        // MergeSkeleton operates on the current repo, so run from main
+                        process.chdir(mainPath);
                         const cmd = new MergeSkeleton();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
@@ -51,11 +54,13 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
-                    // Create build.gradle with version info for CplaceVersion check
-                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
+                    const mainPath = path.join(rootDir, '..', 'main');
+
+                    // Create build.gradle with version info for CplaceVersion check in main repo
+                    fs.writeFileSync(path.join(mainPath, 'build.gradle'), 'version = "5.20.0"');
+                    child_process.execSync('git add build.gradle && git commit -m "Add build.gradle"', {cwd: mainPath});
 
                     // Create conflicting changes
-                    const mainPath = path.join(rootDir, '..', 'main');
 
                     // Create skeleton branch with conflict
                     child_process.execSync('git checkout -b skeleton/5.20', {cwd: mainPath});
@@ -73,7 +78,8 @@ describe('MergeSkeleton', () => {
                     };
                     const previousCwd = process.cwd();
                     try {
-                        process.chdir(rootDir);
+                        // MergeSkeleton operates on the current repo, so run from main
+                        process.chdir(mainPath);
                         const cmd = new MergeSkeleton();
                         cmd.prepareAndMayExecute(params);
                         await cmd.execute();
@@ -96,21 +102,29 @@ describe('MergeSkeleton', () => {
             .withBranchUnderTest('release/5.20')
             .evaluateWithRemoteAndLocalRepos(
                 async (rootDir: string) => {
-                    // Create build.gradle with version info for CplaceVersion check
-                    fs.writeFileSync(path.join(rootDir, 'build.gradle'), 'version = "5.20.0"');
-
                     const mainPath = path.join(rootDir, '..', 'main');
 
-                    const params: ICommandParameters = {};
-                    const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params);
+                    // Create build.gradle with version info for CplaceVersion check in main repo
+                    fs.writeFileSync(path.join(mainPath, 'build.gradle'), 'version = "5.20.0"');
+                    child_process.execSync('git add build.gradle && git commit -m "Add build.gradle"', {cwd: mainPath});
 
-                    // Should handle gracefully when no skeleton branch exists
+                    const params: ICommandParameters = {};
+                    const previousCwd = process.cwd();
                     try {
-                        await cmd.execute();
-                    } catch (e) {
-                        // Expected to fail or skip when no skeleton branch
-                        expect(e).toBeDefined();
+                        // MergeSkeleton operates on the current repo, so run from main
+                        process.chdir(mainPath);
+                        const cmd = new MergeSkeleton();
+                        cmd.prepareAndMayExecute(params);
+
+                        // Should handle gracefully when no skeleton branch exists
+                        try {
+                            await cmd.execute();
+                        } catch (e) {
+                            // Expected to fail or skip when no skeleton branch
+                            expect(e).toBeDefined();
+                        }
+                    } finally {
+                        process.chdir(previousCwd);
                     }
 
                     return mainPath;

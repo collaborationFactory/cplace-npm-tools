@@ -37,8 +37,9 @@ describe('MigrateArtifactGroup', () => {
                 },
                 async (rootDir: string) => {
                     // Assert: parent-repos.json updated with artifactGroup
+                    // Note: 'main' repo always gets 'cf.cplace' as artifactGroup (hardcoded)
                     const parentRepos = catParentReposJson(rootDir);
-                    expect(parentRepos.main.artifactGroup).toBe('com.example.main');
+                    expect(parentRepos.main.artifactGroup).toBe('cf.cplace');
                     expect(parentRepos.main.useSnapshot).toBe(true);
                 }
             );
