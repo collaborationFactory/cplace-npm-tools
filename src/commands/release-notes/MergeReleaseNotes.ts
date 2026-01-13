@@ -26,7 +26,7 @@ export class MergeReleaseNotes implements ICommand {
             return false;
         }
         this.pathToBase = params[MergeReleaseNotes.PARAMETER_BASE] as string;
-        if (!this.pathToOther) {
+        if (!this.pathToBase) {
             console.error(`missing "${MergeReleaseNotes.PARAMETER_BASE}" parameter`);
             return false;
         }

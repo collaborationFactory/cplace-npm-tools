@@ -158,13 +158,97 @@ All errors are caught by the generic error handler in `test/helpers/remoteReposi
 
 ---
 
-## Future Iterations (Not Started)
+---
 
-### Phase 3: release-notes Command Tests (Pending)
-- Implement tests for ReleaseNotes command
-- Cover message database parsing
-- Test multi-language support
-- Verify merge conflict resolution
+## Iteration 3: Phase 3 - release-notes Command Tests ✅
+
+**Completed**: 2026-01-13
+
+**Status**: Complete test coverage for release-notes commands
+
+### Scope
+Complete test coverage for the 3 release-notes subcommands:
+1. GenerateReleaseNotes (existing tests - extend if needed)
+2. MergeReleaseNotes (integration tests needed)
+3. CheckMessages (integration tests needed)
+
+Plus create E2E tests for all three commands.
+
+### Existing Tests (Before)
+- ✅ `test/release-notes/GenerateReleaseNotes.test.ts` - 1 unit test for sorting
+- ✅ `test/release-notes/ReleaseNotesMessagesFile.test.ts` - 4 unit tests for message file handling
+
+### New Tests Created
+- ✅ `test/release-notes/MergeReleaseNotes.test.ts` - 8 integration tests for three-way merge
+- ✅ `test/release-notes/CheckMessages.test.ts` - 13 integration tests (9 new + 4 from ReleaseNotesMessagesFile)
+- ✅ `e2e-tests/release-notes/generate.e2e.ts` - 2 E2E tests for generation
+- ✅ `e2e-tests/release-notes/merge.e2e.ts` - 2 E2E tests for merge
+- ✅ `e2e-tests/release-notes/check.e2e.ts` - 3 E2E tests for validation
+
+### Test Coverage Summary
+
+**Integration Tests**: 27 tests total
+- GenerateReleaseNotes: 1 test (existing)
+- ReleaseNotesMessagesFile: 4 tests (existing)
+- MergeReleaseNotes: 8 tests (NEW)
+  - Non-conflicting merge
+  - Identical entries handling
+  - Conflict detection
+  - Commented entries
+  - Parameter validation (current, other, base)
+  - Multiple entries from both sides
+- CheckMessages: 13 tests (NEW)
+  - Parameter validation (default size, custom size, zero size)
+  - Changelog marker detection
+  - Merge commit format
+  - Second paragraph detection
+  - Same paragraph rejection
+  - Missing entry tracking
+  - Duplicate prevention
+  - Message extraction
+  - Error counting
+
+**E2E Tests**: 7 tests total
+- generate.e2e.ts: 2 tests
+  - Generate from git log with changelog markers
+  - Handle empty repository gracefully
+- merge.e2e.ts: 2 tests
+  - Merge two message databases
+  - Handle conflicting changes
+- check.e2e.ts: 3 tests
+  - Validate all commits have messages
+  - Detect missing commit messages
+  - Accept custom size parameter
+
+### Bug Fixed
+
+**MergeReleaseNotes.ts:29** - Parameter validation bug
+- **Issue**: Validation checked `this.pathToOther` instead of `this.pathToBase`
+- **Root Cause**: Copy-paste error in validation logic
+- **Fix**: Changed `if (!this.pathToOther)` to `if (!this.pathToBase)`
+- **Impact**: Command would accept missing base parameter when it should reject it
+- **Location**: `src/commands/release-notes/MergeReleaseNotes.ts:29`
+
+### Test Results
+- **Integration Tests**: 27/27 passing ✅
+- **E2E Tests**: 7/7 passing ✅
+- **Total New Tests**: 24 (17 integration + 7 E2E)
+
+### Accomplishments
+- [x] Review existing release-notes tests
+- [x] Create MergeReleaseNotes integration tests (8 tests)
+- [x] Create CheckMessages integration tests (13 tests)
+- [x] Create release-notes E2E tests (7 tests across 3 files)
+- [x] Run and verify all Phase 3 integration tests
+- [x] Run and verify all Phase 3 E2E tests
+- [x] Fix parameter validation bug in MergeReleaseNotes
+
+### Commits
+- Hash: [to be added]
+
+---
+
+## Future Iterations (Not Started)
 
 ### Phase 4: Additional Command Tests (Pending)
 - flow command tests (upmerge workflows)
