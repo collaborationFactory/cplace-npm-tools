@@ -446,17 +446,88 @@ jobs:
 
 ---
 
+---
+
+## Post-Loop Improvements ✅
+
+**Completed**: 2026-01-13
+
+After completing all 5 planned Ralph Loop phases, additional improvements were made to address test isolation and stability issues discovered during test execution.
+
+### Issue 1: Temp Directory Race Condition
+**Problem**: 6 tests failing with `EEXIST: file already exists, mkdir` errors when Jest ran tests in parallel. Multiple tests starting within the same millisecond generated identical directory names.
+
+**Root Cause**: `createTempDirectory()` used `new Date().getTime()` (millisecond precision only), causing directory name collisions across Jest workers.
+
+**Solution**: Enhanced directory naming to guarantee uniqueness:
+```typescript
+// Before: /tmp/${timestamp}-cplace-cli-test-${suffix}
+// After:  /tmp/${timestamp}-${pid}-${random}-cplace-cli-test-${suffix}
+```
+Added process ID (handles multiple Jest workers) and random component (handles same-millisecond collisions).
+
+**Result**: Zero EEXIST errors, temp directory race condition completely eliminated.
+
+**Commit**: e495483
+
+### Issue 2: Process.chdir() Race Condition
+**Problem**: After fixing temp directory issue, 4 tests still failed inconsistently. Tests were interfering with each other's working directories when calling `process.chdir()` simultaneously.
+
+**Root Cause**: Multiple tests calling `process.chdir()` in parallel. Test A changes to dirA, Test B immediately changes to dirB, Test A operations run in wrong directory.
+
+**Solution**: Created mutex lock for serializing `process.chdir()` calls:
+- New helper: `test/helpers/processLock.ts` with `withLockedCwd()` function
+- Uses Promise-based queue to serialize all working directory changes
+- Updated 7 test cases across BranchRepos.test.ts and MergeSkeleton.test.ts
+
+**Result**: Eliminated race conditions. Tests now fail deterministically (not flakily), revealing actual test/command bugs rather than isolation issues.
+
+**Commit**: e04b5ff
+
+### Issue 3: Remaining Test Failures (Documented)
+**Status**: 4 tests still failing consistently after isolation fixes. These are actual bugs in tests or commands, not isolation issues.
+
+**Failures**:
+1. BranchRepos: "should create branch across all repos" - Branches not created in sibling repos
+2. BranchRepos: "should create branch from specific source branch" - parent-repos.json ENOENT error
+3. MergeSkeleton: "should detect and merge skeleton branch automatically" - Merge conflicts not resolved
+4. MergeSkeleton: "should handle merge conflicts with --ours strategy" - --ours strategy not working
+
+**Action Taken**: Created comprehensive documentation in `followup-tasks/fix-remaining-test-failures.md` with:
+- Detailed error descriptions and root cause analysis
+- Investigation steps for debugging
+- Recommended fix approaches (test setup vs command robustness)
+- Quick win option to skip tests temporarily
+
+**Commit**: 71c4141
+
+### Test Results After Post-Loop Improvements
+- **Before Post-Loop**: 342/348 passing (6 EEXIST failures + flaky failures)
+- **After Post-Loop**: 344/348 passing (4 consistent, documented failures)
+- **Pass Rate**: 98.8%
+- **Flaky Tests**: 0 (all test isolation issues resolved)
+
+### Commits Summary
+1. e495483 - Fix temp directory race condition with PID + random component
+2. e04b5ff - Add process.chdir() mutex lock for test isolation
+3. 71c4141 - Document remaining 4 test failures for future work
+
+---
+
 ## Summary: Ralph Loop Implementation Complete ✅
 
-All 5 phases of the test suite implementation plan have been completed:
+All 5 phases of the test suite implementation plan have been completed, plus additional post-loop improvements for test stability:
 
 1. **Phase 1**: E2E Infrastructure Foundation (5 E2E test commands)
 2. **Phase 2**: repos Command Integration Tests (9 tests across 3 files)
 3. **Phase 3**: release-notes Command Tests (24 new tests: 17 integration + 7 E2E)
 4. **Phase 4**: flow, visualize, version Tests (26 new tests: 20 integration + 6 E2E)
 5. **Phase 5**: CI/CD Integration & Documentation (GitHub Actions + comprehensive docs)
+6. **Post-Loop**: Test Isolation Fixes (temp directory + process.chdir() race conditions)
 
 **Total New Tests Added**: 64 tests (55 integration + 13 E2E)
-**Final Test Count**: 355 passing tests
+**Final Test Count**: 344/348 passing (98.8% pass rate)
+**Test Stability**: All flaky tests eliminated, remaining failures documented
 **Documentation**: Complete test writing guide for future development
 **CI/CD**: Automated testing on every pull request
+**Known Issues**: 4 failing tests documented in `followup-tasks/fix-remaining-test-failures.md`
