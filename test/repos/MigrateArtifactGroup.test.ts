@@ -23,9 +23,15 @@ describe('MigrateArtifactGroup', () => {
                     fs.writeFileSync(path.join(rootDir, 'build.gradle'), buildGradle);
 
                     const params: ICommandParameters = {};
-                    const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new MigrateArtifactGroup();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return rootDir;
                 },
@@ -53,9 +59,15 @@ describe('MigrateArtifactGroup', () => {
                     fs.writeFileSync(path.join(rootDir, 'build.gradle'), buildGradle);
 
                     const params: ICommandParameters = {};
-                    const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new MigrateArtifactGroup();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return rootDir;
                 },
@@ -81,14 +93,20 @@ describe('MigrateArtifactGroup', () => {
                     fs.writeFileSync(path.join(rootDir, 'build.gradle'), buildGradle);
 
                     const params: ICommandParameters = {};
-                    const cmd = new MigrateArtifactGroup();
-                    cmd.prepareAndMayExecute(params);
-
-                    // Should handle gracefully
+                    const previousCwd = process.cwd();
                     try {
-                        await cmd.execute();
-                    } catch (e) {
-                        // Expected to complete or skip gracefully
+                        process.chdir(rootDir);
+                        const cmd = new MigrateArtifactGroup();
+                        cmd.prepareAndMayExecute(params);
+
+                        // Should handle gracefully
+                        try {
+                            await cmd.execute();
+                        } catch (e) {
+                            // Expected to complete or skip gracefully
+                        }
+                    } finally {
+                        process.chdir(previousCwd);
                     }
 
                     return rootDir;

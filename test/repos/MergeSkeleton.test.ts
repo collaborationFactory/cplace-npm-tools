@@ -23,9 +23,15 @@ describe('MergeSkeleton', () => {
                     child_process.execSync('git checkout release/5.20', {cwd: mainPath});
 
                     const params: ICommandParameters = {};
-                    const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new MergeSkeleton();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return mainPath;
                 },
@@ -65,9 +71,15 @@ describe('MergeSkeleton', () => {
                     const params: ICommandParameters = {
                         ours: true
                     };
-                    const cmd = new MergeSkeleton();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new MergeSkeleton();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return mainPath;
                 },

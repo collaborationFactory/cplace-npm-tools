@@ -14,9 +14,15 @@ describe('BranchRepos', () => {
                         branch: 'feature/new-feature'
                     };
 
-                    const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new BranchRepos();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return rootDir;
                 },
@@ -44,9 +50,15 @@ describe('BranchRepos', () => {
                         branch: 'feature/new-feature'
                     };
 
-                    const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new BranchRepos();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return rootDir;
                 },
@@ -70,9 +82,15 @@ describe('BranchRepos', () => {
                         from: 'master'
                     };
 
-                    const cmd = new BranchRepos();
-                    cmd.prepareAndMayExecute(params, rootDir);
-                    await cmd.execute();
+                    const previousCwd = process.cwd();
+                    try {
+                        process.chdir(rootDir);
+                        const cmd = new BranchRepos();
+                        cmd.prepareAndMayExecute(params);
+                        await cmd.execute();
+                    } finally {
+                        process.chdir(previousCwd);
+                    }
 
                     return rootDir;
                 },
@@ -97,9 +115,14 @@ describe('BranchRepos', () => {
     test('should not execute without branch parameter', () => {
         const params: ICommandParameters = {};
 
-        const cmd = new BranchRepos();
-        const shouldExecute = cmd.prepareAndMayExecute(params, '/tmp');
-
-        expect(shouldExecute).toBe(false);
+        const previousCwd = process.cwd();
+        try {
+            process.chdir('/tmp');
+            const cmd = new BranchRepos();
+            const shouldExecute = cmd.prepareAndMayExecute(params);
+            expect(shouldExecute).toBe(false);
+        } finally {
+            process.chdir(previousCwd);
+        }
     });
 });
