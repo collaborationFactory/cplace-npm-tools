@@ -4,9 +4,13 @@ import * as fs from 'fs';
 import rimraf = require('rimraf');
 
 export function createTempDirectory(suffix: string): string {
+    const timestamp = new Date().getTime();
+    const pid = process.pid;
+    const random = Math.floor(Math.random() * 100000);
+
     const dirPath = path.join(
         os.tmpdir(),
-        `${new Date().getTime()}-cplace-cli-test-${suffix}`
+        `${timestamp}-${pid}-${random}-cplace-cli-test-${suffix}`
     );
     if(!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath);
