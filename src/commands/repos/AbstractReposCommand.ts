@@ -68,7 +68,7 @@ export abstract class AbstractReposCommand implements ICommand {
         const maxAttempts = params[AbstractReposCommand.PARAMETER_MAX_ATTEMPTS];
         if (typeof maxAttempts === 'number' && !isNaN(maxAttempts) && maxAttempts >= 1) {
             if (maxAttempts > 10) {
-                throw new Error('maxAttempts must be between 1 and 10');
+                throw new Error(`maxAttempts value ${maxAttempts} must be between 1 and 10`);
             }
             this.maxAttempts = maxAttempts;
         } else {

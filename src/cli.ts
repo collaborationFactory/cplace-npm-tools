@@ -143,8 +143,9 @@ const cli = meow(
                     Ignored if If '--sequential' is set.
                     Default is 15.
                 --max-attempts sets the maximum number of attempts for transient git/network errors
-                    such as HTTP 404 responses, connection errors, or timeouts (often temporary on remote
-                    git servers / load balancers). Uses exponential backoff (2s, 4s, 8s, ...).
+                    (for example temporary HTTP 404 responses, connection timeouts, connection refused,
+                    or connection reset errors on remote git servers / load balancers).
+                    Uses exponential backoff (2s, 4s, 8s, ...).
                     Default: 1 (no retries). Set to 3 or higher to enable retries. Maximum: 10.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
