@@ -583,9 +583,9 @@ export class Repository {
      * The fetch will be done with a depth of 1.
      * @param branch the branch to fetch from the remote
      */
-    public async prefetchBranchForShallowClone(branch: string): Promise<void> {
+    public prefetchBranchForShallowClone(branch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.git.revparse(['--is-shallow-repository'], async (err, data) => {
+            this.git.revparse(['--is-shallow-repository'], (err, data) => {
                 if (err) {
                     reject(err);
                 } else if (data?.trim() === 'true') {
@@ -596,13 +596,20 @@ export class Repository {
                     The named branches will be interpreted as if specified with the -t option on the git remote add command line.
                     With --add, instead of replacing the list of currently tracked branches, adds to that list.
                      */
-                    try {
-                        await this.git.remote(['set-branches', '--add', 'origin', branch]);
-                        await this.git.fetch(['--depth', '1']);
-                        resolve();
-                    } catch (fetchErr) {
-                        reject(fetchErr);
-                    }
+                    this.git.remote(['set-branches', '--add', 'origin', branch], (remoteErr) => {
+                        if (remoteErr) {
+                            reject(remoteErr);
+                        } else {
+                            // Fetch only the specific branch to avoid "Cannot fast-forward to multiple branches" error
+                            this.git.fetch(['--depth', '1', 'origin', branch], (fetchErr) => {
+                                if (fetchErr) {
+                                    reject(fetchErr);
+                                } else {
+                                    resolve();
+                                }
+                            });
+                        }
+                    });
                 } else {
                     resolve();
                 }
