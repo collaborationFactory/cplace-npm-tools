@@ -39,7 +39,7 @@ describe('release-notes generate E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // Verify command executed
                 if (result.exitCode !== 0) {
                     console.log('Command stderr:', result.stderr);
@@ -75,7 +75,7 @@ describe('release-notes generate E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // Command should complete without crashing
                 // Exit code may be non-zero if no commits found, which is acceptable
                 expect([0, 1]).toContain(result.exitCode);

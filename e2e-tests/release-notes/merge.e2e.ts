@@ -93,7 +93,7 @@ describe('release-notes merge E2E', () => {
 
                 return {result, currentFile, tempDir};
             },
-            async ({result, currentFile, tempDir}) => {
+            async ({result, tempDir}) => {
                 try {
                     // Command should complete (may report conflicts but not crash)
                     expect(result.exitCode).toBeGreaterThanOrEqual(0);

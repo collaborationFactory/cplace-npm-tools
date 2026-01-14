@@ -21,7 +21,7 @@ export async function withLockedCwd<T>(dir: string, fn: () => Promise<T>): Promi
     const previousLock = cwdLock;
 
     // Create a new lock that will be released when this operation completes
-    let releaseLock: () => void;
+    let releaseLock: (() => void) | undefined;
     cwdLock = new Promise<void>((resolve) => {
         releaseLock = resolve;
     });
@@ -41,6 +41,8 @@ export async function withLockedCwd<T>(dir: string, fn: () => Promise<T>): Promi
         }
     } finally {
         // Release the lock so the next operation can proceed
-        releaseLock!();
+        if (releaseLock) {
+            releaseLock();
+        }
     }
 }

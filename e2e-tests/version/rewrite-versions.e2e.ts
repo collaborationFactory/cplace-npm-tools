@@ -51,7 +51,7 @@ ext {
 
                 return {result, rootRepoPath, parentReposPath, mainPath};
             },
-            async ({result, rootRepoPath, parentReposPath, mainPath}) => {
+            async ({result, parentReposPath, mainPath}) => {
                 // Verify command executed
                 if (result.exitCode !== 0) {
                     console.log('Rewrite-versions stderr:', result.stderr);
@@ -127,7 +127,7 @@ ext {
 
                 return {result, rootRepoPath, parentReposPath, mainPath};
             },
-            async ({result, rootRepoPath, parentReposPath, mainPath}) => {
+            async ({result, parentReposPath, mainPath}) => {
                 // Command should complete
                 expect([0, 1]).toContain(result.exitCode);
 

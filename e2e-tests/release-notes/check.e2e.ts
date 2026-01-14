@@ -44,7 +44,7 @@ describe('release-notes check E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // When all messages are present, check should pass
                 if (result.exitCode === 0) {
                     expect(result.stdout + result.stderr).not.toContain('does not contain all commits');
@@ -89,7 +89,7 @@ describe('release-notes check E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // When messages are missing, check should fail or report errors
                 const output = result.stdout + result.stderr;
 
@@ -131,7 +131,7 @@ describe('release-notes check E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // Command should accept the size parameter without error
                 // Exit code may vary based on repository state
                 expect(result.exitCode).toBeGreaterThanOrEqual(0);

@@ -13,12 +13,11 @@
     "lib": ["ES6"]
   },
   "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "e2e-tests/**/*.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist"
+    "src/**/*.test.ts",
+    "test/**/*",
+    "e2e-tests/**/*"
   ]
 }

@@ -89,7 +89,7 @@ describe('repos --write E2E', () => {
                 const result = await cliRunner.execute(['repos', '--write'], {cwd: rootDir});
                 return {result, rootDir};
             },
-            async ({result, rootDir}) => {
+            async ({result}) => {
                 // Assert: Command failed with non-zero exit code
                 expect(result.exitCode).not.toBe(0);
 

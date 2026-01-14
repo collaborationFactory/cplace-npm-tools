@@ -46,7 +46,7 @@ describe('flow upmerge E2E', () => {
 
                 return {result, mainPath};
             },
-            async ({result, mainPath}) => {
+            async ({result}) => {
                 // Verify command executed (may have specific requirements)
                 // Exit code 0 means success, non-zero may indicate conflicts or requirements not met
                 if (result.exitCode !== 0) {

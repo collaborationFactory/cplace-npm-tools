@@ -1,9 +1,8 @@
 import {E2ETestRunner} from '../helpers/E2ETestRunner';
 import {basicTestSetupData} from '../../test/helpers/remoteRepositories';
-import {assertDirectoryExists, assertGitBranch} from '../helpers/assertions';
+import {assertDirectoryExists} from '../helpers/assertions';
 import {ICliResult} from '../helpers/cliRunner';
 import * as path from 'path';
-import * as fs from 'fs';
 import * as child_process from 'child_process';
 
 describe('repos --update E2E', () => {
