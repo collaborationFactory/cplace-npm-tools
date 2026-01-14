@@ -79,14 +79,17 @@ export class Repository {
         if (!error) {
             return false;
         }
-        const errorMsg = error.message || error.toString();
+        const errorMsg = (error.message || error.toString()).toLowerCase();
 
         // HTTP 404 errors (often temporary on remote git servers / load balancers)
-        if (errorMsg.includes('404') ||  errorMsg.toLowerCase().includes('not found')) {
+        if (errorMsg.includes('404') || errorMsg.includes('not found')) {
             return true;
         }
 
-        return false;
+        // Network timeouts and connection errors
+        return errorMsg.includes('etimedout') || errorMsg.includes('econnrefused') ||
+            errorMsg.includes('econnreset') || errorMsg.includes('timeout');
+
     }
 
     /**
@@ -183,16 +186,16 @@ export class Repository {
                 return; // Success - exit the retry loop
 
             } catch (err) {
-                const isTransient = this.isRetryableGitError(err);
+                const isRetryableError = this.isRetryableGitError(err);
                 const hasRetriesLeft = attempt < maxRetries;
 
-                if (isTransient && hasRetriesLeft) {
+                if (isRetryableError && hasRetriesLeft) {
                     const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, etc.
                     console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attempt}/${maxRetries}): ${err.message || err}`);
                     console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
                     await this.delay(delayMs);
                 } else {
-                    if (attempt >= maxRetries && isTransient) {
+                    if (attempt >= maxRetries && isRetryableError) {
                         console.error(`[${repoName}]:`, `Clone failed after ${maxRetries} attempts`);
                     }
                     throw err;
