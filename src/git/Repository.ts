@@ -51,7 +51,7 @@ export class Repository {
      * @param rootDir - Root directory for resolving remote URL protocol
      * @param toPath - Destination path for the cloned repository
      * @param depth - Clone depth (0 for full clone)
-     * @param gitRetryCount - Number of retry attempts for transient errors (HTTP 404, timeouts, connection failures) (default: 1, no retries)
+     * @param maxAttempts - Maximum number of attempts for transient errors (HTTP 404, timeouts, connection failures) (default: 1, no retries)
      * @returns Promise resolving to the cloned Repository instance
      */
     public static async clone(
@@ -60,13 +60,13 @@ export class Repository {
         rootDir: string,
         toPath: string,
         depth: number,
-        gitRetryCount: number = 1
+        maxAttempts: number = 1
     ): Promise<Repository> {
         const { ref, isTag } = this.determineRefToCheckout(repoName, repoProperties, depth);
         const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
         const remoteUrl = await this.getRemoteOriginUrl(repoName, repoProperties.url, rootDir);
 
-        await this.cloneWithRetry(repoName, remoteUrl, toPath, options, gitRetryCount);
+        await this.cloneWithRetry(repoName, remoteUrl, toPath, options, maxAttempts);
 
         return this.setupClonedRepo(repoName, toPath, repoProperties, ref, isTag);
     }
@@ -173,10 +173,10 @@ export class Repository {
         remoteUrl: string,
         toPath: string,
         options: string[],
-        maxRetries: number
+        maxAttempts: number
     ): Promise<void> {
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 await new Promise<void>((resolve, reject) => {
                     simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
@@ -195,16 +195,16 @@ export class Repository {
 
             } catch (err) {
                 const isRetryableError = this.isRetryableGitError(err);
-                const hasRetriesLeft = attempt < maxRetries;
+                const hasAttemptsLeft = attempt < maxAttempts;
 
-                if (isRetryableError && hasRetriesLeft) {
+                if (isRetryableError && hasAttemptsLeft) {
                     const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, etc.
-                    console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attempt}/${maxRetries}): ${err.message || err}`);
+                    console.warn(`[${repoName}]:`, `Clone failed with transient error (attempt ${attempt}/${maxAttempts}): ${err.message || err}`);
                     console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
                     await this.delay(delayMs);
                 } else {
-                    if (attempt >= maxRetries && isRetryableError) {
-                        console.error(`[${repoName}]:`, `Clone failed after ${maxRetries} attempts`);
+                    if (attempt >= maxAttempts && isRetryableError) {
+                        console.error(`[${repoName}]:`, `Clone failed after ${maxAttempts} attempts`);
                     }
                     throw err;
                 }

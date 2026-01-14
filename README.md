@@ -136,9 +136,10 @@ $  cplace-cli --help
                     This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
                     Ignored if If '--sequential' is set.
                     Default is 15.
-                --git-retry-count sets the number of retry attempts for HTTP 404 errors
-                    (often temporary on remote git servers / load balancers).
-                    Uses exponential backoff (2s, 4s, 8s, ...). Default: 1 (no retries). Set to 3 or higher to enable retries.
+                --max-attempts sets the maximum number of attempts for transient git/network errors
+                    (for example temporary HTTP 404 responses, timeouts, or connection errors).
+                    Uses exponential backoff (2s, 4s, 8s, ...). Default: 1 (no retries).
+                    Set to 3 or higher to enable retries. Maximum: 10.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked
