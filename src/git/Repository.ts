@@ -180,7 +180,7 @@ export class Repository {
                     });
                 });
 
-                if (attempt > 0) {
+                if (attempt > 1) {
                     console.log(`[${repoName}]:`, `Clone succeeded on attempt ${attempt}`);
                 }
                 return; // Success - exit the retry loop
