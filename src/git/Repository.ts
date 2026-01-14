@@ -51,7 +51,7 @@ export class Repository {
      * @param rootDir - Root directory for resolving remote URL protocol
      * @param toPath - Destination path for the cloned repository
      * @param depth - Clone depth (0 for full clone)
-     * @param gitRetryCount - Number of retry attempts for HTTP 404 errors (default: 1, no retries)
+     * @param gitRetryCount - Number of retry attempts for transient errors (HTTP 404, timeouts, connection failures) (default: 1, no retries)
      * @returns Promise resolving to the cloned Repository instance
      */
     public static async clone(
