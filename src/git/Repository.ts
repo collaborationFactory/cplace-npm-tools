@@ -82,7 +82,15 @@ export class Repository {
         const errorMsg = (error.message || error.toString()).toLowerCase();
 
         // HTTP 404 errors (often temporary on remote git servers / load balancers)
-        if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+        const isHttp404 = errorMsg.includes('404');
+
+        // Git-specific "not found" errors (avoid matching unrelated "not found" messages)
+        const isGitNotFound =
+            errorMsg.includes('repository not found') ||
+            errorMsg.includes('remote: repository not found') ||
+            errorMsg.includes('remote: not found');
+
+        if (isHttp404 || isGitNotFound) {
             return true;
         }
 
