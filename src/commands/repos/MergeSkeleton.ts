@@ -71,7 +71,7 @@ export class MergeSkeleton extends AbstractReposCommand {
     protected mergeSuccess: boolean = true;
 
     public async execute(): Promise<void> {
-        const pathToRepo = path.join(process.cwd());
+        const pathToRepo = this.rootDir;
         const repo = new Repository(pathToRepo);
 
         await repo.checkIsRepo();
@@ -148,7 +148,11 @@ export class MergeSkeleton extends AbstractReposCommand {
         return Promise.resolve();
     }
 
-    public prepareAndMayExecute(params: ICommandParameters): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir?: string): boolean {
+        // Set rootDir (either explicit or from process.cwd())
+        // Note: MergeSkeleton doesn't need parent-repos.json, so we don't call super.prepareAndMayExecute()
+        this.rootDir = rootDir ? rootDir : process.cwd();
+
         const baseBranch = params[MergeSkeleton.PARAMETER_BASE_BRANCH];
         if (typeof baseBranch === 'string') {
             Global.isVerbose() && console.log(`Using base branch ${baseBranch}`);

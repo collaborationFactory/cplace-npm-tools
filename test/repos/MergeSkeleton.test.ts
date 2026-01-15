@@ -1,7 +1,6 @@
 import {ICommandParameters} from '../../src/commands/models';
 import {MergeSkeleton} from '../../src/commands/repos/MergeSkeleton';
 import {multiBranchTestSetupData, testWith} from '../helpers/remoteRepositories';
-import {withLockedCwd} from '../helpers/processLock';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
@@ -27,12 +26,10 @@ describe('MergeSkeleton', () => {
 
                     const params: ICommandParameters = {};
 
-                    // MergeSkeleton operates on the current repo, so run from main
-                    await withLockedCwd(mainPath, async () => {
-                        const cmd = new MergeSkeleton();
-                        cmd.prepareAndMayExecute(params);
-                        await cmd.execute();
-                    });
+                    // MergeSkeleton operates on the current repo, so pass mainPath as rootDir
+                    const cmd = new MergeSkeleton();
+                    cmd.prepareAndMayExecute(params, mainPath);
+                    await cmd.execute();
 
                     return mainPath;
                 },
@@ -75,12 +72,10 @@ describe('MergeSkeleton', () => {
                         ours: true
                     };
 
-                    // MergeSkeleton operates on the current repo, so run from main
-                    await withLockedCwd(mainPath, async () => {
-                        const cmd = new MergeSkeleton();
-                        cmd.prepareAndMayExecute(params);
-                        await cmd.execute();
-                    });
+                    // MergeSkeleton operates on the current repo, so pass mainPath as rootDir
+                    const cmd = new MergeSkeleton();
+                    cmd.prepareAndMayExecute(params, mainPath);
+                    await cmd.execute();
 
                     return mainPath;
                 },
@@ -105,19 +100,17 @@ describe('MergeSkeleton', () => {
 
                     const params: ICommandParameters = {};
 
-                    // MergeSkeleton operates on the current repo, so run from main
-                    await withLockedCwd(mainPath, async () => {
-                        const cmd = new MergeSkeleton();
-                        cmd.prepareAndMayExecute(params);
+                    // MergeSkeleton operates on the current repo, so pass mainPath as rootDir
+                    const cmd = new MergeSkeleton();
+                    cmd.prepareAndMayExecute(params, mainPath);
 
-                        // Should handle gracefully when no skeleton branch exists
-                        try {
-                            await cmd.execute();
-                        } catch (e) {
-                            // Expected to fail or skip when no skeleton branch
-                            expect(e).toBeDefined();
-                        }
-                    });
+                    // Should handle gracefully when no skeleton branch exists
+                    try {
+                        await cmd.execute();
+                    } catch (e) {
+                        // Expected to fail or skip when no skeleton branch
+                        expect(e).toBeDefined();
+                    }
 
                     return mainPath;
                 },

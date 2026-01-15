@@ -22,7 +22,13 @@ export class BranchRepos extends AbstractReposCommand {
     private push: boolean;
     private branchFrom: string;
 
-    public prepareAndMayExecute(params: ICommandParameters): boolean {
+    public prepareAndMayExecute(params: ICommandParameters, rootDir?: string): boolean {
+        // Call parent to set this.rootDir
+        const parentResult = super.prepareAndMayExecute(params, rootDir);
+        if (!parentResult) {
+            return false;
+        }
+
         let branchName = params[Repos.PARAMETER_BRANCH];
         if (typeof branchName !== 'string') {
             branchName = params[Repos.PARAMETER_BRANCH_SHORT];
@@ -55,16 +61,23 @@ export class BranchRepos extends AbstractReposCommand {
             .map((repo) => this.push ? repo.push('origin', this.branchName) : Promise.resolve(), {concurrency: 1});
     }
 
-    private findRepos(): Promise<Repository[]> {
-        return fs.readdirAsync('../')
-            .map((dir: string) => this.checkRepo(dir))
-            .filter((repo) => repo);
+    private getWorkspaceDir(): string {
+        return path.dirname(this.rootDir);
     }
 
-    private checkRepo(dir: string): Repository {
-        if (dir === this.parentRepoPath || fs.existsSync(`../${dir}/${AbstractReposCommand.PARENT_REPOS_FILE_NAME}`)) {
-            return new Repository(`../${dir}`);
-        }
+    private findRepos(): Promise<Repository[]> {
+        const workspaceDir = this.getWorkspaceDir();
+        const repoNames = Object.keys(this.parentRepos);
+
+        const repos = repoNames.map((repoName: string) => {
+            const repoPath = path.join(workspaceDir, repoName);
+            return new Repository(repoPath);
+        });
+
+        // Also include the root repo itself (which contains parent-repos.json)
+        repos.unshift(new Repository(this.rootDir));
+
+        return Promise.resolve(repos);
     }
 
     private validateRepoClean(repo: Repository): Promise<Repository> {
@@ -85,11 +98,18 @@ export class BranchRepos extends AbstractReposCommand {
 
     private adjustParentReposJsonAndCommit(repo: Repository): Promise<Repository> {
         // check if this is cplace main repo
-        if (repo.workingDir === path.resolve('..', this.parentRepoPath)) {
+        const mainRepoPath = path.join(this.getWorkspaceDir(), this.parentRepoPath);
+        if (repo.workingDir === mainRepoPath) {
             return Promise.resolve(repo);
         }
+
+        const filename = path.join(repo.workingDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
+        if (!fs.existsSync(filename)) {
+            // Skip repos that don't have parent-repos.json (leaf repos)
+            return Promise.resolve(repo);
+        }
+
         try {
-            const filename = path.join(repo.workingDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
             const descriptorFile = fs.readFileSync(filename, 'utf8');
             const reposDescriptor: IReposDescriptor = JSON.parse(descriptorFile);
 

@@ -56,3 +56,4 @@ dist/
 *.tgz
 /parent-repos.json
 /release-notes/messages_de.db
+*.js
