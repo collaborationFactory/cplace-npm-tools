@@ -203,7 +203,7 @@ export class Repository {
                     console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
                     await this.delay(delayMs);
                 } else {
-                    if (attempt >= maxAttempts && isRetryableError) {
+                    if (isRetryableError && !hasAttemptsLeft) {
                         console.error(`[${repoName}]:`, `Clone failed after ${maxAttempts} attempts`);
                     }
                     throw err;
