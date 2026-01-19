@@ -131,7 +131,7 @@ const cli = meow(
                 If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
                     the commit hash will be added if the repository is checked out.
 
-            --clone|-c [--depth <depth>] [--sequential] [--concurrency]:
+            --clone|-c [--depth <depth>] [--sequential] [--concurrency] [--max-attempts <count>]:
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
@@ -142,6 +142,11 @@ const cli = meow(
                     This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
                     Ignored if If '--sequential' is set.
                     Default is 15.
+                --max-attempts sets the maximum number of attempts for transient git/network errors
+                    (for example temporary HTTP 404 responses, connection timeouts, connection refused,
+                    or connection reset errors on remote git servers / load balancers).
+                    Uses exponential backoff (2s, 4s, 8s, ...).
+                    Default: 3. Maximum: 10.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked
@@ -357,6 +362,9 @@ const cli = meow(
         flags: {
             release: {
                 type: 'string'
+            },
+            maxAttempts: {
+                type: 'number'
             }
         }
     }

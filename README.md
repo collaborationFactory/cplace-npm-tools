@@ -136,6 +136,10 @@ $  cplace-cli --help
                     This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
                     Ignored if If '--sequential' is set.
                     Default is 15.
+                --max-attempts sets the maximum number of attempts for transient git/network errors
+                    (for example temporary HTTP 404 responses, connection timeouts, connection refused,
+                    or connection reset errors on remote git servers / load balancers).
+                    Uses exponential backoff (2s, 4s, 8s, ...). Default: 3. Maximum: 10.
                 Clone behavior:
                 1. If a tag is configured for the parent repository it is cloned on that tag,
                 2. Else if a commit hash is configured, the repository is cloned to the HEAD of the branch. The specific commit needs to be checked

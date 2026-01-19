@@ -18,5 +18,4 @@ export class Global {
     public static isVerbose(): boolean {
         return Global.instance.verbose;
     }
-
 }
