@@ -22,4 +22,3 @@ jobs:
         run: npm install
       - name: NPM Publish
         run: npm publish
-        
