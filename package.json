@@ -1,11 +1,13 @@
 {
   "name": "@cplace/cli",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "cplace cli tools",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
+    "test:retry": "jest --testPathPattern=Repository.retry",
+    "test:retry:blackbox": "bash scripts/test-retry-logic.sh",
     "dev:tsc": "tsc && chmod -R +x ./dist",
     "dev:lint": "eslint \"**/*.ts\"",
     "dev": "npm run dev:lint && npm run dev:tsc",
