@@ -99,6 +99,13 @@ export class UpdateRepos extends AbstractReposCommand {
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
+
+        // Prefetch branch for shallow clones BEFORE checking node_modules
+        // This ensures origin/<branch> exists for the targetRef check
+        if (repoProperties.branch) {
+            await repo.prefetchBranchForShallowClone(repoProperties.branch);
+        }
+
         const targetRef = await this.getTargetRef(repo, repoProperties);
 
         const startingBranchHasCheckedInNodeModules = repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
