@@ -66,7 +66,7 @@ export class Repository {
         const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
         const remoteUrl = await this.getRemoteOriginUrl(repoName, repoProperties.url, rootDir);
 
-        await this.cloneWithRetry(repoName, remoteUrl, toPath, options, maxAttempts);
+        await Repository.cloneWithRetry(repoName, remoteUrl, toPath, options, maxAttempts);
 
         return this.setupClonedRepo(repoName, toPath, repoProperties, ref, isTag);
     }
@@ -233,7 +233,7 @@ export class Repository {
             });
         };
 
-        return this.withRetry(cloneOperation, 'Clone', repoName, maxAttempts);
+        return Repository.withRetry(cloneOperation, 'Clone', repoName, maxAttempts);
     }
 
     /**
@@ -304,22 +304,17 @@ export class Repository {
      * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
      * @returns Promise resolving to the latest tag, or null if not a release branch
      */
-    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            if (repoProperties.branch?.startsWith('release/')) {
-                const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
+    public static async getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
+        if (!repoProperties.branch?.startsWith('release/')) {
+            return null;
+        }
 
-                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir, maxAttempts)
-                    .then((latestTag) => {
-                        Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
-                        resolve(latestTag);
-                    })
-                    .catch((error) => reject(error));
-            } else {
-                resolve(null);
-            }
-        });
+        const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
+        Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
+
+        const latestTag = await this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir, maxAttempts);
+        Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
+        return latestTag;
     }
 
     /**
@@ -331,30 +326,28 @@ export class Repository {
      * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
      * @returns Promise resolving to the active tag, or null if not found
      */
-    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            if (repoProperties.tag) {
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
-                resolve(repoProperties.tag);
-            } else if (repoProperties.branch.startsWith('release-version/')) {
-                const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
-                resolve(currentReleaseVersion);
-            } else {
-                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir, maxAttempts)
-                    .then((latestTag) => {
-                        if (latestTag) {
-                            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
-                        }
-                        resolve(latestTag);
-                    })
-                    .catch((error) => {
-                            console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
-                            reject(error);
-                        }
-                    );
+    public static async getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
+        if (repoProperties.tag) {
+            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
+            return repoProperties.tag;
+        }
+
+        if (repoProperties.branch.startsWith('release-version/')) {
+            const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
+            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
+            return currentReleaseVersion;
+        }
+
+        try {
+            const latestTag = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir, maxAttempts);
+            if (latestTag) {
+                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
             }
-        });
+            return latestTag;
+        } catch (error) {
+            console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
+            throw error;
+        }
     }
 
     /**
@@ -389,11 +382,7 @@ export class Repository {
         const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
         Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
 
-        if (sortedTags) {
-            return sortedTags.slice(-1)[0];
-        } else {
-            return null;
-        }
+        return sortedTags?.at(-1) ?? null;
     }
 
     public static sortByTagName(repoName: string, result: string, tagPattern: string): string[] {
@@ -491,26 +480,30 @@ export class Repository {
      * @param rootDir The directory of the local root repository
      * @param maxAttempts Maximum number of attempts for transient errors (default: 1, no retries)
      */
-    public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string, maxAttempts: number = 1): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            Repository.getLocalOriginUrl(repoName, rootDir, maxAttempts)
-                .then((localOriginUrl) => {
-                    let useRepoUrl = repoUrl;
-                    if (!repoUrl) {
-                        console.log(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
-                        reject(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
-                    } else if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
-                        const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
-                        useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
-                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
-                    } else if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
-                        const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
-                        useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
-                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
-                    }
-                    resolve(useRepoUrl);
-                });
-        });
+    public static async getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string, maxAttempts: number = 1): Promise<string> {
+        const localOriginUrl = await Repository.getLocalOriginUrl(repoName, rootDir, maxAttempts);
+
+        if (!repoUrl) {
+            const errorMsg = `[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`;
+            console.log(errorMsg);
+            throw new Error(errorMsg);
+        }
+
+        if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
+            const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
+            const useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
+            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
+            return useRepoUrl;
+        }
+
+        if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
+            const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
+            const useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
+            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
+            return useRepoUrl;
+        }
+
+        return repoUrl;
     }
 
     /**

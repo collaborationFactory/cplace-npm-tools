@@ -48,15 +48,7 @@ export class BranchRepos extends AbstractReposCommand {
         // Initialize maxAttempts from AbstractReposCommand
         // Note: We can't call super.prepareAndMayExecute() as it requires parent-repos.json,
         // which may not exist in the parent repo. Instead, we directly initialize maxAttempts.
-        const maxAttempts = params[AbstractReposCommand.PARAMETER_MAX_ATTEMPTS];
-        if (typeof maxAttempts === 'number' && !isNaN(maxAttempts) && maxAttempts >= 1) {
-            if (maxAttempts > AbstractReposCommand.MAX_ATTEMPTS_LIMIT) {
-                throw new Error(`maxAttempts value ${maxAttempts} must be between ${AbstractReposCommand.MAX_ATTEMPTS_DEFAULT} and ${AbstractReposCommand.MAX_ATTEMPTS_LIMIT}`);
-            }
-            this.maxAttempts = maxAttempts;
-        } else {
-            this.maxAttempts = AbstractReposCommand.MAX_ATTEMPTS_DEFAULT;
-        }
+        this.maxAttempts = AbstractReposCommand.parseMaxAttempts(params);
 
         return true;
     }
