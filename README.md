@@ -125,7 +125,7 @@ $  cplace-cli --help
                 If --freeze and --latest-tag are set, --latest-tag takes precedence. If there is no tag found for the parent repository
                     the commit hash will be added if the repository is checked out.
 
-            --clone|-c [--depth <depth>] [--sequential] [--concurrency] [--max-attempts <count>]:
+            --clone|-c [--depth <depth>] [--sequential] [--concurrency <count>] [--max-attempts <count>]:
                 Clones all parent repos if missing.
                 If --depth is set to a positive integer, a shallow clone with a history truncated to the specified number of commits is created.
                 The --depth parameter is ignored if a 'commit' is set to checkout in the parent repository.
