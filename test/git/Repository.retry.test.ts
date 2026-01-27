@@ -1,4 +1,4 @@
-import { Repository } from '../../src/git/Repository';
+import { Repository } from '../../src/git';
 import * as simpleGit from 'simple-git';
 
 jest.mock('simple-git');
@@ -415,6 +415,18 @@ describe('Repository retry logic', () => {
             ).rejects.toThrow('ETIMEDOUT');
 
             expect(operation).toHaveBeenCalledTimes(1);
+        });
+
+        test('should throw for maxAttempts of 0 (edge case - loop never executes)', async () => {
+            // Document expected behavior: with maxAttempts = 0, the for loop never executes
+            // and the method falls through to throw the "failed unexpectedly" error
+            const operation = jest.fn().mockResolvedValue('success');
+
+            await expect(
+                Repository.withRetry(operation, 'TestOp', 'test-repo', 0)
+            ).rejects.toThrow('failed unexpectedly');
+
+            expect(operation).not.toHaveBeenCalled();
         });
 
         test('should preserve type for different return types', async () => {

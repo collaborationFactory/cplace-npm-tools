@@ -75,11 +75,11 @@ export class Repository {
      * Determines if the given error is retryable.
      * Retryable errors include network timeouts, connection failures, HTTP 404s, and Git RPC issues.
      */
-    public static isRetryableGitError(error: any): boolean {
+    public static isRetryableGitError(error: unknown): boolean {
         if (!error) {
             return false;
         }
-        const errorMsg = (error.message || error.toString()).toLowerCase();
+        const errorMsg = String((error as Error).message || error).toLowerCase();
 
         // HTTP 404 errors (often temporary on remote git servers / load balancers)
         const isHttp404 = errorMsg.includes('404');
@@ -304,7 +304,7 @@ export class Repository {
      * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
      * @returns Promise resolving to the latest tag, or null if not a release branch
      */
-    public static async getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
+    public static async getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
         if (!repoProperties.branch?.startsWith('release/')) {
             return null;
         }
@@ -326,7 +326,7 @@ export class Repository {
      * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
      * @returns Promise resolving to the active tag, or null if not found
      */
-    public static async getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string> {
+    public static async getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
         if (repoProperties.tag) {
             Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
             return repoProperties.tag;
@@ -360,7 +360,7 @@ export class Repository {
      * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
      * @returns Promise resolving to the latest matching tag, or null if none found
      */
-    public static async getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string, maxAttempts: number = 1): Promise<string> {
+    public static async getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
         Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
 
         const remoteOriginUrl = await Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir, maxAttempts);
@@ -382,7 +382,7 @@ export class Repository {
         const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
         Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
 
-        return sortedTags?.at(-1) ?? null;
+        return sortedTags?.length > 0 ? sortedTags[sortedTags.length - 1] : null;
     }
 
     public static sortByTagName(repoName: string, result: string, tagPattern: string): string[] {
@@ -484,7 +484,7 @@ export class Repository {
         const localOriginUrl = await Repository.getLocalOriginUrl(repoName, rootDir, maxAttempts);
 
         if (!repoUrl) {
-            const errorMsg = `[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`;
+            const errorMsg = `[${repoName}]: repo url not configured in parent-repos.json. Please check the configuration of ${repoName}.`;
             console.log(errorMsg);
             throw new Error(errorMsg);
         }
