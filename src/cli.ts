@@ -73,7 +73,8 @@ const cli = meow(
         repos <subcommand> [--force]
             Handles repo specific actions where <subcommand> is one of the following:
 
-            --update|-u [--nofetch] [--reset-to-remote] [--sequential] [--concurrency <count>]: Updates all parent repos.
+            --update|-u [--nofetch] [--reset-to-remote] [--sequential] [--concurrency <count>] [--max-attempts <count>]:
+                Updates all parent repos.
                 Tags instead of branches are supported in parent-repos.json by cplace-cli > 0.17.0 e.g.:
                 "main": {
                   "url": "git@github.com:collaborationFactory/cplace.git",
@@ -95,6 +96,11 @@ const cli = meow(
                     This allows to circumvent possible limits of remote api calls. Use 0 or negative values for unlimited concurrency.
                     Ignored if If '--sequential' is set.
                     Default is 15.
+                --max-attempts sets the maximum number of attempts for transient git/network errors
+                    (for example temporary HTTP 404 responses, connection timeouts, connection refused,
+                    or connection reset errors on remote git servers / load balancers).
+                    Uses exponential backoff (2s, 4s, 8s, ...).
+                    Default: 3. Maximum: 10.
                 Update behavior:
                 1. If a tag is configured for the parent repository it is updated to that tag,
                 2. Else if a commit hash is configured, the repository is updated to that commit.
@@ -158,7 +164,7 @@ const cli = meow(
                 5. If 'useSnapshot' is true for the parent repository, the HEAD of the branch is cloned regradless of any other configuration.
                 6. If no branch is configured (not recommended), the default branch will be cloned.
 
-            --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>]
+            --branch|-b <name> [--parent <parent-repo-name>] [--push] [--from <branch-name>] [--max-attempts <count>]
                 Creates a new branch <name> on the topmost repo and all its child repos. All affected repos will
                 checkout the new branch and their parent-repos.json will be updated to match the branch name.
                 The topmost repo must be named 'main'. This can be overridden by providing the --parent parameter.
@@ -166,6 +172,10 @@ const cli = meow(
                 You can provide a remote-branch name using the --from <branch-name> parameter. This determines the
                 remote branch based on which the new branches are created. If this parameter is missing, the local
                 branches currently checked out are used.
+                --max-attempts sets the maximum number of attempts for transient git/network errors
+                    when pushing or fetching branches.
+                    Uses exponential backoff (2s, 4s, 8s, ...).
+                    Default: 3. Maximum: 10.
 
             --add-dependency|-d <name> [--all]
                 Adds a new dependency to another plugin or repository.
