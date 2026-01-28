@@ -30,7 +30,8 @@ jobs:
           name: package
           path: '*.tgz'
 
-  publish:
+  trusted_publish:
+    name: Trusted Publish to NPM
     needs: build
     runs-on: ubuntu-latest
     permissions:
