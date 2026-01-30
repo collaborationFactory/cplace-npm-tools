@@ -8,7 +8,6 @@ const mockedSimpleGit = simpleGit as jest.Mocked<typeof simpleGit>;
 describe('Repository retry logic', () => {
 
     describe('isRetryableGitError', () => {
-        // Method is now public, access directly
         const isRetryableGitError = (error: any): boolean => {
             return Repository.isRetryableGitError(error);
         };
@@ -81,7 +80,6 @@ describe('Repository retry logic', () => {
         let consoleLogSpy: jest.SpyInstance;
         let consoleErrorSpy: jest.SpyInstance;
 
-        // Access private static method for testing
         const cloneWithRetry = (
             repoName: string,
             remoteUrl: string,
@@ -262,7 +260,6 @@ describe('Repository retry logic', () => {
     });
 
     describe('delay helper', () => {
-        // Method is now public, access directly
         const delay = (ms: number): Promise<void> => {
             return Repository.delay(ms);
         };
@@ -418,8 +415,6 @@ describe('Repository retry logic', () => {
         });
 
         test('should throw for maxAttempts of 0 (edge case - loop never executes)', async () => {
-            // Document expected behavior: with maxAttempts = 0, the for loop never executes
-            // and the method falls through to throw the "failed unexpectedly" error
             const operation = jest.fn().mockResolvedValue('success');
 
             await expect(

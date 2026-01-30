@@ -97,7 +97,6 @@ export class Repository {
         // Network timeouts and connection errors
         return errorMsg.includes('etimedout') || errorMsg.includes('econnrefused') ||
             errorMsg.includes('econnreset') || errorMsg.includes('timeout');
-
     }
 
     /**
@@ -106,7 +105,7 @@ export class Repository {
     public static delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-
+yes
     /**
      * Executes an operation with retry logic for transient Git errors.
      * Uses exponential backoff between retry attempts.
