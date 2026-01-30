@@ -66,7 +66,19 @@ export class Repository {
         const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
         const remoteUrl = await this.getRemoteOriginUrl(repoName, repoProperties.url, rootDir);
 
-        await Repository.cloneWithRetry(repoName, remoteUrl, toPath, options, maxAttempts);
+        const cloneOperation = (): Promise<void> => {
+            return new Promise<void>((resolve, reject) => {
+                simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+        };
+
+        await Repository.withRetry(cloneOperation, 'Clone', repoName, maxAttempts);
 
         return this.setupClonedRepo(repoName, toPath, repoProperties, ref, isTag);
     }
@@ -105,7 +117,7 @@ export class Repository {
     public static delay(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-yes
+
     /**
      * Executes an operation with retry logic for transient Git errors.
      * Uses exponential backoff between retry attempts.
@@ -207,32 +219,6 @@ yes
         }
 
         return options;
-    }
-
-    /**
-     * Executes git clone with retry logic for transient errors.
-     * Uses exponential backoff between retry attempts.
-     */
-    private static async cloneWithRetry(
-        repoName: string,
-        remoteUrl: string,
-        toPath: string,
-        options: string[],
-        maxAttempts: number
-    ): Promise<void> {
-        const cloneOperation = (): Promise<void> => {
-            return new Promise<void>((resolve, reject) => {
-                simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-        };
-
-        return Repository.withRetry(cloneOperation, 'Clone', repoName, maxAttempts);
     }
 
     /**

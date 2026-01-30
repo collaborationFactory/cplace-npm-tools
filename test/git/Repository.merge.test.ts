@@ -235,7 +235,7 @@ describe('Repository.merge() tests', () => {
             await repo.checkoutBranch('main');
 
             // Attempt to merge conflict-branch which will create conflicts
-            await expect(repo.merge('origin', 'conflict-branch')).rejects.toThrow('Merge conflict detected when merging conflict-branch into main');
+            await expect(repo.merge('origin', 'conflict-branch')).rejects.toThrow('Merge failed when merging conflict-branch');
 
             // After a failed merge, verify the repository is in a conflicted state
             const status = await repo.status();

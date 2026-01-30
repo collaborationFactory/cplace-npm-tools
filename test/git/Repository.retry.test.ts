@@ -74,20 +74,31 @@ describe('Repository retry logic', () => {
         });
     });
 
-    describe('cloneWithRetry', () => {
+    describe('clone operation with retry', () => {
         let mockClone: jest.Mock;
         let consoleWarnSpy: jest.SpyInstance;
         let consoleLogSpy: jest.SpyInstance;
         let consoleErrorSpy: jest.SpyInstance;
 
-        const cloneWithRetry = (
+        const performCloneWithRetry = (
             repoName: string,
             remoteUrl: string,
             toPath: string,
             options: string[],
             maxRetries: number
         ): Promise<void> => {
-            return (Repository as any)['cloneWithRetry'](repoName, remoteUrl, toPath, options, maxRetries);
+            const cloneOperation = (): Promise<void> => {
+                return new Promise<void>((resolve, reject) => {
+                    simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            };
+            return Repository.withRetry(cloneOperation, 'Clone', repoName, maxRetries);
         };
 
         beforeEach(() => {
@@ -116,7 +127,7 @@ describe('Repository retry logic', () => {
                 callback(null);
             });
 
-            await cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            await performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             expect(mockClone).toHaveBeenCalledTimes(1);
             expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -133,7 +144,7 @@ describe('Repository retry logic', () => {
                 }
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             // First attempt fails, wait for retry delay (2^1 * 1000 = 2000ms)
             await jest.advanceTimersByTimeAsync(2000);
@@ -156,7 +167,7 @@ describe('Repository retry logic', () => {
                 callback(new Error('ETIMEDOUT'));
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             // Attach rejection handler immediately to prevent unhandled rejection
             let caughtError: Error | null = null;
@@ -184,7 +195,7 @@ describe('Repository retry logic', () => {
             });
 
             await expect(
-                cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3)
+                performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3)
             ).rejects.toThrow('Permission denied (publickey)');
 
             expect(mockClone).toHaveBeenCalledTimes(1);
@@ -202,7 +213,7 @@ describe('Repository retry logic', () => {
                 }
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 5);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 5);
 
             // Verify exponential backoff: 2^1=2s, 2^2=4s, 2^3=8s
             await jest.advanceTimersByTimeAsync(2000); // After attempt 1 (2^1 * 1000)
@@ -237,7 +248,7 @@ describe('Repository retry logic', () => {
                     }
                 });
 
-                const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+                const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
                 await jest.advanceTimersByTimeAsync(2000);
                 await clonePromise;
@@ -252,7 +263,7 @@ describe('Repository retry logic', () => {
             });
 
             await expect(
-                cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 1)
+                performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 1)
             ).rejects.toThrow('ETIMEDOUT');
 
             expect(mockClone).toHaveBeenCalledTimes(1);
