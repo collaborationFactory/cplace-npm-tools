@@ -44,6 +44,12 @@ export class BranchRepos extends AbstractReposCommand {
             this.parentRepoPath = parent;
         }
         console.log(`Parent repo is ${this.parentRepoPath}`);
+
+        // Initialize maxAttempts from AbstractReposCommand
+        // Note: We can't call super.prepareAndMayExecute() as it requires parent-repos.json,
+        // which may not exist in the parent repo. Instead, we directly initialize maxAttempts.
+        this.maxAttempts = AbstractReposCommand.parseMaxAttempts(params);
+
         return true;
     }
 
@@ -52,7 +58,7 @@ export class BranchRepos extends AbstractReposCommand {
             .map((repo) => this.validateRepoClean(repo))
             .map((repo) => this.checkoutBranch(repo), {concurrency: 1})
             .map((repo) => this.adjustParentReposJsonAndCommit(repo), {concurrency: 1})
-            .map((repo) => this.push ? repo.push('origin', this.branchName) : Promise.resolve(), {concurrency: 1});
+            .map((repo) => this.push ? repo.push('origin', this.branchName, this.maxAttempts) : Promise.resolve(), {concurrency: 1});
     }
 
     private findRepos(): Promise<Repository[]> {
@@ -68,7 +74,7 @@ export class BranchRepos extends AbstractReposCommand {
     }
 
     private validateRepoClean(repo: Repository): Promise<Repository> {
-        return repo.fetch({})
+        return repo.fetch({}, this.maxAttempts)
             .then(() => repo.status())
             .then((status) => this.checkRepoClean(repo, status))
             .then(() => repo);

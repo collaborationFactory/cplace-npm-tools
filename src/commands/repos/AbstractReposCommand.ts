@@ -67,15 +67,7 @@ export abstract class AbstractReposCommand implements ICommand {
             Global.isVerbose() && console.log('running with concurrency for parallel execution = ' + this.concurrency);
         }
 
-        const maxAttempts = params[AbstractReposCommand.PARAMETER_MAX_ATTEMPTS];
-        if (typeof maxAttempts === 'number' && !isNaN(maxAttempts) && maxAttempts >= 1) {
-            if (maxAttempts > AbstractReposCommand.MAX_ATTEMPTS_LIMIT) {
-                throw new Error(`maxAttempts value ${maxAttempts} must be between ${AbstractReposCommand.MAX_ATTEMPTS_DEFAULT} and ${AbstractReposCommand.MAX_ATTEMPTS_LIMIT}`);
-            }
-            this.maxAttempts = maxAttempts;
-        } else {
-            this.maxAttempts = AbstractReposCommand.MAX_ATTEMPTS_DEFAULT;
-        }
+        this.maxAttempts = AbstractReposCommand.parseMaxAttempts(params);
         Global.isVerbose() && console.log('running with max attempts = ' + this.maxAttempts);
 
         this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
@@ -142,5 +134,24 @@ export abstract class AbstractReposCommand implements ICommand {
             return eol.crlf(content);
         }
         return content;
+    }
+
+    /**
+     * Parses and validates the maxAttempts parameter from command parameters.
+     * Returns a valid value between MAX_ATTEMPTS_DEFAULT and MAX_ATTEMPTS_LIMIT.
+     *
+     * @param params - Command parameters containing maxAttempts
+     * @returns Validated maxAttempts value
+     * @throws Error if maxAttempts exceeds MAX_ATTEMPTS_LIMIT
+     */
+    protected static parseMaxAttempts(params: ICommandParameters): number {
+        const maxAttempts = params[AbstractReposCommand.PARAMETER_MAX_ATTEMPTS];
+        if (typeof maxAttempts === 'number' && !isNaN(maxAttempts) && maxAttempts >= 1) {
+            if (maxAttempts > AbstractReposCommand.MAX_ATTEMPTS_LIMIT) {
+                throw new Error(`maxAttempts value ${maxAttempts} must be between ${AbstractReposCommand.MAX_ATTEMPTS_DEFAULT} and ${AbstractReposCommand.MAX_ATTEMPTS_LIMIT}`);
+            }
+            return maxAttempts;
+        }
+        return AbstractReposCommand.MAX_ATTEMPTS_DEFAULT;
     }
 }

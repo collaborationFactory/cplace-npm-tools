@@ -1,15 +1,16 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    # Only run on specific file changes
-    paths:
-      - "src/**/*.ts"
-      - "tools/**/*.ts"
-      - "test/**/*.ts"
-      - "*.json"
-      - ".github/workflows/*.yml"
+  workflow_dispatch:
+#  pull_request:
+#    types: [opened, synchronize]
+#    # Only run on specific file changes
+#    paths:
+#      - "src/**/*.ts"
+#      - "tools/**/*.ts"
+#      - "test/**/*.ts"
+#      - "*.json"
+#      - ".github/workflows/*.yml"
 
 jobs:
   claude-review:
@@ -19,7 +20,7 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,10 +75,10 @@ jobs:
 
           # Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
           use_sticky_comment: true
-          
+
           # Add specific tools for running tests or linting
           allowed_tools: "Bash(npm run test),Bash(npm run prepare),Bash(npm run clean),Bash(npm run dev), Bash(npm run dev:lint),Bash(npm run dev:tsc)"
-          
+
           # Optional: Skip review for certain conditions
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&

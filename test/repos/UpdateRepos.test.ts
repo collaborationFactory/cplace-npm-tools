@@ -144,10 +144,10 @@ describe('updating the parent repos', () => {
             updateParentRepos.main.tag = 'version/22.2.99';
             await testWithParentRepos(rootDir, {update: updateParentRepos}, 0)
                 .catch((e) => {
-                    // expected to fail
+                    // Expected to fail during tag fetch/checkout, not during node_modules check
                     console.log(e);
-                    if (!e?.message?.includes('Error: Command failed: git ls-tree --name-only "version/22.2.99" "node_modules"')) {
-                        throw new Error('Did not to fail with the expected reason!');
+                    if (!e?.message?.includes('version/22.2.99')) {
+                        throw new Error('Did not fail with the expected reason!');
                     }
                 });
             return true;

@@ -1,4 +1,4 @@
-import { Repository } from '../../src/git/Repository';
+import { Repository } from '../../src/git';
 import * as simpleGit from 'simple-git';
 
 jest.mock('simple-git');
@@ -8,9 +8,8 @@ const mockedSimpleGit = simpleGit as jest.Mocked<typeof simpleGit>;
 describe('Repository retry logic', () => {
 
     describe('isRetryableGitError', () => {
-        // Access private static method for testing
         const isRetryableGitError = (error: any): boolean => {
-            return (Repository as any)['isRetryableGitError'](error);
+            return Repository.isRetryableGitError(error);
         };
 
         // Parameterized tests for retryable errors
@@ -75,21 +74,31 @@ describe('Repository retry logic', () => {
         });
     });
 
-    describe('cloneWithRetry', () => {
+    describe('clone operation with retry', () => {
         let mockClone: jest.Mock;
         let consoleWarnSpy: jest.SpyInstance;
         let consoleLogSpy: jest.SpyInstance;
         let consoleErrorSpy: jest.SpyInstance;
 
-        // Access private static method for testing
-        const cloneWithRetry = (
+        const performCloneWithRetry = (
             repoName: string,
             remoteUrl: string,
             toPath: string,
             options: string[],
             maxRetries: number
         ): Promise<void> => {
-            return (Repository as any)['cloneWithRetry'](repoName, remoteUrl, toPath, options, maxRetries);
+            const cloneOperation = (): Promise<void> => {
+                return new Promise<void>((resolve, reject) => {
+                    simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            };
+            return Repository.withRetry(cloneOperation, 'Clone', repoName, maxRetries);
         };
 
         beforeEach(() => {
@@ -118,7 +127,7 @@ describe('Repository retry logic', () => {
                 callback(null);
             });
 
-            await cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            await performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             expect(mockClone).toHaveBeenCalledTimes(1);
             expect(consoleWarnSpy).not.toHaveBeenCalled();
@@ -135,7 +144,7 @@ describe('Repository retry logic', () => {
                 }
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             // First attempt fails, wait for retry delay (2^1 * 1000 = 2000ms)
             await jest.advanceTimersByTimeAsync(2000);
@@ -158,7 +167,7 @@ describe('Repository retry logic', () => {
                 callback(new Error('ETIMEDOUT'));
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
             // Attach rejection handler immediately to prevent unhandled rejection
             let caughtError: Error | null = null;
@@ -186,7 +195,7 @@ describe('Repository retry logic', () => {
             });
 
             await expect(
-                cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3)
+                performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3)
             ).rejects.toThrow('Permission denied (publickey)');
 
             expect(mockClone).toHaveBeenCalledTimes(1);
@@ -204,7 +213,7 @@ describe('Repository retry logic', () => {
                 }
             });
 
-            const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 5);
+            const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 5);
 
             // Verify exponential backoff: 2^1=2s, 2^2=4s, 2^3=8s
             await jest.advanceTimersByTimeAsync(2000); // After attempt 1 (2^1 * 1000)
@@ -239,7 +248,7 @@ describe('Repository retry logic', () => {
                     }
                 });
 
-                const clonePromise = cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
+                const clonePromise = performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 3);
 
                 await jest.advanceTimersByTimeAsync(2000);
                 await clonePromise;
@@ -254,7 +263,7 @@ describe('Repository retry logic', () => {
             });
 
             await expect(
-                cloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 1)
+                performCloneWithRetry('test-repo', 'https://example.com/repo.git', '/tmp/repo', [], 1)
             ).rejects.toThrow('ETIMEDOUT');
 
             expect(mockClone).toHaveBeenCalledTimes(1);
@@ -262,9 +271,8 @@ describe('Repository retry logic', () => {
     });
 
     describe('delay helper', () => {
-        // Access private static method for testing
         const delay = (ms: number): Promise<void> => {
-            return (Repository as any)['delay'](ms);
+            return Repository.delay(ms);
         };
 
         beforeEach(() => {
@@ -285,6 +293,360 @@ describe('Repository retry logic', () => {
             await delayPromise;
 
             expect(jest.getTimerCount()).toBe(0);
+        });
+    });
+
+    describe('withRetry', () => {
+        let consoleWarnSpy: jest.SpyInstance;
+        let consoleLogSpy: jest.SpyInstance;
+        let consoleErrorSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            jest.useFakeTimers();
+            consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+            consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+            consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            consoleWarnSpy.mockRestore();
+            consoleLogSpy.mockRestore();
+            consoleErrorSpy.mockRestore();
+        });
+
+        test('should succeed on first attempt and return the result', async () => {
+            const operation = jest.fn().mockResolvedValue('success');
+
+            const result = await Repository.withRetry(operation, 'TestOp', 'test-repo', 3);
+
+            expect(result).toBe('success');
+            expect(operation).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+
+        test('should retry on retryable error and return the result on success', async () => {
+            let attempts = 0;
+            const operation = jest.fn().mockImplementation(() => {
+                attempts++;
+                if (attempts === 1) {
+                    return Promise.reject(new Error('ETIMEDOUT'));
+                }
+                return Promise.resolve('success after retry');
+            });
+
+            const resultPromise = Repository.withRetry(operation, 'TestOp', 'test-repo', 3);
+
+            // First attempt fails, wait for retry delay (2^1 * 1000 = 2000ms)
+            await jest.advanceTimersByTimeAsync(2000);
+
+            const result = await resultPromise;
+
+            expect(result).toBe('success after retry');
+            expect(operation).toHaveBeenCalledTimes(2);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                '[test-repo]:',
+                expect.stringContaining('TestOp failed with transient error (attempt 1/3)')
+            );
+            expect(consoleLogSpy).toHaveBeenCalledWith(
+                '[test-repo]:',
+                expect.stringContaining('TestOp succeeded on attempt 2')
+            );
+        });
+
+        test('should throw after exhausting all retries on retryable error', async () => {
+            const operation = jest.fn().mockRejectedValue(new Error('ETIMEDOUT'));
+
+            const resultPromise = Repository.withRetry(operation, 'TestOp', 'test-repo', 3);
+
+            // Attach rejection handler immediately to prevent unhandled rejection
+            let caughtError: Error | null = null;
+            resultPromise.catch((err: Error) => {
+                caughtError = err;
+            });
+
+            // Advance through all retry delays
+            await jest.runAllTimersAsync();
+
+            await expect(resultPromise).rejects.toThrow('ETIMEDOUT');
+
+            expect(operation).toHaveBeenCalledTimes(3);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[test-repo]:',
+                'TestOp failed after 3 attempts'
+            );
+            expect(caughtError).not.toBeNull();
+        });
+
+        test('should fail immediately on non-retryable error', async () => {
+            const operation = jest.fn().mockRejectedValue(new Error('Permission denied'));
+
+            await expect(
+                Repository.withRetry(operation, 'TestOp', 'test-repo', 3)
+            ).rejects.toThrow('Permission denied');
+
+            expect(operation).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+        });
+
+        test('should use exponential backoff delays', async () => {
+            let attempts = 0;
+            const operation = jest.fn().mockImplementation(() => {
+                attempts++;
+                if (attempts < 4) {
+                    return Promise.reject(new Error('ETIMEDOUT'));
+                }
+                return Promise.resolve('success');
+            });
+
+            const resultPromise = Repository.withRetry(operation, 'TestOp', 'test-repo', 5);
+
+            // Verify exponential backoff: 2^1=2s, 2^2=4s, 2^3=8s
+            await jest.advanceTimersByTimeAsync(2000); // After attempt 1 (2^1 * 1000)
+            expect(operation).toHaveBeenCalledTimes(2);
+
+            await jest.advanceTimersByTimeAsync(4000); // After attempt 2 (2^2 * 1000)
+            expect(operation).toHaveBeenCalledTimes(3);
+
+            await jest.advanceTimersByTimeAsync(8000); // After attempt 3 (2^3 * 1000)
+            expect(operation).toHaveBeenCalledTimes(4);
+
+            await resultPromise;
+        });
+
+        test('should work with maxAttempts of 1 (no retries)', async () => {
+            const operation = jest.fn().mockRejectedValue(new Error('ETIMEDOUT'));
+
+            await expect(
+                Repository.withRetry(operation, 'TestOp', 'test-repo', 1)
+            ).rejects.toThrow('ETIMEDOUT');
+
+            expect(operation).toHaveBeenCalledTimes(1);
+        });
+
+        test('should throw for maxAttempts of 0 (edge case - loop never executes)', async () => {
+            const operation = jest.fn().mockResolvedValue('success');
+
+            await expect(
+                Repository.withRetry(operation, 'TestOp', 'test-repo', 0)
+            ).rejects.toThrow('failed unexpectedly');
+
+            expect(operation).not.toHaveBeenCalled();
+        });
+
+        test('should preserve type for different return types', async () => {
+            // Test with number return type
+            const numberOp = jest.fn().mockResolvedValue(42);
+            const numResult = await Repository.withRetry(numberOp, 'NumberOp', 'test-repo', 1);
+            expect(numResult).toBe(42);
+            expect(typeof numResult).toBe('number');
+
+            // Test with object return type
+            const objectOp = jest.fn().mockResolvedValue({ foo: 'bar' });
+            const objResult = await Repository.withRetry(objectOp, 'ObjectOp', 'test-repo', 1);
+            expect(objResult).toEqual({ foo: 'bar' });
+
+            // Test with array return type
+            const arrayOp = jest.fn().mockResolvedValue([1, 2, 3]);
+            const arrResult = await Repository.withRetry(arrayOp, 'ArrayOp', 'test-repo', 1);
+            expect(arrResult).toEqual([1, 2, 3]);
+        });
+    });
+
+    describe('getLatestTagOfPattern with retry', () => {
+        let mockListRemote: jest.Mock;
+        let mockRemote: jest.Mock;
+        let consoleLogSpy: jest.SpyInstance;
+        let consoleWarnSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            jest.useFakeTimers();
+
+            mockListRemote = jest.fn();
+            mockRemote = jest.fn();
+            mockedSimpleGit.simpleGit.mockReturnValue({
+                listRemote: mockListRemote,
+                remote: mockRemote
+            } as any);
+
+            // Mock getLocalOriginUrl to return a URL
+            mockRemote.mockImplementation((_args, callback) => {
+                callback(null, 'https://github.com/test/repo.git');
+            });
+
+            consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+            consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            consoleLogSpy.mockRestore();
+            consoleWarnSpy.mockRestore();
+        });
+
+        test('should succeed on first attempt', async () => {
+            mockListRemote.mockImplementation((_args, callback) => {
+                callback(null, 'abc123\trefs/tags/version/1.0.0\n');
+            });
+
+            const result = await Repository.getLatestTagOfPattern(
+                'test-repo',
+                'https://github.com/test/repo.git',
+                'version/1.0.*',
+                '/tmp/root',
+                1
+            );
+
+            expect(result).toBe('version/1.0.0');
+            expect(mockListRemote).toHaveBeenCalledTimes(1);
+        });
+
+        test('should retry on retryable error and succeed', async () => {
+            let attempts = 0;
+            mockListRemote.mockImplementation((_args, callback) => {
+                attempts++;
+                if (attempts === 1) {
+                    callback(new Error('ETIMEDOUT'));
+                } else {
+                    callback(null, 'abc123\trefs/tags/version/1.0.0\n');
+                }
+            });
+
+            const resultPromise = Repository.getLatestTagOfPattern(
+                'test-repo',
+                'https://github.com/test/repo.git',
+                'version/1.0.*',
+                '/tmp/root',
+                3
+            );
+
+            // First attempt fails, wait for retry delay
+            await jest.advanceTimersByTimeAsync(2000);
+
+            const result = await resultPromise;
+
+            expect(result).toBe('version/1.0.0');
+            expect(mockListRemote).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('fetch with retry', () => {
+        let mockFetch: jest.Mock;
+        let consoleLogSpy: jest.SpyInstance;
+        let consoleWarnSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            jest.useFakeTimers();
+
+            mockFetch = jest.fn();
+            mockedSimpleGit.simpleGit.mockReturnValue({
+                fetch: mockFetch,
+                outputHandler: jest.fn()
+            } as any);
+
+            consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+            consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            consoleLogSpy.mockRestore();
+            consoleWarnSpy.mockRestore();
+        });
+
+        test('should succeed on first attempt', async () => {
+            mockFetch.mockImplementation((_args, callback) => {
+                callback(null);
+            });
+
+            const repo = new Repository('/tmp/test-repo');
+            await repo.fetch({}, 1);
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
+        test('should retry on retryable error and succeed', async () => {
+            let attempts = 0;
+            mockFetch.mockImplementation((_args, callback) => {
+                attempts++;
+                if (attempts === 1) {
+                    callback(new Error('ETIMEDOUT'));
+                } else {
+                    callback(null);
+                }
+            });
+
+            const repo = new Repository('/tmp/test-repo');
+            const fetchPromise = repo.fetch({}, 3);
+
+            // First attempt fails, wait for retry delay
+            await jest.advanceTimersByTimeAsync(2000);
+
+            await fetchPromise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('push with retry', () => {
+        let mockPush: jest.Mock;
+        let consoleLogSpy: jest.SpyInstance;
+        let consoleWarnSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            jest.useFakeTimers();
+
+            mockPush = jest.fn();
+            mockedSimpleGit.simpleGit.mockReturnValue({
+                push: mockPush,
+                outputHandler: jest.fn()
+            } as any);
+
+            consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+            consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            consoleLogSpy.mockRestore();
+            consoleWarnSpy.mockRestore();
+        });
+
+        test('should succeed on first attempt', async () => {
+            mockPush.mockImplementation((_remote, _branch, _opts, callback) => {
+                callback(null);
+            });
+
+            const repo = new Repository('/tmp/test-repo');
+            await repo.push('origin', 'main', 1);
+
+            expect(mockPush).toHaveBeenCalledTimes(1);
+        });
+
+        test('should retry on retryable error and succeed', async () => {
+            let attempts = 0;
+            mockPush.mockImplementation((_remote, _branch, _opts, callback) => {
+                attempts++;
+                if (attempts === 1) {
+                    callback(new Error('ETIMEDOUT'));
+                } else {
+                    callback(null);
+                }
+            });
+
+            const repo = new Repository('/tmp/test-repo');
+            const pushPromise = repo.push('origin', 'main', 3);
+
+            // First attempt fails, wait for retry delay
+            await jest.advanceTimersByTimeAsync(2000);
+
+            await pushPromise;
+
+            expect(mockPush).toHaveBeenCalledTimes(2);
         });
     });
 });
