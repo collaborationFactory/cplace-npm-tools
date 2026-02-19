@@ -1,8 +1,4 @@
----
-title: "List of Available Commands"
-weight: "20"
-type: "section"
----
+# List of Available Commands
 
 To get a list of all available commands and help, enter the following command:
 
