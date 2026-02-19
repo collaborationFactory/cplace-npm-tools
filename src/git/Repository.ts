@@ -43,67 +43,204 @@ export class Repository {
         this.repoName = path.basename(path.resolve(repoPath));
     }
 
-    public static clone(repoName: string, repoProperties: IRepoStatus, rootDir: string, toPath: string, depth: number): Promise<Repository> {
-        return new Promise<Repository>((resolve, reject) => {
-            const options = [];
+    /**
+     * Clones a repository with the specified configuration.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param repoProperties - Configuration including branch, tag, commit, url etc.
+     * @param rootDir - Root directory for resolving remote URL protocol
+     * @param toPath - Destination path for the cloned repository
+     * @param depth - Clone depth (0 for full clone)
+     * @param maxAttempts - Maximum number of attempts for transient errors (HTTP 404, timeouts, connection failures) (default: 1, no retries)
+     * @returns Promise resolving to the cloned Repository instance
+     */
+    public static async clone(
+        repoName: string,
+        repoProperties: IRepoStatus,
+        rootDir: string,
+        toPath: string,
+        depth: number,
+        maxAttempts: number = 1
+    ): Promise<Repository> {
+        const { ref, isTag } = this.determineRefToCheckout(repoName, repoProperties, depth);
+        const options = this.buildCloneOptions(ref, depth, !!repoProperties.commit);
+        const remoteUrl = await this.getRemoteOriginUrl(repoName, repoProperties.url, rootDir);
 
-            let refToCheckout: string;
-            let refIsTag = false;
-
-            if (repoProperties.useSnapshot) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because useSnapshot is true.`);
-            } else if (repoProperties.commit) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout} because a commit is specified.`);
-            } else if (repoProperties.tag) {
-                refToCheckout = repoProperties.tag;
-                refIsTag = true;
-                console.log(`[${repoName}]: will clone the tag ${refToCheckout} with depth ${depth} as configured.`);
-            } else if (repoProperties.latestTagForRelease) {
-                refToCheckout = repoProperties.latestTagForRelease;
-                this.validateTagMarker(repoProperties, repoName);
-
-                refIsTag = true;
-                console.log(`[${repoName}]: will clone the latestTagForRelease ${refToCheckout}, depth ${depth}.`);
-            } else if (repoProperties.branch) {
-                refToCheckout = repoProperties.branch;
-                console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${refToCheckout}, depth ${depth}, because no latestTagForRelease was found and only a branch is configured.`);
-            } else {
-                console.log(`[${repoName}]: will clone the latest HEAD of the default branch with depth ${depth} because not even a branch is configured.`);
-            }
-
-            if (refToCheckout) {
-                options.push('--branch', refToCheckout);
-            }
-            if (depth > 0 && !repoProperties.commit) {
-                options.push('--depth', depth.toString(10));
-            }
-
-            Repository.getRemoteOriginUrl(repoName, repoProperties.url, rootDir).then((remoteOriginUrl) => {
-                simpleGit.simpleGit().clone(remoteOriginUrl, toPath, options, (err) => {
+        const cloneOperation = (): Promise<void> => {
+            return new Promise<void>((resolve, reject) => {
+                simpleGit.simpleGit().clone(remoteUrl, toPath, options, (err) => {
                     if (err) {
                         reject(err);
                     } else {
-                        const newRepo = new Repository(toPath);
-                        if (refIsTag) {
-                            newRepo.createBranchForTag(repoName, refToCheckout)
-                                .then(() => {
-                                    resolve(newRepo);
-                                });
-                        } else if (repoProperties.commit) {
-                            console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
-                            newRepo.checkoutCommit(repoProperties.commit)
-                                .then(() => {
-                                    resolve(newRepo);
-                                });
-                        } else {
-                            resolve(newRepo);
-                        }
+                        resolve();
                     }
                 });
             });
-        });
+        };
+
+        await Repository.withRetry(cloneOperation, 'Clone', repoName, maxAttempts);
+
+        return this.setupClonedRepo(repoName, toPath, repoProperties, ref, isTag);
+    }
+
+    /**
+     * Determines if the given error is retryable.
+     * Retryable errors include network timeouts, connection failures, HTTP 404s, and Git RPC issues.
+     */
+    public static isRetryableGitError(error: unknown): boolean {
+        if (!error) {
+            return false;
+        }
+        const errorMsg = String((error as Error).message || error).toLowerCase();
+
+        // HTTP 404 errors (often temporary on remote git servers / load balancers)
+        const isHttp404 = errorMsg.includes('404');
+
+        // Git-specific "not found" errors (avoid matching unrelated "not found" messages)
+        const isGitNotFound =
+            errorMsg.includes('repository not found') ||
+            errorMsg.includes('remote: repository not found') ||
+            errorMsg.includes('remote: not found');
+
+        if (isHttp404 || isGitNotFound) {
+            return true;
+        }
+
+        // Network timeouts and connection errors
+        return errorMsg.includes('etimedout') || errorMsg.includes('econnrefused') ||
+            errorMsg.includes('econnreset') || errorMsg.includes('timeout');
+    }
+
+    /**
+     * Delay helper for exponential backoff
+     */
+    public static delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Executes an operation with retry logic for transient Git errors.
+     * Uses exponential backoff between retry attempts.
+     *
+     * @param operation - The async operation to execute
+     * @param operationName - Name of the operation for logging (e.g., 'fetch', 'push', 'listRemote')
+     * @param repoName - Name of the repository for logging
+     * @param maxAttempts - Maximum number of attempts (default: 1, no retries)
+     * @returns Promise resolving to the operation result
+     */
+    public static async withRetry<T>(
+        operation: () => Promise<T>,
+        operationName: string,
+        repoName: string,
+        maxAttempts: number = 1
+    ): Promise<T> {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const result = await operation();
+
+                if (attempt > 1) {
+                    console.log(`[${repoName}]:`, `${operationName} succeeded on attempt ${attempt}`);
+                }
+                return result;
+
+            } catch (err) {
+                const isRetryableError = this.isRetryableGitError(err);
+                const hasAttemptsLeft = attempt < maxAttempts;
+
+                if (isRetryableError && hasAttemptsLeft) {
+                    const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, etc.
+                    console.warn(`[${repoName}]:`, `${operationName} failed with transient error (attempt ${attempt}/${maxAttempts}): ${err.message || err}`);
+                    console.log(`[${repoName}]:`, `Retrying in ${delayMs / 1000} seconds...`);
+                    await this.delay(delayMs);
+                } else {
+                    if (isRetryableError && !hasAttemptsLeft) {
+                        console.error(`[${repoName}]:`, `${operationName} failed after ${maxAttempts} attempts`);
+                    }
+                    throw err;
+                }
+            }
+        }
+        // This should never be reached, but TypeScript needs a return
+        throw new Error(`[${repoName}]: ${operationName} failed unexpectedly`);
+    }
+
+    /**
+     * Determines which ref (branch or tag) to checkout based on repo properties.
+     * Returns the ref name and whether it's a tag.
+     */
+    private static determineRefToCheckout(
+        repoName: string,
+        repoProperties: IRepoStatus,
+        depth: number
+    ): { ref: string | undefined; isTag: boolean } {
+        let ref: string | undefined;
+        let isTag = false;
+
+        if (repoProperties.useSnapshot) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref}, depth ${depth}, because useSnapshot is true.`);
+        } else if (repoProperties.commit) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref} because a commit is specified.`);
+        } else if (repoProperties.tag) {
+            ref = repoProperties.tag;
+            isTag = true;
+            console.log(`[${repoName}]: will clone the tag ${ref} with depth ${depth} as configured.`);
+        } else if (repoProperties.latestTagForRelease) {
+            ref = repoProperties.latestTagForRelease;
+            this.validateTagMarker(repoProperties, repoName);
+            isTag = true;
+            console.log(`[${repoName}]: will clone the latestTagForRelease ${ref}, depth ${depth}.`);
+        } else if (repoProperties.branch) {
+            ref = repoProperties.branch;
+            console.log(`[${repoName}]: will clone the latest HEAD of remote branch ${ref}, depth ${depth}, because no latestTagForRelease was found and only a branch is configured.`);
+        } else {
+            console.log(`[${repoName}]: will clone the latest HEAD of the default branch with depth ${depth} because not even a branch is configured.`);
+        }
+
+        return { ref, isTag };
+    }
+
+    /**
+     * Builds the clone options array based on ref and depth settings.
+     */
+    private static buildCloneOptions(
+        ref: string | undefined,
+        depth: number,
+        hasCommit: boolean
+    ): string[] {
+        const options: string[] = [];
+
+        if (ref) {
+            options.push('--branch', ref);
+        }
+        if (depth > 0 && !hasCommit) {
+            options.push('--depth', depth.toString(10));
+        }
+
+        return options;
+    }
+
+    /**
+     * Sets up the cloned repository by creating branches for tags or checking out specific commits.
+     */
+    private static async setupClonedRepo(
+        repoName: string,
+        toPath: string,
+        repoProperties: IRepoStatus,
+        ref: string | undefined,
+        isTag: boolean
+    ): Promise<Repository> {
+        const newRepo = new Repository(toPath);
+
+        if (isTag && ref) {
+            await newRepo.createBranchForTag(repoName, ref);
+        } else if (repoProperties.commit) {
+            console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
+            await newRepo.checkoutCommit(repoProperties.commit);
+        }
+
+        return newRepo;
     }
 
     public static validateTagMarker(repoProperties: IRepoStatus, repoName: string): void {
@@ -143,70 +280,94 @@ export class Repository {
         }
     }
 
-    public static getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            if (repoProperties.branch?.startsWith('release/')) {
-                const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
+    /**
+     * Gets the latest tag for a release branch.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param repoProperties - Repository properties including branch and url
+     * @param rootDir - Root directory for resolving remote URL protocol
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving to the latest tag, or null if not a release branch
+     */
+    public static async getLatestTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
+        if (!repoProperties.branch?.startsWith('release/')) {
+            return null;
+        }
 
-                this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir)
-                    .then((latestTag) => {
-                        Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
-                        resolve(latestTag);
-                    })
-                    .catch((error) => reject(error));
-            } else {
-                resolve(null);
-            }
-        });
+        const currentReleaseVersion: string = repoProperties.branch.substring('release/'.length);
+        Global.isVerbose() && console.log(`[${repoName}]:`, `release version: ${currentReleaseVersion}`);
+
+        const latestTag = await this.getLatestTagOfPattern(repoName, repoProperties.url, `version/${currentReleaseVersion}.*`, rootDir, maxAttempts);
+        Global.isVerbose() && console.log(`[${repoName}]:`, `latest tag for release ${currentReleaseVersion}: ${latestTag}`);
+        return latestTag;
     }
 
-    public static getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            if (repoProperties.tag) {
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
-                resolve(repoProperties.tag);
-            } else if (repoProperties.branch.startsWith('release-version/')) {
-                const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
-                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
-                resolve(currentReleaseVersion);
-            } else {
-                Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir)
-                    .then((latestTag) => {
-                        if (latestTag) {
-                            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
-                        }
-                        resolve(latestTag);
-                    })
-                    .catch((error) => {
-                            console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
-                            reject(error);
-                        }
-                    );
+    /**
+     * Gets the active tag for a release branch.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param repoProperties - Repository properties including branch, tag, and url
+     * @param rootDir - Root directory for resolving remote URL protocol
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving to the active tag, or null if not found
+     */
+    public static async getActiveTagOfReleaseBranch(repoName: string, repoProperties: IRepoStatus, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
+        if (repoProperties.tag) {
+            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from predefined tag: ${repoProperties.tag}`);
+            return repoProperties.tag;
+        }
+
+        if (repoProperties.branch.startsWith('release-version/')) {
+            const currentReleaseVersion: string = repoProperties.branch.substring('release-'.length);
+            Global.isVerbose() && console.log(`[${repoName}]:`, `release version from local tag branch name: ${currentReleaseVersion}`);
+            return currentReleaseVersion;
+        }
+
+        try {
+            const latestTag = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, rootDir, maxAttempts);
+            if (latestTag) {
+                Global.isVerbose() && console.log(`[${repoName}]:`, `release version from latest tag: ${latestTag}`);
             }
-        });
+            return latestTag;
+        } catch (error) {
+            console.log(`[${repoName}]: failed to get latest tag:\n${error}`);
+            throw error;
+        }
     }
 
-    public static getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
-            Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir).then((remoteOriginUrl) => {
+    /**
+     * Gets the latest tag matching a pattern from the remote repository.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param repoUrl - URL of the remote repository
+     * @param tagPattern - Pattern to match tags against
+     * @param rootDir - Root directory for resolving remote URL protocol
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving to the latest matching tag, or null if none found
+     */
+    public static async getLatestTagOfPattern(repoName: string, repoUrl: string, tagPattern: string, rootDir: string, maxAttempts: number = 1): Promise<string | null> {
+        Global.isVerbose() && console.log(`[${repoName}]: Getting the last tag with pattern ${tagPattern}:\n`);
+
+        const remoteOriginUrl = await Repository.getRemoteOriginUrl(repoName, repoUrl, rootDir, maxAttempts);
+
+        const listRemoteOperation = (): Promise<string> => {
+            return new Promise<string>((resolve, reject) => {
                 simpleGit.simpleGit().listRemote(['--tags', '--refs', '--sort=-version:refname', remoteOriginUrl, tagPattern], (err, result: string) => {
                     if (err) {
                         Global.isVerbose() && console.log(`[${repoName}]:`, remoteOriginUrl, ': ls-remote failed!\n', err);
                         reject(err);
                     } else {
-                        const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
-                        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
-                        if (sortedTags) {
-                            resolve(sortedTags.slice(-1)[0]);
-                        } else {
-                            resolve(null);
-                        }
+                        resolve(result);
                     }
                 });
             });
-        });
+        };
+
+        const result = await this.withRetry(listRemoteOperation, 'listRemote', repoName, maxAttempts);
+        const sortedTags: string[] = this.sortByTagName(repoName, result, tagPattern);
+        Global.isVerbose() && console.log(`[${repoName}]: found latest versions in remote git repository:\n${sortedTags ? sortedTags.join('\n') : 'no tags found'}`);
+
+        return sortedTags?.length > 0 ? sortedTags[sortedTags.length - 1] : null;
     }
 
     public static sortByTagName(repoName: string, result: string, tagPattern: string): string[] {
@@ -302,40 +463,60 @@ export class Repository {
      * @param repoName The name of the repository
      * @param repoUrl The URL of the remote repository
      * @param rootDir The directory of the local root repository
+     * @param maxAttempts Maximum number of attempts for transient errors (default: 1, no retries)
      */
-    public static getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve, reject) => {
-            Repository.getLocalOriginUrl(repoName, rootDir)
-                .then((localOriginUrl) => {
-                    let useRepoUrl = repoUrl;
-                    if (!repoUrl) {
-                        console.log(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
-                        reject(`[${repoName}]: repo url not configure in parent-repos.json. Please check the configuration of ${repoName}.`);
-                    } else if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
-                        const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
-                        useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
-                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
-                    } else if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
-                        const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
-                        useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
-                        Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
-                    }
-                    resolve(useRepoUrl);
-                });
-        });
+    public static async getRemoteOriginUrl(repoName: string, repoUrl: string, rootDir: string, maxAttempts: number = 1): Promise<string> {
+        const localOriginUrl = await Repository.getLocalOriginUrl(repoName, rootDir, maxAttempts);
+
+        if (!repoUrl) {
+            const errorMsg = `[${repoName}]: repo url not configured in parent-repos.json. Please check the configuration of ${repoName}.`;
+            console.log(errorMsg);
+            throw new Error(errorMsg);
+        }
+
+        if (repoUrl.startsWith(this.GIT_PROTOCOL) && localOriginUrl.startsWith(this.HTTPS_PROTOCOL)) {
+            const {groups: {host, orgPath}} = /^git@(?<host>.*):(?<orgPath>.*)$/.exec(repoUrl);
+            const useRepoUrl = `${this.HTTPS_PROTOCOL}//${host}/${orgPath}`;
+            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for https.`);
+            return useRepoUrl;
+        }
+
+        if (repoUrl.startsWith(this.HTTPS_PROTOCOL) && localOriginUrl.startsWith(this.GIT_PROTOCOL)) {
+            const {groups: {host, orgPath}} = /^https:\/\/(?<host>[^/]*)\/(?<orgPath>.*)$/.exec(repoUrl);
+            const useRepoUrl = `${this.GIT_PROTOCOL}${host}:${orgPath}`;
+            Global.isVerbose() && console.log(`[${repoName}]: changed repo url ${repoUrl} to ${useRepoUrl} as the root repository's origin is configured for git via ssh.`);
+            return useRepoUrl;
+        }
+
+        return repoUrl;
     }
 
-    public static getLocalOriginUrl(repoName: string, rootDir: string): Promise<string> {
-        return new Promise<string>((resolve) => {
-            simpleGit.simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
-                if (err) {
-                    console.log(`[${repoName}]:`, 'git remote get-url failed! Has the root parent repository the remote added as "origin"?\n', err);
-                    resolve('');
-                } else {
-                    resolve(result);
-                }
+    /**
+     * Gets the origin URL of the local repository.
+     *
+     * @param repoName - Name of the repository for logging
+     * @param rootDir - Root directory of the local repository
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving to the origin URL, or empty string on failure
+     */
+    public static getLocalOriginUrl(repoName: string, rootDir: string, maxAttempts: number = 1): Promise<string> {
+        const getUrlOperation = (): Promise<string> => {
+            return new Promise<string>((resolve, reject) => {
+                simpleGit.simpleGit(rootDir).remote(['get-url', 'origin'], (err, result: string) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                });
             });
-        });
+        };
+
+        return this.withRetry(getUrlOperation, 'getLocalOriginUrl', repoName, maxAttempts)
+            .catch((err) => {
+                console.log(`[${repoName}]:`, 'git remote get-url failed! Has the root parent repository the remote added as "origin"?\n', err);
+                return '';
+            });
     }
 
     public checkRepoHasPathInBranch(options: { ref: string, pathname: string }): boolean {
@@ -399,27 +580,39 @@ export class Repository {
         });
     }
 
-    public fetch({tag, branch}: { tag?: string, branch?: string }): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            const options = [];
-            if (branch || tag) {
-                options.push('--no-tags', '--force', 'origin');
-                tag ? options.push('tag', tag) : options.push(branch);
-            } else {
-                options.push('--all');
-                options.push('--tags');
-            }
+    /**
+     * Fetches from the remote repository.
+     *
+     * @param options - Fetch options (tag or branch to fetch)
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving when fetch completes
+     */
+    public fetch({tag, branch}: { tag?: string, branch?: string }, maxAttempts: number = 1): Promise<void> {
+        const options = [];
+        if (branch || tag) {
+            options.push('--no-tags', '--force', 'origin');
+            tag ? options.push('tag', tag) : options.push(branch);
+        } else {
+            options.push('--all');
+            options.push('--tags');
+        }
 
-            Global.isVerbose() && console.log(`fetching repo ${this.repoName} with options ${options}`);
-            this.git.fetch(options, (err) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    Global.isVerbose() && console.log(`repo ${this.repoName} successfully fetched`);
-                    resolve();
-                }
+        Global.isVerbose() && console.log(`fetching repo ${this.repoName} with options ${options}`);
+
+        const fetchOperation = (): Promise<void> => {
+            return new Promise<void>((resolve, reject) => {
+                this.git.fetch(options, (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        Global.isVerbose() && console.log(`repo ${this.repoName} successfully fetched`);
+                        resolve();
+                    }
+                });
             });
-        });
+        };
+
+        return Repository.withRetry(fetchOperation, 'Fetch', this.repoName, maxAttempts);
     }
 
     public status(): Promise<StatusResult> {
@@ -468,9 +661,20 @@ export class Repository {
                     The named branches will be interpreted as if specified with the -t option on the git remote add command line.
                     With --add, instead of replacing the list of currently tracked branches, adds to that list.
                      */
-                    this.git.remote(['set-branches', '--add', 'origin', branch]);
-                    this.git.fetch(['--depth', '1']);
-                    resolve();
+                    this.git.remote(['set-branches', '--add', 'origin', branch], (remoteErr) => {
+                        if (remoteErr) {
+                            reject(remoteErr);
+                        } else {
+                            // Fetch only the specific branch to avoid "Cannot fast-forward to multiple branches" error
+                            this.git.fetch(['--depth', '1', 'origin', branch], (fetchErr) => {
+                                if (fetchErr) {
+                                    reject(fetchErr);
+                                } else {
+                                    resolve();
+                                }
+                            });
+                        }
+                    });
                 } else {
                     resolve();
                 }
@@ -553,11 +757,11 @@ export class Repository {
     public async merge(remote: string | null, otherBranch: string, opts?: { noFF?: boolean, ffOnly?: boolean, noEdit?: boolean, listFiles?: boolean, noCommit?: boolean }): Promise<void> {
         opts = opts || {};
         Global.isVerbose() && console.log(`[${this.repoName}]: merge ${this.repoName}, otherBranch `, otherBranch);
-        
+
         // Check if the branch exists locally or on the remote
         const existsLocally = await this.checkBranchExistsLocally(otherBranch);
         const existsOnRemote = this.checkBranchExistsOnRemote(remote, otherBranch);
-        
+
         if (!existsLocally && !existsOnRemote) {
             const errorMessage = `Branch '${otherBranch}' does not exist locally or on the remote`;
             console.error(`[${this.repoName}]: ${errorMessage}`);
@@ -570,7 +774,7 @@ export class Repository {
         opts.noEdit && options.push('--no-edit');
         opts.noCommit && options.push('--no-commit');
         options.push('--allow-unrelated-histories');
-        
+
         let mergeData;
         try {
             mergeData = await new Promise<any>((resolve, reject) => {
@@ -649,15 +853,42 @@ export class Repository {
         }
     }
 
-    public push(remote: string, remoteBranchName?: string): Promise<void> {
+    /**
+     * Pushes to the remote repository.
+     *
+     * @param remote - Remote name to push to
+     * @param remoteBranchName - Remote branch name to push to
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving when push completes
+     */
+    public push(remote: string, remoteBranchName?: string, maxAttempts: number = 1): Promise<void> {
         const remoteBranch = remoteBranchName ? 'HEAD:' + remoteBranchName : undefined;
+        Global.isVerbose() && console.log(`[${this.repoName}]: pushing to ${remote}/${remoteBranchName}`);
+
+        const pushOperation = (): Promise<void> => {
+            return new Promise<void>((resolve, reject) => {
+                this.git.push(remote, remoteBranch, {}, (err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        Global.isVerbose() && console.log(`[${this.repoName}]: pushed to ${remote}/${remoteBranchName}`);
+                        resolve();
+                    }
+                });
+            });
+        };
+
+        return Repository.withRetry(pushOperation, 'Push', this.repoName, maxAttempts);
+    }
+
+    public setUpstreamBranch(upstreamBranch: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Global.isVerbose() && console.log(`[${this.repoName}]: pushing to ${remote}/${remoteBranchName}`);
-            this.git.push(remote, remoteBranch, {}, (err) => {
+            Global.isVerbose() && console.log(`[${this.repoName}]: setting upstream branch to ${upstreamBranch}`);
+            this.git.raw(['branch', '--set-upstream-to', upstreamBranch], (err) => {
                 if (err) {
                     reject(err);
                 } else {
-                    Global.isVerbose() && console.log(`[${this.repoName}]: pushed to ${remote}/${remoteBranchName}`);
+                    Global.isVerbose() && console.log(`[${this.repoName}]: upstream branch set to ${upstreamBranch}`);
                     resolve();
                 }
             });
@@ -683,7 +914,14 @@ export class Repository {
         }
     }
 
-    public pullOnlyFastForward(branch: string): Promise<void> {
+    /**
+     * Pulls from the remote repository using fast-forward only.
+     *
+     * @param branch - Branch name for logging purposes
+     * @param maxAttempts - Maximum number of attempts for transient errors (default: 1, no retries)
+     * @returns Promise resolving when pull completes
+     */
+    public pullOnlyFastForward(branch: string, maxAttempts: number = 1): Promise<void> {
         return this.getUpstreamBranchOrOriginBranch()
             .then((tracking) => {
                 if (tracking != null) {
@@ -694,18 +932,23 @@ export class Repository {
                     }
 
                     const remote = tracking.substring(0, i);
-                    const trackingBranch = tracking.substr(i + 1);
+                    const trackingBranch = tracking.substring(i + 1);
 
                     Global.isVerbose() && console.log(`[${this.repoName}]: pulling branch ${branch} from remote ${trackingBranch}`);
-                    return new Promise((resolve, reject) => {
-                        this.git.pull(remote, trackingBranch, ['--ff-only'], (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
+
+                    const pullOperation = (): Promise<void> => {
+                        return new Promise((resolve, reject) => {
+                            this.git.pull(remote, trackingBranch, ['--ff-only'], (err) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve();
+                                }
+                            });
                         });
-                    });
+                    };
+
+                    return Repository.withRetry(pullOperation, 'Pull', this.repoName, maxAttempts);
                 } else {
                     const errorMessage: string = `Not possible because cannot find tracking branch for branch ${branch} in repository ${this.repoName}`;
                     Global.isVerbose() && console.error(errorMessage);

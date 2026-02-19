@@ -71,13 +71,13 @@ export class UpdateRepos extends AbstractReposCommand {
             return Promise.reject(`[${repoName}]: No branch or tag given in parent-repos.json for repo ${repoName}`);
         }
         if (!repoProperties.tag && !repoProperties.useSnapshot) {
-            repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, this.rootDir);
+            repoProperties.latestTagForRelease = await Repository.getLatestTagOfReleaseBranch(repoName, repoProperties, this.rootDir, this.maxAttempts);
         }
 
         const pathToRepo = path.join(this.rootDir, '..', repoName);
         const repo = new Repository(pathToRepo);
         if (!this.noFetch) {
-            await repo.fetch({});
+            await repo.fetch({}, this.maxAttempts);
         }
 
         const status = await repo.status();
@@ -99,6 +99,13 @@ export class UpdateRepos extends AbstractReposCommand {
         const wasGradleBuild = new GradleBuild(pathToRepo).containsGradleBuild();
 
         const repo = new Repository(pathToRepo);
+
+        // Prefetch branch for shallow clones BEFORE checking node_modules
+        // This ensures origin/<branch> exists for the targetRef check
+        if (repoProperties.branch) {
+            await repo.prefetchBranchForShallowClone(repoProperties.branch);
+        }
+
         const targetRef = await this.getTargetRef(repo, repoProperties);
 
         const startingBranchHasCheckedInNodeModules = repo.checkRepoHasPathInBranch({ref: 'HEAD', pathname: AbstractReposCommand.NODE_MODULES});
@@ -133,7 +140,7 @@ export class UpdateRepos extends AbstractReposCommand {
             await this.checkoutBranch(repo, repoProperties);
         } else if (repoProperties.commit) {
             Global.isVerbose() && console.log(`[${repoName}]:`, 'will update to the commit', repoProperties.commit);
-            await repo.fetch({branch: repoProperties.branch});
+            await repo.fetch({branch: repoProperties.branch}, this.maxAttempts);
             await repo.checkoutCommit(repoProperties.commit);
         } else if (repoProperties.tag) {
             console.log(`[${repoName}]: will update to the tag ${repoProperties.tag}.`);
@@ -150,7 +157,7 @@ export class UpdateRepos extends AbstractReposCommand {
 
     private async checkoutTag(repo: Repository, repoName: string, tagToCheckout: string): Promise<void> {
         await repo.resetHard();
-        await repo.fetch({tag: tagToCheckout});
+        await repo.fetch({tag: tagToCheckout}, this.maxAttempts);
         await repo.checkoutTag(tagToCheckout);
         await repo.createBranchForTag(repoName, tagToCheckout);
     }
@@ -165,7 +172,7 @@ export class UpdateRepos extends AbstractReposCommand {
         } else if (this.noFetch) {
             // don't update to the remote branch, but stay at the current local branch
         } else {
-            await repo.pullOnlyFastForward(repoProperties.branch);
+            await repo.pullOnlyFastForward(repoProperties.branch, this.maxAttempts);
         }
     }
 

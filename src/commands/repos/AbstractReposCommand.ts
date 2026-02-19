@@ -14,6 +14,9 @@ import {StatusResult} from 'simple-git';
 export abstract class AbstractReposCommand implements ICommand {
     public static readonly PARENT_REPOS_FILE_NAME: string = 'parent-repos.json';
     public static readonly PARAMETER_CLONE_DEPTH: string = 'depth';
+    public static readonly PARAMETER_MAX_ATTEMPTS: string = 'maxAttempts';
+    public static readonly MAX_ATTEMPTS_LIMIT: number = 10;
+    public static readonly MAX_ATTEMPTS_DEFAULT: number = 3;
 
     protected static readonly PARAMETER_FORCE: string = 'force';
     protected static readonly PARAMETER_SEQUENTIAL: string = 'sequential';
@@ -25,6 +28,7 @@ export abstract class AbstractReposCommand implements ICommand {
     protected sequential: boolean;
     protected concurrency: number;
     protected depth: number;
+    protected maxAttempts: number;
     protected parentReposConfigPath: string;
     protected rootDir: string;
 
@@ -62,6 +66,9 @@ export abstract class AbstractReposCommand implements ICommand {
         if (this.concurrency > 0) {
             Global.isVerbose() && console.log('running with concurrency for parallel execution = ' + this.concurrency);
         }
+
+        this.maxAttempts = AbstractReposCommand.parseMaxAttempts(params);
+        Global.isVerbose() && console.log('running with max attempts = ' + this.maxAttempts);
 
         this.parentReposConfigPath = path.join(this.rootDir, AbstractReposCommand.PARENT_REPOS_FILE_NAME);
         if (!fs.existsSync(this.parentReposConfigPath)) {
@@ -127,5 +134,24 @@ export abstract class AbstractReposCommand implements ICommand {
             return eol.crlf(content);
         }
         return content;
+    }
+
+    /**
+     * Parses and validates the maxAttempts parameter from command parameters.
+     * Returns a valid value between MAX_ATTEMPTS_DEFAULT and MAX_ATTEMPTS_LIMIT.
+     *
+     * @param params - Command parameters containing maxAttempts
+     * @returns Validated maxAttempts value
+     * @throws Error if maxAttempts exceeds MAX_ATTEMPTS_LIMIT
+     */
+    protected static parseMaxAttempts(params: ICommandParameters): number {
+        const maxAttempts = params[AbstractReposCommand.PARAMETER_MAX_ATTEMPTS];
+        if (typeof maxAttempts === 'number' && !isNaN(maxAttempts) && maxAttempts >= 1) {
+            if (maxAttempts > AbstractReposCommand.MAX_ATTEMPTS_LIMIT) {
+                throw new Error(`maxAttempts value ${maxAttempts} must be between ${AbstractReposCommand.MAX_ATTEMPTS_DEFAULT} and ${AbstractReposCommand.MAX_ATTEMPTS_LIMIT}`);
+            }
+            return maxAttempts;
+        }
+        return AbstractReposCommand.MAX_ATTEMPTS_DEFAULT;
     }
 }
