@@ -54,6 +54,14 @@ export class MergeSkeleton extends AbstractReposCommand {
 
     protected static readonly GH_CLI_COMMAND: string = 'gh';
 
+    /**
+     * Files whose local ("ours") version must always be kept when they conflict
+     * during a skeleton merge, regardless of the git status code. This prevents the
+     * skeleton's version.gradle (which may carry an older version) from being adopted.
+     * Matched against the exact path git reports (repo-root files).
+     */
+    protected static readonly ALWAYS_OURS: Set<string> = new Set<string>(['version.gradle']);
+
     protected baseBranch: string;
     protected targetBranch: string;
     protected skeletonBranch: string;
@@ -203,6 +211,14 @@ export class MergeSkeleton extends AbstractReposCommand {
     }
 
     private async handleFile(fileName: string, localStatus: string, remoteStatus: string, interactive: boolean, messagePrefix: string): Promise<void> {
+
+        // Always keep our version of allow-listed files (e.g. version.gradle), regardless
+        // of the merge status or interactive mode, so the skeleton's version is never adopted.
+        if (MergeSkeleton.ALWAYS_OURS.has(fileName)) {
+            console.log(`Keeping our version of '${fileName}' (always kept on conflict)`);
+            this.ours.add(fileName);
+            return;
+        }
 
         // get the corresponding merge status from the map
         const mergeStatus = MergeSkeleton.FILE_MERGE_STATUS_MAP.get(`${localStatus}${remoteStatus}`);
