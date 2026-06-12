@@ -193,9 +193,11 @@ const cli = meow(
                 that will be branched from the base branch. A skeleton branch will be selected automatically based on 
                 the cplace version. 
                 If the merge is successful, the changes will be committed, but not pushed.
-                If the merge was unsuccessful, fix the merge conflicts, add the changes with 'git add .' (without 
+                If the merge was unsuccessful, fix the merge conflicts, add the changes with 'git add .' (without
                 commiting them) and run the same command again. The command will try to continue the merge.
-                
+                The local 'version.gradle' is always kept ('ours') when it conflicts, so the skeleton's
+                (potentially older) version is never adopted.
+
                 --base-branch - specifies to which base branch of the repo to merge the skeleton (ex: release/23.1). 
                 --target-branch - if specified, this branch will be checked out from the base branch, and the skeleton 
                                   will be merged in it instead of the base branch. 
@@ -213,6 +215,7 @@ const cli = meow(
                 --interactive - if specified, the command will ask for a decision for each newly added or conflicting file.
                                 The choices provided are accept our (local) version, accept their (remote) version,
                                 or leave the conflict to be resolved manually.
+                                Note: 'version.gradle' is always kept as ours and is not prompted for.
 
                 ex: cplace-cli repos --merge-skeleton --base-branch=release/23.1 --push 
                     (merge auto detected skeleton version to release/23.1 and push to remote)
