@@ -21,7 +21,7 @@ export class ReleaseNotesMessagesFile {
     private static readonly MESSAGES_FILE_NAME_PATTERN: RegExp = new RegExp(/^messages_.*\.db$/);
     private static readonly CHANGELOG_DEFAULT_MESSAGE_PATTERN: RegExp = new RegExp(/(^|\n{2})\s*changelog:[^\S\n]*(([^\n]|\n(?!\n))*)/, 'i');
     private static readonly RELEVANCE_PATTERNS: RegExp[] = [
-        new RegExp(/merge pull request #\d+/, 'i'), // GitHub Pull Request
+        // new RegExp(/merge pull request #\d+/, 'i'), // GitHub Pull Request
         ReleaseNotesMessagesFile.CHANGELOG_DEFAULT_MESSAGE_PATTERN // Explicit changelog marker
     ];
 
@@ -94,7 +94,7 @@ export class ReleaseNotesMessagesFile {
 
     public getMessage(hash: string): string | null {
         const entry = this.hashMap.get(hash);
-        return entry ? entry.message : null;
+        return entry && entry.status === 'ok' ? entry.message : null;
     }
 
     public parse(): Promise<void> {

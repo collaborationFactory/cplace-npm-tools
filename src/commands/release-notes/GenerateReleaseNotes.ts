@@ -112,11 +112,11 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
-        return logs.filter((log) => log.squad)
+        return logs.filter((log) => log.message)
             .sort((a, b) => {
                 const dateA = new Date(a.date).getTime();
                 const dateB = new Date(b.date).getTime();
-                if (a.squad.toLowerCase() === b.squad.toLowerCase()) {
+                if ((a.squad ?? '').toLowerCase() === (b.squad ?? '').toLowerCase()) {
                     return dateA < dateB ? -1 : 1;
                 } else {
                     return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
@@ -224,7 +224,7 @@ export class GenerateReleaseNotes implements ICommand {
                     .trim();
             }
         }
-        const sortedLogs: IGitLogEntry[] = this.sortLogs(gitLogEntries);
+        const filteredLogs: IGitLogEntry[] = gitLogEntries.filter((log) => log.message);
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -233,13 +233,13 @@ export class GenerateReleaseNotes implements ICommand {
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
-        for (const sortedLog of sortedLogs) {
-            if (sortedLog.message) {
-                const prNumber = sortedLog.message.split('#')[1]?.replace(']', '').trim();
+        for (const log of filteredLogs) {
+            if (log.message) {
+                const prNumber = log.message.split('#')[1]?.replace(']', '').trim();
                 if (prNumber && remoteUrl) {
-                    this.changelog.push(`   * ${sortedLog.message}(${remoteUrl}/pull/${prNumber})`);
+                    this.changelog.push(`   * ${log.message}(${remoteUrl}/pull/${prNumber})`);
                 } else {
-                    this.changelog.push(`   * ${sortedLog.message}`);
+                    this.changelog.push(`   * ${log.message}`);
                 }
             }
         }
