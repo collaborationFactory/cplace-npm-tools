@@ -51,11 +51,12 @@ const log6: IGitLogEntry = {
     hash: 'b'
 };
 
-test('can sort by squad and then by date', () => {
+test('can sort by squad (which may be empty) and then by date', () => {
     const logs = releaseNotes.sortLogs([log2, log4, log5, log1, log3, log6]);
-    expect(logs[0]).toBe(log2);
-    expect(logs[1]).toBe(log4);
-    expect(logs[2]).toBe(log3);
-    expect(logs[3]).toBe(log5);
-    expect(logs[4]).toBe(log1);
+    expect(logs[0]).toBe(log6);
+    expect(logs[1]).toBe(log2);
+    expect(logs[2]).toBe(log4);
+    expect(logs[3]).toBe(log3);
+    expect(logs[4]).toBe(log5);
+    expect(logs[5]).toBe(log1);
 });
