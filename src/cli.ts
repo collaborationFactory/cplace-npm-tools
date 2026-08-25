@@ -45,6 +45,11 @@ const cli = meow(
             If <to> is not given "HEAD" is used.
             If <lang> is not given "en" is used.
 
+            A commit is included in the release notes only if its message contains a changelog: marker
+            (case-insensitive), either at the start of the message or after a blank line:
+
+                changelog: [PFM-ISSUE-1234] Fix: description of the change [PR repo#5678]
+
             --release <version>
                 Create release notes for commits between the head of the release Branch for the given release 
                 and the head of the predecessor release branch.
