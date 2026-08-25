@@ -149,7 +149,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         if (file.getNumErrors()) {
             if (this.force) {
-                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
+                console.warn(`Skipping ${file.getNumErrors()} commented/conflict entries in messages - continuing due to --force`);
                 return file;
             }
             throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in messages');
@@ -175,7 +175,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         if (explicits && explicits.getNumErrors()) {
             if (this.force) {
-                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
+                console.warn(`Skipping ${explicits.getNumErrors()} commented/conflict entries in explicits - continuing due to --force`);
                 return result;
             }
             throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in explicits');
