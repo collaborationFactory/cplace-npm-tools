@@ -32,20 +32,20 @@ test('update method adds missing entries to missingEntries Map', () => {
 test('message with incorrect changelog and merge commit messages are negative/sorted out', () => {
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'a very important changelog for a fix', date: '', author_email: '', author_name: ''};
     let result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 
     entry = {hash: 'hashForTest', message: 'a very important changelog: for a fix', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 
     entry = {hash: 'hashForTest', message: 'Short commit message\n' +
             'changelog: same paragraph, so not reported', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 
     entry = {hash: 'hashForTest', message: 'Merge pull request #5420 from', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 });
 
 test('message with regular changelog is positive / not sorted out', () => {
