@@ -235,7 +235,8 @@ export class GenerateReleaseNotes implements ICommand {
         }
         for (const log of filteredLogs) {
             if (log.message) {
-                const prNumber = log.message.split('#').slice(-1)[0]?.split(']')[0]?.trim();
+                const prNumbers = log.message.match(/#\s*(\d+)/g);
+                const prNumber = prNumbers?.[prNumbers.length - 1].replace(/\D/g, '');
                 if (prNumber && remoteUrl) {
                     this.changelog.push(`   * ${log.message}(${remoteUrl}/pull/${prNumber})`);
                 } else {
