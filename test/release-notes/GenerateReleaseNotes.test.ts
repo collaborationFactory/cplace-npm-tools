@@ -60,3 +60,14 @@ test('can sort by squad (which may be empty) and then by date', () => {
     expect(logs[4]).toBe(log5);
     expect(logs[5]).toBe(log1);
 });
+
+test('sort result is stable for permuted input: squad and date grouping holds regardless of entry order', () => {
+    const logs = releaseNotes.sortLogs([log6, log1, log3, log5, log4, log2]);
+    expect(logs[0]).toBe(log6);
+    // log4 and log2 share squad and date — their relative order reflects input order
+    expect(logs[1]).toBe(log4);
+    expect(logs[2]).toBe(log2);
+    expect(logs[3]).toBe(log3);
+    expect(logs[4]).toBe(log5);
+    expect(logs[5]).toBe(log1);
+});

@@ -113,15 +113,8 @@ export class GenerateReleaseNotes implements ICommand {
 
     public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
         return logs.filter((log) => log.message)
-            .sort((a, b) => {
-                const dateA = new Date(a.date).getTime();
-                const dateB = new Date(b.date).getTime();
-                if ((a.squad ?? '').toLowerCase() === (b.squad ?? '').toLowerCase()) {
-                    return dateA < dateB ? -1 : 1;
-                } else {
-                    return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
-                }
-            });
+            .sort((a, b) => (a.squad ?? '').toLowerCase().localeCompare((b.squad ?? '').toLowerCase())
+                || new Date(a.date).getTime() - new Date(b.date).getTime());
     }
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
@@ -224,7 +217,8 @@ export class GenerateReleaseNotes implements ICommand {
                     .trim();
             }
         }
-        const filteredLogs: IGitLogEntry[] = gitLogEntries.filter((log) => log.message);
+        // Only continue to work on log entries with a message and sort them before further processing
+        const sortedAndFilteredLogs: IGitLogEntry[] = this.sortLogs(gitLogEntries.filter((log) => log.message));
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -233,7 +227,7 @@ export class GenerateReleaseNotes implements ICommand {
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
-        for (const log of filteredLogs) {
+        for (const log of sortedAndFilteredLogs) {
             if (log.message) {
                 const prNumbers = log.message.match(/#\s*(\d+)/g);
                 const prNumber = prNumbers?.[prNumbers.length - 1].replace(/\D/g, '');
