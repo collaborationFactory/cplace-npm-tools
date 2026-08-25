@@ -29,6 +29,23 @@ test('update method adds missing entries to missingEntries Map', () => {
     expect(size).toBe(2);
 });
 
+test('getMessage returns message only for ok entries, null for commented and conflict', () => {
+    const file = new ReleaseNotesMessagesFile('');
+
+    file.update([{hash: 'ok-hash', message: 'changelog: a fix', date: '', author_email: '', author_name: ''}]);
+    expect(file.getMessage('ok-hash')).toBe('a fix');
+
+    file.update([{hash: 'commented-hash', message: 'plain commit without changelog marker', date: '', author_email: '', author_name: ''}]);
+    expect(file.getMessage('commented-hash')).toBeNull();
+
+    // Two ok entries with differing messages for the same hash; merge with empty base produces a conflict
+    file.update([{hash: 'conflict-hash', message: 'changelog: version two', date: '', author_email: '', author_name: ''}]);
+    const other = new ReleaseNotesMessagesFile('');
+    other.update([{hash: 'conflict-hash', message: 'changelog: version one', date: '', author_email: '', author_name: ''}]);
+    file.merge(other, new ReleaseNotesMessagesFile(''));
+    expect(file.getMessage('conflict-hash')).toBeNull();
+});
+
 test('message with incorrect changelog and merge commit messages are negative/sorted out', () => {
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'a very important changelog for a fix', date: '', author_email: '', author_name: ''};
     let result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
