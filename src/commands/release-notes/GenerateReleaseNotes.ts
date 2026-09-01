@@ -228,14 +228,12 @@ export class GenerateReleaseNotes implements ICommand {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
         for (const log of sortedAndFilteredLogs) {
-            if (log.message) {
-                const prNumbers = log.message.match(/#\s*(\d+)/g);
-                const prNumber = prNumbers?.[prNumbers.length - 1].replace(/\D/g, '');
-                if (prNumber && remoteUrl) {
-                    this.changelog.push(`   * ${log.message}(${remoteUrl}/pull/${prNumber})`);
-                } else {
-                    this.changelog.push(`   * ${log.message}`);
-                }
+            const prNumbers = log.message.match(/#\s*(\d+)/g);
+            const prNumber = prNumbers?.[prNumbers.length - 1].replace(/\D/g, '');
+            if (prNumber && remoteUrl) {
+                this.changelog.push(`   * ${log.message}(${remoteUrl}/pull/${prNumber})`);
+            } else {
+                this.changelog.push(`   * ${log.message}`);
             }
         }
 
