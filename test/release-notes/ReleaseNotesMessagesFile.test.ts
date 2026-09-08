@@ -29,19 +29,40 @@ test('update method adds missing entries to missingEntries Map', () => {
     expect(size).toBe(2);
 });
 
-test('message with incorrect changelog is negative/sorted out', () => {
+test('getMessage returns message only for ok entries, null for commented and conflict', () => {
+    const file = new ReleaseNotesMessagesFile('');
+
+    file.update([{hash: 'ok-hash', message: 'changelog: a fix', date: '', author_email: '', author_name: ''}]);
+    expect(file.getMessage('ok-hash')).toBe('a fix');
+
+    file.update([{hash: 'commented-hash', message: 'plain commit without changelog marker', date: '', author_email: '', author_name: ''}]);
+    expect(file.getMessage('commented-hash')).toBeNull();
+
+    // Two ok entries with differing messages for the same hash; merge with empty base produces a conflict
+    file.update([{hash: 'conflict-hash', message: 'changelog: version two', date: '', author_email: '', author_name: ''}]);
+    const other = new ReleaseNotesMessagesFile('');
+    other.update([{hash: 'conflict-hash', message: 'changelog: version one', date: '', author_email: '', author_name: ''}]);
+    file.merge(other, new ReleaseNotesMessagesFile(''));
+    expect(file.getMessage('conflict-hash')).toBeNull();
+});
+
+test('message with incorrect changelog and merge commit messages are negative/sorted out', () => {
     let entry: IGitLogEntry = {hash: 'hashForTest', message: 'a very important changelog for a fix', date: '', author_email: '', author_name: ''};
     let result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 
     entry = {hash: 'hashForTest', message: 'a very important changelog: for a fix', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
 
     entry = {hash: 'hashForTest', message: 'Short commit message\n' +
             'changelog: same paragraph, so not reported', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(undefined);
+    expect(result).toBe(false);
+
+    entry = {hash: 'hashForTest', message: 'Merge pull request #5420 from', date: '', author_email: '', author_name: ''};
+    result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
+    expect(result).toBe(false);
 });
 
 test('message with regular changelog is positive / not sorted out', () => {
@@ -67,10 +88,6 @@ test('message with regular changelog is positive / not sorted out', () => {
     expect(result).toBe(true);
 
     entry = {hash: 'hashForTest', message: '    changelog: Platform Development: [PFM-TASK-2054]Simplified mail config validation [PR cplace#5398]', date: '', author_email: '', author_name: ''};
-    result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
-    expect(result).toBe(true);
-
-    entry = {hash: 'hashForTest', message: 'Merge pull request #5420 from', date: '', author_email: '', author_name: ''};
     result = ReleaseNotesMessagesFile.filterRelevantCommits(entry);
     expect(result).toBe(true);
 

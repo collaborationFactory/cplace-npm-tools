@@ -112,16 +112,9 @@ export class GenerateReleaseNotes implements ICommand {
     }
 
     public sortLogs(logs: IGitLogEntry[]): IGitLogEntry[] {
-        return logs.filter((log) => log.squad)
-            .sort((a, b) => {
-                const dateA = new Date(a.date).getTime();
-                const dateB = new Date(b.date).getTime();
-                if (a.squad.toLowerCase() === b.squad.toLowerCase()) {
-                    return dateA < dateB ? -1 : 1;
-                } else {
-                    return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
-                }
-            });
+        return logs.filter((log) => log.message)
+            .sort((a, b) => (a.squad ?? '').toLowerCase().localeCompare((b.squad ?? '').toLowerCase())
+                || new Date(a.date).getTime() - new Date(b.date).getTime());
     }
 
     private async parseLog(log: IGitLogSummary): Promise<void> {
@@ -156,7 +149,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         if (file.getNumErrors()) {
             if (this.force) {
-                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in messages - continuing due to force option');
+                console.warn(`Skipping ${file.getNumErrors()} commented/conflict entries in messages - continuing due to --force`);
                 return file;
             }
             throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in messages');
@@ -182,7 +175,7 @@ export class GenerateReleaseNotes implements ICommand {
 
         if (explicits && explicits.getNumErrors()) {
             if (this.force) {
-                Global.isVerbose() && console.warn('Some commits are commented out or in conflict in explicits - continuing due to force option');
+                console.warn(`Skipping ${explicits.getNumErrors()} commented/conflict entries in explicits - continuing due to --force`);
                 return result;
             }
             throw new Error('Cannot generate changelogs - some commits are still commented out or in conflict in explicits');
@@ -224,7 +217,8 @@ export class GenerateReleaseNotes implements ICommand {
                     .trim();
             }
         }
-        const sortedLogs: IGitLogEntry[] = this.sortLogs(gitLogEntries);
+        // Only continue to work on log entries with a message and sort them before further processing
+        const sortedAndFilteredLogs: IGitLogEntry[] = this.sortLogs(gitLogEntries.filter((log) => log.message));
         const remoteUrl = execSync('git config --get remote.origin.url')
             .toString()?.replace('.git', '')
             .replace(/(\r\n|\n|\r)/gm, '')
@@ -233,14 +227,13 @@ export class GenerateReleaseNotes implements ICommand {
         if (!remoteUrl) {
             throw new Error(`Remote url of your local git repository doesn't exist.`);
         }
-        for (const sortedLog of sortedLogs) {
-            if (sortedLog.message) {
-                const prNumber = sortedLog.message.split('#')[1]?.replace(']', '').trim();
-                if (prNumber && remoteUrl) {
-                    this.changelog.push(`   * ${sortedLog.message}(${remoteUrl}/pull/${prNumber})`);
-                } else {
-                    this.changelog.push(`   * ${sortedLog.message}`);
-                }
+        for (const log of sortedAndFilteredLogs) {
+            const prNumbers = log.message.match(/#\s*(\d+)/g);
+            const prNumber = prNumbers?.[prNumbers.length - 1].replace(/\D/g, '');
+            if (prNumber && remoteUrl) {
+                this.changelog.push(`   * ${log.message}(${remoteUrl}/pull/${prNumber})`);
+            } else {
+                this.changelog.push(`   * ${log.message}`);
             }
         }
 

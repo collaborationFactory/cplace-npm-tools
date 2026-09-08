@@ -45,6 +45,20 @@ const cli = meow(
             If <to> is not given "HEAD" is used.
             If <lang> is not given "en" is used.
 
+            A commit is included in the release notes only if its message contains a changelog: marker
+            (case-insensitive), either at the start of the message or after a blank line:
+
+                changelog: <Component:> [PFM-ISSUE-xxx] <Description> [PR cplace#nr]
+
+            Component:  Optional. Any word/hyphen sequence followed by a colon. Used to sort
+                        entries when using --docs.
+            [PR cplace#nr]
+                        Optional. The last #nr reference in the message is turned into a pull
+                        request link when using --docs.
+
+            Example:
+                changelog: New Gantt: [PFM-ISSUE-33193] Visual highlighting of critical path tasks [PR cplace-project-planning#1279]
+
             --release <version>
                 Create release notes for commits between the head of the release Branch for the given release 
                 and the head of the predecessor release branch.
