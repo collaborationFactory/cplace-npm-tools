@@ -72,6 +72,9 @@ describe('Upmerge', () => {
 
 
         beforeEach(() => {
+            // Drop queued one-time values a failing test may have left behind
+            mockRepo.status.mockReset();
+            mockRepo.merge.mockReset();
             mockRepo.fetch.mockResolvedValue();
             mockRepo.status.mockResolvedValue(createStatusResult());
             mockRepo.listBranches.mockResolvedValue(mockBranches);
@@ -121,9 +124,6 @@ describe('Upmerge', () => {
             // Should set upstream for each temporary branch
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4); // One for each branch
 
-            // Should configure push.default to upstream
-            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', '--local', 'push.default', 'upstream']);
-
             // Should clean up leftover upmerge branches
             expect(mockRepo.deleteBranch).toHaveBeenCalled();
         });
@@ -142,9 +142,6 @@ describe('Upmerge', () => {
 
             // Should still set upstream for each temporary branch
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledTimes(4);
-
-            // Should still configure push.default
-            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', '--local', 'push.default', 'upstream']);
         });
 
         it('should handle customer branches when specified', async () => {
@@ -198,7 +195,7 @@ describe('Upmerge', () => {
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/master');
         });
 
-        it('should configure push.default to upstream at start', async () => {
+        it('should not change the git configuration of the repository', async () => {
             const params: ICommandParameters = {
                 release: '23.4',
                 push: true
@@ -207,8 +204,78 @@ describe('Upmerge', () => {
 
             await upmerge.execute();
 
-            // Should set push.default to upstream
-            expect(mockRepo.rawWrapper).toHaveBeenCalledWith(['config', '--local', 'push.default', 'upstream']);
+            const configCalls = (mockRepo.rawWrapper as jest.Mock).mock.calls.filter(call => call[0][0] === 'config');
+            expect(configCalls).toEqual([]);
+        });
+
+        it('should print the push command with an explicit refspec when the merge stops on a conflict', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            // First merge (23.4 -> 24.1) stops on a conflict
+            mockRepo.merge.mockRejectedValueOnce(new Error('Merge conflict'));
+            mockRepo.status
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).toContain('git push origin HEAD:release/24.1');
+                expect(output).toContain('cplace-cli flow --upmerge --release 24.1');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
+
+        it('should not print the push command for a conflict when push is disabled', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: false
+            };
+            upmerge.prepareAndMayExecute(params);
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            mockRepo.merge.mockRejectedValueOnce(new Error('Merge conflict'));
+            mockRepo.status
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).not.toContain('git push');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
+
+        it('should not print the push command when the merge fails without a conflict', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            mockRepo.merge.mockRejectedValueOnce(new Error('Merge failed'));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge failed');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).not.toContain('git push');
+            } finally {
+                logSpy.mockRestore();
+            }
         });
 
         it('should clean up leftover upmerge branches after successful completion', async () => {

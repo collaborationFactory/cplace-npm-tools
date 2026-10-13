@@ -71,10 +71,6 @@ export class Upmerge implements ICommand {
         await this.repo.fetch({});
         await this.checkRepoClean();
 
-        // Set push.default to upstream to allow pushing to differently named upstream branches
-        // This allows developers to simply run 'git push' after resolving merge conflicts
-        await this.repo.rawWrapper(['config', '--local', 'push.default', 'upstream']);
-
         const release = await this.checkForRelease();
 
         const gitBranchDetails = await this.repo.listBranches();
@@ -318,12 +314,49 @@ export class Upmerge implements ICommand {
                     return upmergeChecker.analyzeRequiredMerge(tempSrcBranch, branch.name)
                 }
             })
-            .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
+            .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles})
+                .catch((err) => (this.push ? this.printConflictResolutionHint(targetBranchName) : BPromise.resolve())
+                    .then(() => BPromise.reject(err))))
             .then(() => {
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
                     : BPromise.resolve();
             });
+    }
+
+    /**
+     * Tells the developer how to finish an upmerge that stopped on a merge conflict. The temporary branch is named
+     * differently from its target branch, so the push needs an explicit refspec.
+     */
+    private printConflictResolutionHint(targetBranchName: string): BPromise<void> {
+        return BPromise.resolve(this.repo.status())
+            .then((status) => {
+                if (!status.conflicted.length) {
+                    return;
+                }
+                console.log('To finish this upmerge:');
+                console.log('  1. resolve the conflicts and commit the merge');
+                console.log(`  2. git push ${this.remote} HEAD:${targetBranchName}`);
+                const releaseMatch = /^release\/(.+)$/.exec(targetBranchName);
+                if (releaseMatch) {
+                    console.log(`  3. continue with: cplace-cli flow --upmerge --release ${releaseMatch[1]}${this.continueUpmergeOptions()}`);
+                }
+                console.log('');
+            })
+            .catch(() => undefined);
+    }
+
+    private continueUpmergeOptions(): string {
+        const options: string[] = [];
+        if (this.remote !== 'origin') {
+            options.push(`--remote ${this.remote}`);
+        }
+        if (this.allCustomers) {
+            options.push('--all-customers');
+        } else if (this.customer) {
+            options.push(`--customer ${this.customer}`);
+        }
+        return options.map((option) => ' ' + option).join('');
     }
 
 }
