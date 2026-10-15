@@ -34,6 +34,7 @@ export class Upmerge implements ICommand {
     private showDetails: boolean;
 
     private remoteReleaseBranchPattern: RegExp;
+    private startRelease: string;
 
     private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
     private static readonly REPO_DIVIDER = '='.repeat(20);
@@ -123,6 +124,7 @@ export class Upmerge implements ICommand {
             if (rn == null) {
                 return BPromise.reject(`Could not parse release number '${this.release}'`);
             }
+            this.startRelease = this.release;
             return BPromise.resolve(rn);
         }
 
@@ -140,6 +142,7 @@ export class Upmerge implements ICommand {
                     return BPromise.reject(`${version} is no valid Release Number`);
                 } else {
                     console.log('is in release:', releaseNumber);
+                    this.startRelease = version;
                     return BPromise.resolve(releaseNumber);
                 }
             });
@@ -326,7 +329,9 @@ export class Upmerge implements ICommand {
 
     /**
      * Tells the developer how to finish an upmerge that stopped on a merge conflict. The temporary branch is named
-     * differently from its target branch, so the push needs an explicit refspec.
+     * differently from its target branch, so the push needs an explicit refspec. The rerun repeats the original
+     * arguments: merges that are already done pass through, and starting from the conflicting branch instead would
+     * skip pending customer branch merges.
      */
     private printConflictResolutionHint(targetBranchName: string): BPromise<void> {
         return BPromise.resolve(this.repo.status())
@@ -337,17 +342,13 @@ export class Upmerge implements ICommand {
                 console.log('To finish this upmerge:');
                 console.log('  1. resolve the conflicts and commit the merge');
                 console.log(`  2. git push ${this.remote} HEAD:${targetBranchName}`);
-                const releaseMatch = /^release\/(.+)$/.exec(targetBranchName);
-                if (releaseMatch) {
-                    console.log(`  3. continue with: cplace-cli flow --upmerge --release ${releaseMatch[1]}${this.continueUpmergeOptions()}`);
-                }
-                console.log('');
+                console.log(`  3. continue with: cplace-cli flow --upmerge${this.continueUpmergeOptions()}\n`);
             })
             .catch(() => undefined);
     }
 
     private continueUpmergeOptions(): string {
-        const options: string[] = [];
+        const options: string[] = [`--release ${this.startRelease}`];
         if (this.remote !== 'origin') {
             options.push(`--remote ${this.remote}`);
         }
@@ -355,6 +356,12 @@ export class Upmerge implements ICommand {
             options.push('--all-customers');
         } else if (this.customer) {
             options.push(`--customer ${this.customer}`);
+        }
+        if (this.showFiles) {
+            options.push('--show-files');
+        }
+        if (this.showDetails) {
+            options.push('--show-details');
         }
         return options.map((option) => ' ' + option).join('');
     }

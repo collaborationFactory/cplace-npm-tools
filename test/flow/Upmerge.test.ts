@@ -228,7 +228,95 @@ describe('Upmerge', () => {
 
                 const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
                 expect(output).toContain('git push origin HEAD:release/24.1');
-                expect(output).toContain('cplace-cli flow --upmerge --release 24.1');
+                expect(output).toContain('cplace-cli flow --upmerge --release 23.4\n');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
+
+        it('should repeat the original arguments in the rerun command when a customer branch merge stops on a conflict', async () => {
+            mockRepo.listBranches.mockResolvedValue([
+                ...mockBranches,
+                {name: 'origin/customer/acme/23.4', commit: 'commit5', current: false, isRemote: true, tracking: null},
+                {name: 'origin/customer/acme/24.1', commit: 'commit6', current: false, isRemote: true, tracking: null}
+            ]);
+            const params: ICommandParameters = {
+                release: '23.4',
+                customer: 'acme',
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            // The three release merges succeed, the merge into customer/acme/23.4 stops on a conflict
+            mockRepo.merge
+                .mockResolvedValueOnce()
+                .mockResolvedValueOnce()
+                .mockResolvedValueOnce()
+                .mockRejectedValueOnce(new Error('Merge conflict'));
+            mockRepo.status
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).toContain('git push origin HEAD:customer/acme/23.4');
+                expect(output).toContain('cplace-cli flow --upmerge --release 23.4 --customer acme\n');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
+
+        it('should print the rerun command when the merge into the default branch stops on a conflict', async () => {
+            const params: ICommandParameters = {
+                release: '23.4',
+                allCustomers: true,
+                showFiles: true,
+                push: true
+            };
+            upmerge.prepareAndMayExecute(params);
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            // 23.4 -> 24.1 and 24.1 -> 24.2 succeed, 24.2 -> master stops on a conflict
+            mockRepo.merge
+                .mockResolvedValueOnce()
+                .mockResolvedValueOnce()
+                .mockRejectedValueOnce(new Error('Merge conflict'));
+            mockRepo.status
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).toContain('git push origin HEAD:master');
+                expect(output).toContain('cplace-cli flow --upmerge --release 23.4 --all-customers --show-files\n');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
+
+        it('should use the release of the tracked branch in the rerun command when no release is given', async () => {
+            upmerge.prepareAndMayExecute({push: true});
+            const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+            mockRepo.merge.mockRejectedValueOnce(new Error('Merge conflict'));
+            mockRepo.status
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult())
+                .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+            try {
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                const output = logSpy.mock.calls.map(call => call.join(' ')).join('\n');
+                expect(output).toContain('cplace-cli flow --upmerge --release 23.4\n');
             } finally {
                 logSpy.mockRestore();
             }
