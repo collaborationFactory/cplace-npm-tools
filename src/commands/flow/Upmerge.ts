@@ -34,6 +34,7 @@ export class Upmerge implements ICommand {
     private showDetails: boolean;
 
     private remoteReleaseBranchPattern: RegExp;
+    private startRelease: string;
 
     private prefix: string = 'upmerge-' + randomatic('Aa0', 6) + '/';
     private static readonly REPO_DIVIDER = '='.repeat(20);
@@ -70,10 +71,6 @@ export class Upmerge implements ICommand {
     public async execute(): Promise<void> {
         await this.repo.fetch({});
         await this.checkRepoClean();
-
-        // Set push.default to upstream to allow pushing to differently named upstream branches
-        // This allows developers to simply run 'git push' after resolving merge conflicts
-        await this.repo.rawWrapper(['config', '--local', 'push.default', 'upstream']);
 
         const release = await this.checkForRelease();
 
@@ -127,6 +124,7 @@ export class Upmerge implements ICommand {
             if (rn == null) {
                 return BPromise.reject(`Could not parse release number '${this.release}'`);
             }
+            this.startRelease = this.release;
             return BPromise.resolve(rn);
         }
 
@@ -144,6 +142,7 @@ export class Upmerge implements ICommand {
                     return BPromise.reject(`${version} is no valid Release Number`);
                 } else {
                     console.log('is in release:', releaseNumber);
+                    this.startRelease = version;
                     return BPromise.resolve(releaseNumber);
                 }
             });
@@ -318,12 +317,53 @@ export class Upmerge implements ICommand {
                     return upmergeChecker.analyzeRequiredMerge(tempSrcBranch, branch.name)
                 }
             })
-            .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles}))
+            .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles})
+                .catch((err) => (this.push ? this.printConflictResolutionHint(targetBranchName) : BPromise.resolve())
+                    .then(() => BPromise.reject(err))))
             .then(() => {
                 return this.push
                     ? this.repo.push(this.remote, targetBranchName)
                     : BPromise.resolve();
             });
+    }
+
+    /**
+     * Tells the developer how to finish an upmerge that stopped on a merge conflict. The temporary branch is named
+     * differently from its target branch, so the push needs an explicit refspec. The rerun repeats the original
+     * arguments: merges that are already done pass through, and starting from the conflicting branch instead would
+     * skip pending customer branch merges.
+     */
+    private printConflictResolutionHint(targetBranchName: string): BPromise<void> {
+        return BPromise.resolve(this.repo.status())
+            .then((status) => {
+                if (!status.conflicted.length) {
+                    return;
+                }
+                console.log('To finish this upmerge:');
+                console.log('  1. resolve the conflicts and commit the merge');
+                console.log(`  2. git push ${this.remote} HEAD:${targetBranchName}`);
+                console.log(`  3. continue with: cplace-cli flow --upmerge${this.continueUpmergeOptions()}\n`);
+            })
+            .catch(() => undefined);
+    }
+
+    private continueUpmergeOptions(): string {
+        const options: string[] = [`--release ${this.startRelease}`];
+        if (this.remote !== 'origin') {
+            options.push(`--remote ${this.remote}`);
+        }
+        if (this.allCustomers) {
+            options.push('--all-customers');
+        } else if (this.customer) {
+            options.push(`--customer ${this.customer}`);
+        }
+        if (this.showFiles) {
+            options.push('--show-files');
+        }
+        if (this.showDetails) {
+            options.push('--show-details');
+        }
+        return options.map((option) => ' ' + option).join('');
     }
 
 }
