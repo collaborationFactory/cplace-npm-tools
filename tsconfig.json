@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2018",
     "declaration": true,
     "module": "commonjs",
     "sourceMap": true,
@@ -10,7 +10,7 @@
     "outDir": "dist",
     "noImplicitAny": false,
     "rootDirs": ["src", "test"],
-    "lib": ["ES6"]
+    "lib": ["ES2018"]
   },
   "include": [
     "src/**/*.ts"
