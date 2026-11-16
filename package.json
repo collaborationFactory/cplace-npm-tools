@@ -1,6 +1,6 @@
 {
   "name": "@cplace/cli",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "cplace cli tools",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -24,10 +24,13 @@
     "url": "https://github.com/collaborationFactory/cplace-npm-tools.git"
   },
   "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.23.4 <23 || >=24.22.1"
+  },
   "devDependencies": {
     "@eslint/create-config": "^0.4.2",
     "@types/jest": "^29.5.12",
-    "@types/node": "~18.11.0",
+    "@types/node": "~24.19.2",
     "@types/rimraf": "^3.0.2",
     "@types/update-notifier": "^4.1.0",
     "@typescript-eslint/eslint-plugin": "^5.48.0",
@@ -42,7 +45,7 @@
     "merge2": "^1.0.2",
     "ts-jest": "^29.1.5",
     "tslint": "^5.11.0",
-    "typescript": "~5.1.0"
+    "typescript": "~5.6.3"
   },
   "dependencies": {
     "@inquirer/expand": "^4.0.15",
