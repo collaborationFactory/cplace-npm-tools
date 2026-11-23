@@ -11,6 +11,13 @@ import {IBranchDetails} from './models';
 import {Global} from '../../Global';
 import {promiseAllSettledParallel} from '../../promiseAllSettled';
 import {UpmergeAnalyzer} from "./UpmergeAnalyzer";
+import {runVerifyCommand} from './VerifyCommand';
+
+/** A branch that received a merge in this run: the temporary branch holding the merge and the branch it is for */
+interface IMergedTarget {
+    tempBranchName: string;
+    targetBranchName: string;
+}
 
 export class Upmerge implements ICommand {
     // language=JSRegexp
@@ -23,6 +30,7 @@ export class Upmerge implements ICommand {
     private static readonly PARAMETER_ALL_CUSTOMERS: string = 'allCustomers';
     private static readonly PARAMETER_CUSTOMER: string = 'customer';
     private static readonly PARAMETER_SHOW_DETAILS: string = 'showDetails';
+    private static readonly PARAMETER_VERIFY: string = 'verify';
 
     private repo: Repository;
     private remote: string = 'origin';
@@ -32,6 +40,10 @@ export class Upmerge implements ICommand {
     private allCustomers: boolean;
     private customer: string;
     private showDetails: boolean;
+    private verifyCommand: string;
+
+    /** Branches merged in this run, in merge order and each listed once */
+    private readonly mergedTargets: IMergedTarget[] = [];
 
     private remoteReleaseBranchPattern: RegExp;
     private startRelease: string;
@@ -56,6 +68,15 @@ export class Upmerge implements ICommand {
         }
         this.showFiles = params[Upmerge.PARAMETER_SHOW_FILES] === true;
         this.showDetails = params[Upmerge.PARAMETER_SHOW_DETAILS] === true;
+
+        const verify = params[Upmerge.PARAMETER_VERIFY];
+        if (verify !== undefined && verify !== false) {
+            if (typeof verify !== 'string' || !verify.trim()) {
+                console.error('--verify needs a command, e.g. --verify "./gradlew compileJava"');
+                return false;
+            }
+            this.verifyCommand = verify;
+        }
 
         this.allCustomers = params[Upmerge.PARAMETER_ALL_CUSTOMERS] === true;
         if (!this.allCustomers) {
@@ -241,6 +262,7 @@ export class Upmerge implements ICommand {
             .then(() => customerBranches.reduce(
                 (p, branch) => p.then(() => this.mergeCustomerBranch(branch, branches, cleanup)),
                 BPromise.resolve()))
+            .then(() => this.verifyAndPushMergedTargets())
             .then(() => {
                 // On success: checkout the last upmerged branch and delete temporary branches
                 if (releaseBranches.length > 0) {
@@ -309,7 +331,12 @@ export class Upmerge implements ICommand {
         }
         const tempBranchName = this.tempBranchName(branch.name);
         const targetBranchName = branch.name.substr(this.remote.length + 1);
-        return this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name])
+        // A customer branch receives two merges. When pushes are deferred, the second merge has to build on the temporary
+        // branch of the first one: resetting it to the remote branch would drop the first merge.
+        const checkout = this.verifyCommand && cleanup.has(tempBranchName)
+            ? this.repo.checkoutBranch(tempBranchName)
+            : this.repo.checkoutBranch([tolerateExistingBranch ? '-B' : '-b', tempBranchName, branch.name]);
+        return BPromise.resolve(checkout)
             .then(() => cleanup.add(tempBranchName))
             .then(() => this.repo.setUpstreamBranch(`${this.remote}/${targetBranchName}`))
             .then(() => {
@@ -320,11 +347,87 @@ export class Upmerge implements ICommand {
             .then(() => this.repo.merge(null, tempSrcBranch, {noFF: true, listFiles: this.showFiles})
                 .catch((err) => (this.push ? this.printConflictResolutionHint(targetBranchName) : BPromise.resolve())
                     .then(() => BPromise.reject(err))))
+            .then(() => this.addMergedTarget({tempBranchName, targetBranchName}))
             .then(() => {
-                return this.push
+                return this.push && !this.verifyCommand
                     ? this.repo.push(this.remote, targetBranchName)
                     : BPromise.resolve();
             });
+    }
+
+    private addMergedTarget(target: IMergedTarget): void {
+        if (!this.mergedTargets.some((t) => t.tempBranchName === target.tempBranchName)) {
+            this.mergedTargets.push(target);
+        }
+    }
+
+    /**
+     * With --verify, nothing has been pushed yet when all merges are done. Runs the verify command on every merged branch
+     * in merge order and pushes them only if the command succeeds on all of them.
+     */
+    private async verifyAndPushMergedTargets(): Promise<void> {
+        if (!this.verifyCommand) {
+            return;
+        }
+
+        const cwd = await this.repositoryRoot();
+        for (const [index, target] of this.mergedTargets.entries()) {
+            await this.verifyMergedTarget(target, cwd, this.mergedTargets.slice(0, index));
+        }
+
+        if (!this.push) {
+            console.log('\nVerification passed for all merged branches, nothing pushed (--no-push)');
+            return;
+        }
+        console.log('\nVerification passed for all merged branches, pushing');
+        for (const target of this.mergedTargets) {
+            await this.repo.checkoutBranch(target.tempBranchName);
+            await this.repo.push(this.remote, target.targetBranchName);
+        }
+    }
+
+    private async verifyMergedTarget(target: IMergedTarget, cwd: string, verifiedTargets: IMergedTarget[]): Promise<void> {
+        if (!await this.hasNewCommits(target)) {
+            console.log(`\nNothing merged into ${target.targetBranchName}, skipping verification`);
+            return;
+        }
+
+        console.log(`\nVerifying ${target.targetBranchName} on ${target.tempBranchName}: ${this.verifyCommand}`);
+        await this.repo.checkoutBranch(target.tempBranchName);
+
+        let outcome: string;
+        try {
+            const result = await runVerifyCommand(this.verifyCommand, cwd);
+            if (result.exitCode === 0) {
+                console.log(`Verification passed for ${target.targetBranchName}`);
+                return;
+            }
+            outcome = result.signal ? `terminated by signal ${result.signal}` : `exit code ${result.exitCode}`;
+        } catch (e) {
+            outcome = `command could not be started: ${e.message || e}`;
+        }
+
+        const failure = `Verification failed for ${target.targetBranchName} (${outcome})`;
+        console.error(failure);
+        console.log(`Nothing was pushed. The merges are on the local temporary branches, you are on ${target.tempBranchName}.`);
+        if (this.push) {
+            this.printFinishHint([
+                'fix the problem on this branch and commit the fix',
+                this.pushCommand(target.targetBranchName, verifiedTargets)
+            ]);
+        }
+        throw new Error(`${failure}, nothing was pushed`);
+    }
+
+    /** Whether the temporary branch holds commits its target branch on the remote does not have */
+    private async hasNewCommits(target: IMergedTarget): Promise<boolean> {
+        const count = await this.repo.rawWrapper(['rev-list', '--count', `${this.remote}/${target.targetBranchName}..${target.tempBranchName}`]);
+        return `${count}`.trim() !== '0';
+    }
+
+    private async repositoryRoot(): Promise<string> {
+        const root = `${await this.repo.rawWrapper(['rev-parse', '--show-toplevel'])}`.trim();
+        return root || process.cwd();
     }
 
     /**
@@ -339,12 +442,38 @@ export class Upmerge implements ICommand {
                 if (!status.conflicted.length) {
                     return;
                 }
-                console.log('To finish this upmerge:');
-                console.log('  1. resolve the conflicts and commit the merge');
-                console.log(`  2. git push ${this.remote} HEAD:${targetBranchName}`);
-                console.log(`  3. continue with: cplace-cli flow --upmerge${this.continueUpmergeOptions()}\n`);
+                const steps = ['resolve the conflicts and commit the merge'];
+                const pendingTargets = this.mergedTargets.filter((t) => t.targetBranchName !== targetBranchName);
+                if (this.verifyCommand) {
+                    const unverified = ['this branch', ...pendingTargets.map((t) => t.tempBranchName)].join(', ');
+                    steps.push(`run the verify command on ${unverified}: none of them has been verified yet`);
+                }
+                steps.push(this.pushCommand(targetBranchName, this.verifyCommand ? pendingTargets : []));
+                this.printFinishHint(steps);
             })
             .catch(() => undefined);
+    }
+
+    /**
+     * Prints the steps that finish a stopped upmerge, followed by the rerun of the original command. The rerun repeats
+     * the original arguments: merges that are already done pass through.
+     */
+    private printFinishHint(steps: string[]): void {
+        console.log('To finish this upmerge:');
+        [...steps, `continue with: cplace-cli flow --upmerge${this.continueUpmergeOptions()}\n`]
+            .forEach((step, i) => console.log(`  ${i + 1}. ${step}`));
+    }
+
+    /**
+     * The push that finishes a stopped upmerge: the current branch to its target, together with the merges of this run that
+     * have not been pushed yet. Those are pushed atomically so that no target branch is left without the merges below it.
+     */
+    private pushCommand(targetBranchName: string, unpushedTargets: IMergedTarget[]): string {
+        if (!unpushedTargets.length) {
+            return `git push ${this.remote} HEAD:${targetBranchName}`;
+        }
+        const refspecs = unpushedTargets.map((t) => `${t.tempBranchName}:${t.targetBranchName}`);
+        return `git push --atomic ${this.remote} ${refspecs.join(' ')} HEAD:${targetBranchName}`;
     }
 
     private continueUpmergeOptions(): string {
@@ -363,7 +492,14 @@ export class Upmerge implements ICommand {
         if (this.showDetails) {
             options.push('--show-details');
         }
+        if (this.verifyCommand) {
+            options.push(`--verify ${Upmerge.shellQuote(this.verifyCommand)}`);
+        }
         return options.map((option) => ' ' + option).join('');
+    }
+
+    private static shellQuote(value: string): string {
+        return `'${value.replace(/'/g, `'\\''`)}'`;
     }
 
 }

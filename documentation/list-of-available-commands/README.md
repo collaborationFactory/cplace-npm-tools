@@ -279,6 +279,7 @@ $  cplace-cli --help
             be on the path.
 
         flow --upmerge [--no-push] [--release <version>] [--all-customers | --customer <customer>] [--show-files] [--show-details]
+            [--verify <command>]
             Merge changes upwards into all releases. This needs a clean workspace, however it will not touch your
             local branches. All merges will be done on new, temporary local branches and will then be pushed.
 
@@ -303,6 +304,18 @@ $  cplace-cli --help
             --show-details
               Shows commit details when 10 or fewer commits
               need merging, otherwise displays a summary grouped by author.
+
+            --verify <command>
+                Run <command> on every merged branch before anything is pushed, and push only if it succeeds on all
+                of them. All branches are merged first, then <command> runs through the shell once per merged branch
+                (checked out on its temporary branch, in the repository root), in merge order. Branches that received
+                no new commits are skipped. If <command> exits with a non-zero code, nothing is pushed: the output names
+                the branch in a line "Verification failed for <branch> (exit code <n>)", the local temporary branches
+                are kept with the failing one checked out, and the CLI exits with a non-zero code. Customer branches
+                (--customer, --all-customers) are verified the same way, after the release branches. Combined with
+                --no-push, the branches are merged and verified only. cplace-cli knows nothing about the build tool,
+                e.g.:
+                    cplace-cli flow --upmerge --release 26.1 --verify "./gradlew compileJava compileTestJava -PnoIncludes=true"
 
         refactor <subcommand> --plugin|-p <plugin>
             Handles plugin specific refactorings where <subcommand> is one of the following:
