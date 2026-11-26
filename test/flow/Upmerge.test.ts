@@ -3,9 +3,11 @@ import {Repository} from '../../src/git';
 import {IGitBranchDetails} from '../../src/git/models';
 import {ICommandParameters} from '../../src/commands/models';
 import {StatusResult} from 'simple-git';
+import {runVerifyCommand} from '../../src/commands/flow/VerifyCommand';
 
 // Mock Repository class
 jest.mock('../../src/git/Repository');
+jest.mock('../../src/commands/flow/VerifyCommand');
 
 describe('Upmerge', () => {
     let upmerge: Upmerge;
@@ -26,6 +28,16 @@ describe('Upmerge', () => {
 
             expect(result).toBeTruthy();
             expect(Repository).toHaveBeenCalled();
+        });
+
+        it('should refuse --verify without a command', () => {
+            const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            try {
+                expect(upmerge.prepareAndMayExecute({verify: ''})).toBeFalsy();
+                expect(upmerge.prepareAndMayExecute({verify: '  '})).toBeFalsy();
+            } finally {
+                errorSpy.mockRestore();
+            }
         });
 
         it('should accept custom remote', () => {
@@ -423,6 +435,244 @@ describe('Upmerge', () => {
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.1');
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/release/24.2');
             expect(mockRepo.setUpstreamBranch).toHaveBeenCalledWith('origin/master');
+        });
+
+        it('should not run a verify command without --verify', async () => {
+            upmerge.prepareAndMayExecute({release: '23.4', push: true});
+
+            await upmerge.execute();
+
+            expect(runVerifyCommand).not.toHaveBeenCalled();
+        });
+
+        describe('with --verify', () => {
+            const VERIFY_COMMAND = './gradlew compileJava';
+            const mockRunVerifyCommand = runVerifyCommand as jest.MockedFunction<typeof runVerifyCommand>;
+            let logSpy: jest.SpyInstance;
+            let errorSpy: jest.SpyInstance;
+
+            /** Target branches that received no new commits in the merge */
+            let unchangedTargets: string[];
+
+            beforeEach(() => {
+                unchangedTargets = [];
+                mockRunVerifyCommand.mockReset();
+                mockRunVerifyCommand.mockResolvedValue({exitCode: 0, signal: null});
+                mockRepo.rawWrapper = jest.fn().mockImplementation((args: string[]) => {
+                    if (args[0] === 'rev-parse' && args[1] === '--show-toplevel') {
+                        return Promise.resolve('/path/to/repo\n');
+                    }
+                    if (args[0] === 'rev-list') {
+                        const target = args[2].split('..')[0].replace(/^origin\//, '');
+                        return Promise.resolve(unchangedTargets.includes(target) ? '0\n' : '2\n');
+                    }
+                    return Promise.resolve('');
+                });
+                logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+                errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            });
+
+            afterEach(() => {
+                logSpy.mockRestore();
+                errorSpy.mockRestore();
+            });
+
+            function output(): string {
+                return [...logSpy.mock.calls, ...errorSpy.mock.calls].map(call => call.join(' ')).join('\n');
+            }
+
+            /** The branch checked out right before each call of the given mock */
+            function checkedOutBefore(mock: jest.MockInstance<unknown, any[]>): string[] {
+                return mock.mock.invocationCallOrder.map((order) => {
+                    const checkoutIndex = mockRepo.checkoutBranch.mock.invocationCallOrder
+                        .filter((o) => o < order)
+                        .length - 1;
+                    return mockRepo.checkoutBranch.mock.calls[checkoutIndex][0] as string;
+                });
+            }
+
+            it('should verify every merged branch in merge order before pushing any of them', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+
+                await upmerge.execute();
+
+                expect(mockRunVerifyCommand).toHaveBeenCalledTimes(3);
+                expect(mockRunVerifyCommand).toHaveBeenCalledWith(VERIFY_COMMAND, '/path/to/repo');
+                expect(checkedOutBefore(mockRunVerifyCommand)).toEqual([
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/release\/24\.1$/),
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/release\/24\.2$/),
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/master$/)
+                ]);
+
+                expect(mockRepo.push.mock.calls).toEqual([
+                    ['origin', 'release/24.1'],
+                    ['origin', 'release/24.2'],
+                    ['origin', 'master']
+                ]);
+                const lastVerification = Math.max(...mockRunVerifyCommand.mock.invocationCallOrder);
+                const firstPush = Math.min(...mockRepo.push.mock.invocationCallOrder);
+                expect(lastVerification).toBeLessThan(firstPush);
+            });
+
+            it('should push each branch from its own temporary branch', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+
+                await upmerge.execute();
+
+                expect(checkedOutBefore(mockRepo.push)).toEqual([
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/release\/24\.1$/),
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/release\/24\.2$/),
+                    expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/master$/)
+                ]);
+            });
+
+            it('should push nothing and name the failing branch when the verify command fails', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand
+                    .mockResolvedValueOnce({exitCode: 0, signal: null})
+                    .mockResolvedValueOnce({exitCode: 1, signal: null});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed for release/24.2 (exit code 1)');
+
+                expect(mockRepo.push).not.toHaveBeenCalled();
+                expect(mockRunVerifyCommand).toHaveBeenCalledTimes(2);
+                expect(errorSpy).toHaveBeenCalledWith('Verification failed for release/24.2 (exit code 1)');
+            });
+
+            it('should keep the temporary branches and stay on the failing one when the verify command fails', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand.mockResolvedValueOnce({exitCode: 1, signal: null});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed for release/24.1');
+
+                expect(mockRepo.deleteBranch).not.toHaveBeenCalled();
+                const checkouts = mockRepo.checkoutBranch.mock.calls;
+                expect(checkouts[checkouts.length - 1][0]).toMatch(/^upmerge-[A-Za-z0-9]{6}\/release\/24\.1$/);
+            });
+
+            it('should print how to push the fix together with the branches verified before it', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand
+                    .mockResolvedValueOnce({exitCode: 0, signal: null})
+                    .mockResolvedValueOnce({exitCode: 1, signal: null});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed');
+
+                expect(output()).toMatch(
+                    /git push --atomic origin upmerge-[A-Za-z0-9]{6}\/release\/24\.1:release\/24\.1 HEAD:release\/24\.2\n/);
+                expect(output()).toContain(`cplace-cli flow --upmerge --release 23.4 --verify '${VERIFY_COMMAND}'\n`);
+            });
+
+            it('should report a command terminated by a signal as a failure', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand.mockResolvedValueOnce({exitCode: null, signal: 'SIGTERM'});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed for release/24.1 (terminated by signal SIGTERM)');
+
+                expect(mockRepo.push).not.toHaveBeenCalled();
+            });
+
+            it('should report a command that cannot be started as a failure', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand.mockRejectedValueOnce(new Error('spawn ENOENT'));
+
+                await expect(upmerge.execute()).rejects.toThrow(
+                    'Verification failed for release/24.1 (command could not be started: spawn ENOENT)');
+
+                expect(mockRepo.push).not.toHaveBeenCalled();
+            });
+
+            it('should verify but not push with --no-push', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: false, verify: VERIFY_COMMAND});
+
+                await upmerge.execute();
+
+                expect(mockRunVerifyCommand).toHaveBeenCalledTimes(3);
+                expect(mockRepo.push).not.toHaveBeenCalled();
+            });
+
+            it('should not print push instructions for a failure with --no-push', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: false, verify: VERIFY_COMMAND});
+                mockRunVerifyCommand.mockResolvedValueOnce({exitCode: 2, signal: null});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed for release/24.1 (exit code 2)');
+
+                expect(output()).not.toContain('git push');
+            });
+
+            it('should skip the verification of a branch that received no new commits', async () => {
+                unchangedTargets = ['release/24.2'];
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+
+                await upmerge.execute();
+
+                expect(checkedOutBefore(mockRunVerifyCommand)).toEqual([
+                    expect.stringMatching(/\/release\/24\.1$/),
+                    expect.stringMatching(/\/master$/)
+                ]);
+                expect(mockRepo.push).toHaveBeenCalledTimes(3);
+            });
+
+            it('should verify customer branches after the release branches and keep both merges into a customer branch', async () => {
+                mockRepo.listBranches.mockResolvedValue([
+                    ...mockBranches,
+                    {name: 'origin/customer/acme/23.4', commit: 'commit5', current: false, isRemote: true, tracking: null},
+                    {name: 'origin/customer/acme/24.1', commit: 'commit6', current: false, isRemote: true, tracking: null}
+                ]);
+                upmerge.prepareAndMayExecute({release: '23.4', customer: 'acme', push: true, verify: VERIFY_COMMAND});
+
+                await upmerge.execute();
+
+                expect(mockRepo.merge).toHaveBeenCalledTimes(6);
+                // customer/acme/24.1 receives customer/acme/23.4 and then release/24.1: the second merge has to continue on
+                // the temporary branch of the first one instead of resetting it to the unchanged remote branch
+                const resets = mockRepo.checkoutBranch.mock.calls
+                    .filter((call) => Array.isArray(call[0]) && call[0][0] === '-B')
+                    .filter((call) => call[0][2] === 'origin/customer/acme/24.1');
+                expect(resets).toEqual([]);
+                expect(mockRepo.checkoutBranch).toHaveBeenCalledWith(expect.stringMatching(/^upmerge-[A-Za-z0-9]{6}\/customer\/acme\/24\.1$/));
+
+                expect(checkedOutBefore(mockRunVerifyCommand)).toEqual([
+                    expect.stringMatching(/\/release\/24\.1$/),
+                    expect.stringMatching(/\/release\/24\.2$/),
+                    expect.stringMatching(/\/master$/),
+                    expect.stringMatching(/\/customer\/acme\/23\.4$/),
+                    expect.stringMatching(/\/customer\/acme\/24\.1$/)
+                ]);
+                expect(mockRepo.push.mock.calls.map((call) => call[1])).toEqual([
+                    'release/24.1', 'release/24.2', 'master', 'customer/acme/23.4', 'customer/acme/24.1'
+                ]);
+            });
+
+            it('should print how to push a conflict resolution together with the unpushed merges below it', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: VERIFY_COMMAND});
+                // 23.4 -> 24.1 succeeds, 24.1 -> 24.2 stops on a conflict
+                mockRepo.merge
+                    .mockResolvedValueOnce()
+                    .mockRejectedValueOnce(new Error('Merge conflict'));
+                mockRepo.status
+                    .mockResolvedValueOnce(createStatusResult())
+                    .mockResolvedValueOnce(createStatusResult())
+                    .mockResolvedValueOnce(createStatusResult({conflicted: ['file1']}));
+
+                await expect(upmerge.execute()).rejects.toThrow('Merge conflict');
+
+                expect(mockRepo.push).not.toHaveBeenCalled();
+                expect(mockRunVerifyCommand).not.toHaveBeenCalled();
+                expect(output()).toMatch(/run the verify command on this branch, upmerge-[A-Za-z0-9]{6}\/release\/24\.1: /);
+                expect(output()).toMatch(
+                    /git push --atomic origin upmerge-[A-Za-z0-9]{6}\/release\/24\.1:release\/24\.1 HEAD:release\/24\.2\n/);
+                expect(output()).toContain(`cplace-cli flow --upmerge --release 23.4 --verify '${VERIFY_COMMAND}'\n`);
+            });
+
+            it('should quote single quotes of the verify command in the rerun command', async () => {
+                upmerge.prepareAndMayExecute({release: '23.4', push: true, verify: "./gradlew -Pmsg='a b'"});
+                mockRunVerifyCommand.mockResolvedValueOnce({exitCode: 1, signal: null});
+
+                await expect(upmerge.execute()).rejects.toThrow('Verification failed');
+
+                expect(output()).toContain(String.raw`--verify './gradlew -Pmsg='\''a b'\'''` + '\n');
+            });
         });
     });
 });
